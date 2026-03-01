@@ -13,6 +13,8 @@ env/
 
 # SQLite
 *.db
+*.db-shm
+*.db-wal
 *.sqlite3
 
 # ChromaDB
