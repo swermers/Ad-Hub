@@ -38,3 +38,6 @@ class Product(Base):
     content_pieces: Mapped[list["ContentPiece"]] = relationship(  # noqa: F821
         back_populates="product", cascade="all, delete-orphan"
     )
+    connections: Mapped[list["PlatformConnection"]] = relationship(  # noqa: F821
+        back_populates="product", cascade="all, delete-orphan"
+    )

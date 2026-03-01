@@ -87,6 +87,65 @@ export const api = {
     }),
   deleteContent: (id: string) =>
     request<void>(`/api/content/${id}`, { method: "DELETE" }),
+
+  // Connections
+  listConnections: (productId?: string) => {
+    const qs = productId ? `?product_id=${productId}` : "";
+    return request<PlatformConnection[]>(`/api/connections${qs}`);
+  },
+  createConnection: (data: ConnectionCreate) =>
+    request<PlatformConnection>("/api/connections", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  deleteConnection: (id: string) =>
+    request<void>(`/api/connections/${id}`, { method: "DELETE" }),
+  testConnection: (id: string) =>
+    request<ConnectionTestResult>(`/api/connections/${id}/test`, {
+      method: "POST",
+    }),
+
+  // Schedule
+  listScheduledPosts: (params?: ScheduleFilter) => {
+    const searchParams = new URLSearchParams();
+    if (params?.product_id) searchParams.set("product_id", params.product_id);
+    if (params?.status) searchParams.set("status", params.status);
+    if (params?.platform) searchParams.set("platform", params.platform);
+    const qs = searchParams.toString();
+    return request<Paginated<ScheduledPost>>(`/api/schedule${qs ? `?${qs}` : ""}`);
+  },
+  createScheduledPost: (data: ScheduleCreate) =>
+    request<ScheduledPost>("/api/schedule", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  cancelScheduledPost: (id: string) =>
+    request<void>(`/api/schedule/${id}`, { method: "DELETE" }),
+  postNow: (id: string) =>
+    request<ScheduledPost>(`/api/schedule/${id}/post-now`, { method: "POST" }),
+
+  // Analytics
+  getOverview: (productId?: string, days: number = 30) => {
+    const searchParams = new URLSearchParams();
+    if (productId) searchParams.set("product_id", productId);
+    searchParams.set("days", String(days));
+    const qs = searchParams.toString();
+    return request<AnalyticsOverview>(`/api/analytics/overview?${qs}`);
+  },
+  getTopPerformers: (productId?: string, metric: string = "impressions", limit: number = 10) => {
+    const searchParams = new URLSearchParams();
+    if (productId) searchParams.set("product_id", productId);
+    searchParams.set("metric", metric);
+    searchParams.set("limit", String(limit));
+    const qs = searchParams.toString();
+    return request<TopPerformer[]>(`/api/analytics/top-performers?${qs}`);
+  },
+  getContentMetrics: (contentId: string) =>
+    request<ContentMetrics>(`/api/analytics/content/${contentId}`),
+  getInsights: (productId: string) =>
+    request<Insights>(`/api/analytics/insights?product_id=${productId}`),
+  triggerCollect: () =>
+    request<{ collected: number }>("/api/analytics/collect", { method: "POST" }),
 };
 
 // Types
@@ -170,4 +229,107 @@ export interface ContentFilter {
   status?: string;
   platform?: string;
   content_type?: string;
+}
+
+// Phase 2 types
+
+export interface PlatformConnection {
+  id: string;
+  product_id: string;
+  platform: string;
+  platform_account_id: string | null;
+  platform_account_name: string | null;
+  status: string;
+  token_expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConnectionCreate {
+  product_id: string;
+  platform: string;
+  access_token: string;
+  refresh_token?: string;
+  platform_account_id?: string;
+  platform_account_name?: string;
+}
+
+export interface ConnectionTestResult {
+  valid: boolean;
+  account_info: Record<string, unknown> | null;
+  error: string | null;
+}
+
+export interface ScheduledPost {
+  id: string;
+  content_id: string;
+  connection_id: string;
+  scheduled_at: string;
+  posted_at: string | null;
+  platform_post_id: string | null;
+  status: string;
+  error: string | null;
+  created_at: string;
+  content_title: string | null;
+  content_body_preview: string | null;
+  platform: string | null;
+  platform_account_name: string | null;
+}
+
+export interface ScheduleCreate {
+  content_id: string;
+  connection_id: string;
+  scheduled_at: string;
+}
+
+export interface ScheduleFilter {
+  product_id?: string;
+  status?: string;
+  platform?: string;
+}
+
+export interface AnalyticsOverview {
+  total_impressions: number;
+  total_clicks: number;
+  total_likes: number;
+  total_shares: number;
+  total_comments: number;
+  total_spend: number;
+  total_conversions: number;
+  avg_ctr: number;
+  posts_tracked: number;
+  period_days: number;
+}
+
+export interface TopPerformer {
+  content_id: string;
+  title: string | null;
+  body_preview: string | null;
+  content_type: string | null;
+  platform: string;
+  total_impressions: number;
+  total_clicks: number;
+  total_likes: number;
+  total_shares: number;
+  avg_ctr: number;
+}
+
+export interface ContentMetrics {
+  content_id: string;
+  title: string | null;
+  total_impressions: number;
+  total_clicks: number;
+  total_likes: number;
+  total_shares: number;
+  total_comments: number;
+  total_conversions: number;
+  avg_ctr: number;
+  total_spend: number;
+  platforms: string[];
+}
+
+export interface Insights {
+  insights: string[];
+  recommendations: string[];
+  content_angles: string[];
 }

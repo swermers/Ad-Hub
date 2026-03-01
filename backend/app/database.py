@@ -36,6 +36,14 @@ def get_db():
 
 
 def create_tables():
-    from app.models import ContentPiece, CrawledPage, Product, UploadedDocument  # noqa: F401
+    from app.models import (  # noqa: F401
+        ContentPiece,
+        CrawledPage,
+        PerformanceMetric,
+        PlatformConnection,
+        Product,
+        ScheduledPost,
+        UploadedDocument,
+    )
 
     Base.metadata.create_all(bind=engine)
