@@ -58,16 +58,16 @@ async def generate_content_batch(
 
 Product: {product.name}
 Description: {product.description}
-Target Audience: {product.target_audience or 'General audience'}
-Pain Points: {product.pain_points or 'Not specified'}
-Differentiators: {product.differentiators or 'Not specified'}
+Target Audience: {product.target_audience or "General audience"}
+Pain Points: {product.pain_points or "Not specified"}
+Differentiators: {product.differentiators or "Not specified"}
 
-{f'Brand Brief: {brand_brief}' if brand_brief else ''}
+{f"Brand Brief: {brand_brief}" if brand_brief else ""}
 
 Funnel Stage: {funnel_stage}
-{FUNNEL_STAGE_CONTEXT.get(funnel_stage, '')}
+{FUNNEL_STAGE_CONTEXT.get(funnel_stage, "")}
 
-{f'Product Knowledge Context: {rag_context}' if rag_context else ''}
+{f"Product Knowledge Context: {rag_context}" if rag_context else ""}
 
 IMPORTANT: Only use factual information from the provided context. Do not invent features or claims."""
 
@@ -76,13 +76,16 @@ IMPORTANT: Only use factual information from the provided context. Do not invent
     for content_type in content_types:
         for platform in platforms:
             type_prompts = CONTENT_TYPE_PROMPTS.get(content_type, {})
-            type_instruction = type_prompts.get(platform, type_prompts.get("general", f"Write {content_type} content for {platform}."))
+            type_instruction = type_prompts.get(
+                platform,
+                type_prompts.get("general", f"Write {content_type} content for {platform}."),
+            )
 
             user_prompt = f"""{type_instruction}
 
 Generate {count} unique variations. Each should take a different angle or hook.
 
-{f'Additional instructions: {instructions}' if instructions else ''}
+{f"Additional instructions: {instructions}" if instructions else ""}
 
 Return your response as a JSON array with this structure:
 [
@@ -105,22 +108,33 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                     text = text.split("\n", 1)[1].rsplit("```", 1)[0]
                 pieces = json.loads(text)
             except (json.JSONDecodeError, IndexError):
-                pieces = [{"title": "Generated Content", "body": result["content"], "hook": None, "cta": None}]
+                pieces = [
+                    {
+                        "title": "Generated Content",
+                        "body": result["content"],
+                        "hook": None,
+                        "cta": None,
+                    }
+                ]
 
             for piece in pieces:
-                all_pieces.append({
-                    "content_type": content_type,
-                    "platform": platform,
-                    "title": piece.get("title"),
-                    "body": piece.get("body", ""),
-                    "hook": piece.get("hook"),
-                    "cta": piece.get("cta"),
-                    "metadata": json.dumps({
-                        "model": result["model"],
-                        "input_tokens": result["input_tokens"],
-                        "output_tokens": result["output_tokens"],
-                        "funnel_stage": funnel_stage,
-                    }),
-                })
+                all_pieces.append(
+                    {
+                        "content_type": content_type,
+                        "platform": platform,
+                        "title": piece.get("title"),
+                        "body": piece.get("body", ""),
+                        "hook": piece.get("hook"),
+                        "cta": piece.get("cta"),
+                        "metadata": json.dumps(
+                            {
+                                "model": result["model"],
+                                "input_tokens": result["input_tokens"],
+                                "output_tokens": result["output_tokens"],
+                                "funnel_stage": funnel_stage,
+                            }
+                        ),
+                    }
+                )
 
     return all_pieces

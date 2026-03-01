@@ -10,9 +10,7 @@ from app.database import Base
 class CrawledPage(Base):
     __tablename__ = "crawled_pages"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     product_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("products.id", ondelete="CASCADE"), nullable=False
     )
@@ -30,9 +28,7 @@ class CrawledPage(Base):
 class UploadedDocument(Base):
     __tablename__ = "uploaded_documents"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     product_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("products.id", ondelete="CASCADE"), nullable=False
     )

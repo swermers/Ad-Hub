@@ -46,9 +46,16 @@ class ProductResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-@router.get("", response_model=list[ProductResponse])
-def list_products(db: Session = Depends(get_db)):
-    return db.query(Product).order_by(Product.created_at.desc()).all()
+class PaginatedProducts(BaseModel):
+    items: list[ProductResponse]
+    total: int
+
+
+@router.get("", response_model=PaginatedProducts)
+def list_products(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
+    total = db.query(Product).count()
+    items = db.query(Product).order_by(Product.created_at.desc()).offset(skip).limit(limit).all()
+    return PaginatedProducts(items=items, total=total)
 
 
 @router.post("", response_model=ProductResponse, status_code=201)
@@ -69,9 +76,7 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{product_id}", response_model=ProductResponse)
-def update_product(
-    product_id: str, data: ProductUpdate, db: Session = Depends(get_db)
-):
+def update_product(product_id: str, data: ProductUpdate, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")

@@ -10,9 +10,7 @@ from app.database import Base
 class ContentPiece(Base):
     __tablename__ = "content_pieces"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     product_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("products.id", ondelete="CASCADE"), nullable=False
     )

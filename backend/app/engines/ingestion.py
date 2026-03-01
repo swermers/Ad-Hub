@@ -1,36 +1,48 @@
+import json
+import logging
 from urllib.parse import urljoin, urlparse
 
+import httpx
 from bs4 import BeautifulSoup
-from playwright.async_api import async_playwright
+
+logger = logging.getLogger(__name__)
 
 
 async def crawl_website(start_url: str, max_pages: int = 20) -> list[dict]:
-    """Crawl a website starting from start_url, extracting text content."""
+    """Crawl a website starting from start_url, extracting text content.
+
+    Uses httpx (HTTP client) by default. Falls back gracefully if a page
+    can't be fetched. For JS-heavy sites, Playwright can be used instead
+    (requires `playwright install chromium`).
+    """
     domain = urlparse(start_url).netloc
     visited: set[str] = set()
     results: list[dict] = []
     queue = [start_url]
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-
+    async with httpx.AsyncClient(
+        follow_redirects=True,
+        timeout=15.0,
+        headers={"User-Agent": "AdHub-Crawler/0.1"},
+    ) as client:
         while queue and len(visited) < max_pages:
             url = queue.pop(0)
             if url in visited:
                 continue
 
             try:
-                response = await page.goto(url, wait_until="networkidle", timeout=15000)
-                if not response or response.status >= 400:
+                response = await client.get(url)
+                if response.status_code >= 400:
                     visited.add(url)
                     continue
 
-                html = await page.content()
+                html = response.text
                 soup = BeautifulSoup(html, "html.parser")
 
                 # Remove non-content elements
-                for tag in soup(["nav", "footer", "script", "style", "header", "aside", "noscript"]):
+                for tag in soup(
+                    ["nav", "footer", "script", "style", "header", "aside", "noscript"]
+                ):
                     tag.decompose()
 
                 title = ""
@@ -44,29 +56,28 @@ async def crawl_website(start_url: str, max_pages: int = 20) -> list[dict]:
                 # Classify page type
                 page_type = _classify_page(url, title, content_text)
 
-                results.append({
-                    "url": url,
-                    "title": title,
-                    "content": content_text,
-                    "page_type": page_type,
-                })
+                results.append(
+                    {
+                        "url": url,
+                        "title": title,
+                        "content": content_text,
+                        "page_type": page_type,
+                    }
+                )
                 visited.add(url)
 
                 # Discover internal links
-                links = await page.eval_on_selector_all(
-                    "a[href]", "els => els.map(e => e.href)"
-                )
-                for link in links:
+                for a_tag in soup.find_all("a", href=True):
+                    link = urljoin(url, a_tag["href"])
                     parsed = urlparse(link)
                     if parsed.netloc == domain and link not in visited:
                         clean = link.split("#")[0].split("?")[0]
                         if not clean.endswith((".pdf", ".png", ".jpg", ".gif", ".zip", ".mp4")):
                             queue.append(clean)
 
-            except Exception:
+            except Exception as e:
+                logger.warning("Failed to crawl %s: %s", url, e)
                 visited.add(url)
-
-        await browser.close()
 
     return results
 
@@ -111,7 +122,7 @@ async def generate_brand_brief(product, crawled_pages, documents) -> dict:
     prompt = f"""Analyze the following product information and generate a comprehensive brand brief.
 
 Product Name: {product.name}
-Website: {product.website_url or 'N/A'}
+Website: {product.website_url or "N/A"}
 Description: {product.description}
 Target Audience: {product.target_audience}
 Pain Points: {product.pain_points}
@@ -154,7 +165,6 @@ Return ONLY the JSON object, no markdown formatting."""
 
     result = await call_claude(prompt)
 
-    import json
     try:
         # Try to parse as JSON
         text = result["content"].strip()

@@ -10,9 +10,7 @@ from app.database import Base
 class Product(Base):
     __tablename__ = "products"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     website_url: Mapped[str | None] = mapped_column(String(2048))
     description: Mapped[str] = mapped_column(Text, default="")

@@ -2,13 +2,13 @@ import anthropic
 
 from app.config import settings
 
-_client: anthropic.Anthropic | None = None
+_client: anthropic.AsyncAnthropic | None = None
 
 
-def _get_client() -> anthropic.Anthropic:
+def _get_client() -> anthropic.AsyncAnthropic:
     global _client
     if _client is None:
-        _client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        _client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
     return _client
 
 
@@ -28,7 +28,7 @@ async def call_claude(
     if system:
         kwargs["system"] = system
 
-    message = client.messages.create(**kwargs)
+    message = await client.messages.create(**kwargs)
 
     return {
         "content": message.content[0].text,

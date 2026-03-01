@@ -16,7 +16,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 // Products
 export const api = {
   // Products
-  listProducts: () => request<Product[]>("/api/products"),
+  listProducts: async (): Promise<Product[]> => {
+    const res = await request<Paginated<Product>>("/api/products");
+    return res.items;
+  },
   getProduct: (id: string) => request<Product>(`/api/products/${id}`),
   createProduct: (data: ProductCreate) =>
     request<Product>("/api/products", {
@@ -67,7 +70,9 @@ export const api = {
     if (params?.content_type)
       searchParams.set("content_type", params.content_type);
     const qs = searchParams.toString();
-    return request<ContentPiece[]>(`/api/content${qs ? `?${qs}` : ""}`);
+    return request<Paginated<ContentPiece>>(`/api/content${qs ? `?${qs}` : ""}`).then(
+      (res) => res.items
+    );
   },
   getContent: (id: string) => request<ContentPiece>(`/api/content/${id}`),
   updateContent: (id: string, data: Partial<ContentPiece>) =>
@@ -85,6 +90,11 @@ export const api = {
 };
 
 // Types
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+}
+
 export interface Product {
   id: string;
   name: string;

@@ -36,6 +36,6 @@ def get_db():
 
 
 def create_tables():
-    from app.models import Product, CrawledPage, UploadedDocument, ContentPiece  # noqa: F401
+    from app.models import ContentPiece, CrawledPage, Product, UploadedDocument  # noqa: F401
 
     Base.metadata.create_all(bind=engine)

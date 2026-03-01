@@ -120,15 +120,9 @@ def _run_brief_generation(product_id: str):
         if not product:
             return
 
-        pages = (
-            db.query(CrawledPage)
-            .filter(CrawledPage.product_id == product_id)
-            .all()
-        )
+        pages = db.query(CrawledPage).filter(CrawledPage.product_id == product_id).all()
         documents = (
-            db.query(UploadedDocument)
-            .filter(UploadedDocument.product_id == product_id)
-            .all()
+            db.query(UploadedDocument).filter(UploadedDocument.product_id == product_id).all()
         )
 
         brief = asyncio.run(generate_brand_brief(product, pages, documents))
@@ -155,9 +149,7 @@ def start_crawl(
 
     task_id = str(uuid.uuid4())
     _task_status[task_id] = {"status": "pending", "pages_crawled": 0, "error": None}
-    background_tasks.add_task(
-        _run_crawl, task_id, product_id, product.website_url, data.max_pages
-    )
+    background_tasks.add_task(_run_crawl, task_id, product_id, product.website_url, data.max_pages)
     return CrawlStatusResponse(task_id=task_id, status="pending", pages_crawled=0)
 
 

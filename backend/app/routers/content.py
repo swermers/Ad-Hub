@@ -38,12 +38,19 @@ class ContentStatusUpdate(BaseModel):
     status: str
 
 
-@router.get("", response_model=list[ContentPieceResponse])
+class PaginatedContent(BaseModel):
+    items: list[ContentPieceResponse]
+    total: int
+
+
+@router.get("", response_model=PaginatedContent)
 def list_content(
     product_id: str | None = None,
     status: str | None = None,
     platform: str | None = None,
     content_type: str | None = None,
+    skip: int = 0,
+    limit: int = 50,
     db: Session = Depends(get_db),
 ):
     query = db.query(ContentPiece)
@@ -55,7 +62,9 @@ def list_content(
         query = query.filter(ContentPiece.platform == platform)
     if content_type:
         query = query.filter(ContentPiece.content_type == content_type)
-    return query.order_by(ContentPiece.created_at.desc()).all()
+    total = query.count()
+    items = query.order_by(ContentPiece.created_at.desc()).offset(skip).limit(limit).all()
+    return PaginatedContent(items=items, total=total)
 
 
 @router.get("/{content_id}", response_model=ContentPieceResponse)
@@ -67,9 +76,7 @@ def get_content(content_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{content_id}", response_model=ContentPieceResponse)
-def update_content(
-    content_id: str, data: ContentUpdate, db: Session = Depends(get_db)
-):
+def update_content(content_id: str, data: ContentUpdate, db: Session = Depends(get_db)):
     piece = db.query(ContentPiece).filter(ContentPiece.id == content_id).first()
     if not piece:
         raise HTTPException(status_code=404, detail="Content not found")

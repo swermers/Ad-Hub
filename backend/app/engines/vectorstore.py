@@ -77,11 +77,13 @@ class VectorStore:
 
         documents = []
         for i in range(len(results["documents"][0])):
-            documents.append({
-                "text": results["documents"][0][i],
-                "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
-                "distance": results["distances"][0][i] if results["distances"] else None,
-            })
+            documents.append(
+                {
+                    "text": results["documents"][0][i],
+                    "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
+                    "distance": results["distances"][0][i] if results["distances"] else None,
+                }
+            )
 
         return documents
 
