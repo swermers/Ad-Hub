@@ -37,8 +37,13 @@ def get_db():
 
 def create_tables():
     from app.models import (  # noqa: F401
+        AdTemplate,
+        AdVariation,
         ContentPiece,
         CrawledPage,
+        OptimizationConfig,
+        OptimizationLog,
+        PainPoint,
         PerformanceMetric,
         PlatformConnection,
         Product,

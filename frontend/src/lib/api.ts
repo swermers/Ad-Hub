@@ -146,6 +146,94 @@ export const api = {
     request<Insights>(`/api/analytics/insights?product_id=${productId}`),
   triggerCollect: () =>
     request<{ collected: number }>("/api/analytics/collect", { method: "POST" }),
+
+  // Ad Templates
+  listTemplates: (productId?: string) => {
+    const qs = productId ? `?product_id=${productId}` : "";
+    return request<AdTemplate[]>(`/api/templates${qs}`);
+  },
+  createTemplate: (data: AdTemplateCreate) =>
+    request<AdTemplate>("/api/templates", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  deleteTemplate: (id: string) =>
+    request<void>(`/api/templates/${id}`, { method: "DELETE" }),
+
+  // Pain Points
+  listPainPoints: (productId: string, category?: string) => {
+    const qs = category ? `?category=${category}` : "";
+    return request<PainPointItem[]>(`/api/products/${productId}/pain-points${qs}`);
+  },
+  createPainPoint: (productId: string, data: PainPointCreate) =>
+    request<PainPointItem>(`/api/products/${productId}/pain-points`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  deletePainPoint: (productId: string, pointId: string) =>
+    request<void>(`/api/products/${productId}/pain-points/${pointId}`, { method: "DELETE" }),
+  researchPainPoints: (productId: string, count: number = 20) =>
+    request<ResearchStatus>(`/api/products/${productId}/research-pain-points?count=${count}`, {
+      method: "POST",
+    }),
+  getResearchStatus: (productId: string, taskId: string) =>
+    request<ResearchStatus>(`/api/products/${productId}/research-pain-points-status/${taskId}`),
+
+  // Bulk Generation
+  bulkGenerate: (productId: string, data: BulkGenerateRequest) =>
+    request<BulkGenerateStatus>(`/api/products/${productId}/bulk-generate`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getBulkGenerateStatus: (productId: string, taskId: string) =>
+    request<BulkGenerateStatus>(`/api/products/${productId}/bulk-generate-status/${taskId}`),
+  listVariations: (productId: string, batchId?: string, status?: string) => {
+    const params = new URLSearchParams();
+    if (batchId) params.set("batch_id", batchId);
+    if (status) params.set("status", status);
+    const qs = params.toString();
+    return request<AdVariation[]>(`/api/products/${productId}/ad-variations${qs ? `?${qs}` : ""}`);
+  },
+  updateVariation: (id: string, data: Partial<{ headline: string; body: string; cta: string }>) =>
+    request<AdVariation>(`/api/products/ad-variations/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  bulkUpdateVariationStatus: (variationIds: string[], status: string) =>
+    request<{ updated: number }>("/api/products/ad-variations/bulk-status", {
+      method: "PUT",
+      body: JSON.stringify({ variation_ids: variationIds, status }),
+    }),
+  deleteVariation: (id: string) =>
+    request<void>(`/api/products/ad-variations/${id}`, { method: "DELETE" }),
+
+  // Bulk Upload
+  bulkUpload: (productId: string, data: BulkUploadRequest) =>
+    request<BulkUploadStatus>(`/api/products/${productId}/bulk-upload`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getBulkUploadStatus: (productId: string, taskId: string) =>
+    request<BulkUploadStatus>(`/api/products/${productId}/bulk-upload-status/${taskId}`),
+
+  // Optimizer
+  getOptimizationConfig: (productId: string) =>
+    request<OptimizationConfigData>(`/api/products/${productId}/optimization-config`),
+  updateOptimizationConfig: (productId: string, data: Partial<OptimizationConfigData>) =>
+    request<OptimizationConfigData>(`/api/products/${productId}/optimization-config`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  runOptimization: (productId: string) =>
+    request<RunOptimizationStatus>(`/api/products/${productId}/run-optimization`, {
+      method: "POST",
+    }),
+  getOptimizationStatus: (productId: string, taskId: string) =>
+    request<RunOptimizationStatus>(`/api/products/${productId}/run-optimization-status/${taskId}`),
+  getOptimizationLog: (productId: string, limit: number = 50) =>
+    request<OptimizationLogItem[]>(`/api/products/${productId}/optimization-log?limit=${limit}`),
+  getWinnerAnalysis: (productId: string) =>
+    request<WinnerAnalysis>(`/api/products/${productId}/winner-analysis`),
 };
 
 // Types
@@ -332,4 +420,139 @@ export interface Insights {
   insights: string[];
   recommendations: string[];
   content_angles: string[];
+}
+
+// Bulk Ad Generator types
+
+export interface AdTemplate {
+  id: string;
+  product_id: string | null;
+  name: string;
+  template_type: string;
+  layout_config: Record<string, string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdTemplateCreate {
+  product_id?: string;
+  name: string;
+  template_type: string;
+  layout_config?: Record<string, string>;
+}
+
+export interface PainPointItem {
+  id: string;
+  product_id: string;
+  pain_point: string;
+  desired_outcome: string;
+  category: string;
+  severity: number;
+  target_segment: string | null;
+  source: string;
+  created_at: string;
+}
+
+export interface PainPointCreate {
+  pain_point: string;
+  desired_outcome?: string;
+  category?: string;
+  severity?: number;
+  target_segment?: string;
+}
+
+export interface ResearchStatus {
+  task_id: string;
+  status: string;
+  points_generated: number;
+  error: string | null;
+}
+
+export interface BulkGenerateRequest {
+  template_id: string;
+  pain_point_ids: string[];
+  variations_per_pain_point: number;
+  funnel_stage?: string;
+}
+
+export interface BulkGenerateStatus {
+  task_id: string;
+  status: string;
+  variations_generated: number;
+  batch_id: string | null;
+  error: string | null;
+}
+
+export interface AdVariation {
+  id: string;
+  product_id: string;
+  batch_id: string;
+  template_id: string | null;
+  pain_point_id: string | null;
+  headline: string;
+  body: string;
+  cta: string;
+  template_type: string | null;
+  template_config: Record<string, string>;
+  pain_point_text: string | null;
+  desired_outcome: string | null;
+  status: string;
+  image_url: string | null;
+  meta_ad_id: string | null;
+  performance_score: number | null;
+  created_at: string;
+}
+
+export interface BulkUploadRequest {
+  variation_ids: string[];
+  ad_set_id: string;
+  connection_id: string;
+  destination_url: string;
+  page_id: string;
+}
+
+export interface BulkUploadStatus {
+  task_id: string;
+  status: string;
+  uploaded: number;
+  failed: number;
+  error: string | null;
+}
+
+export interface OptimizationConfigData {
+  id: string;
+  product_id: string;
+  min_impressions: number;
+  max_cpm: number;
+  min_ctr: number;
+  winner_ctr_threshold: number;
+  winner_budget_multiplier: number;
+  check_interval_hours: number;
+  enabled: boolean;
+}
+
+export interface RunOptimizationStatus {
+  task_id: string;
+  status: string;
+  actions_taken: number;
+  error: string | null;
+}
+
+export interface OptimizationLogItem {
+  id: string;
+  product_id: string;
+  ad_variation_id: string | null;
+  action: string;
+  reason: string;
+  metrics_snapshot: Record<string, number>;
+  headline: string | null;
+  created_at: string;
+}
+
+export interface WinnerAnalysis {
+  winning_patterns: string[];
+  losing_patterns: string[];
+  recommended_angles: string[];
+  recommended_templates: string[];
+  summary: string;
 }

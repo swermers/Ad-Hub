@@ -6,7 +6,20 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import create_tables
-from app.routers import analytics, connections, content, generation, ingestion, products, schedule
+from app.routers import (
+    analytics,
+    bulk_generator,
+    bulk_upload,
+    connections,
+    content,
+    generation,
+    ingestion,
+    optimizer,
+    pain_points,
+    products,
+    schedule,
+    templates,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +65,11 @@ app.include_router(content.router, prefix="/api/content", tags=["content"])
 app.include_router(connections.router, prefix="/api/connections", tags=["connections"])
 app.include_router(schedule.router, prefix="/api/schedule", tags=["schedule"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
+app.include_router(templates.router, prefix="/api/templates", tags=["templates"])
+app.include_router(pain_points.router, prefix="/api/products", tags=["pain-points"])
+app.include_router(bulk_generator.router, prefix="/api/products", tags=["bulk-generator"])
+app.include_router(bulk_upload.router, prefix="/api/products", tags=["bulk-upload"])
+app.include_router(optimizer.router, prefix="/api/products", tags=["optimizer"])
 
 
 @app.get("/api/health")

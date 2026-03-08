@@ -46,6 +46,15 @@ def start_scheduler():
         replace_existing=True,
     )
 
+    # Auto-optimizer: check every hour
+    scheduler.add_job(
+        _run_auto_optimizer,
+        "interval",
+        minutes=60,
+        id="auto_optimizer",
+        replace_existing=True,
+    )
+
     scheduler.start()
     logger.info("Scheduler started")
 
@@ -97,5 +106,31 @@ def _collect_all_metrics():
         asyncio.run(collect_metrics_for_all_posts(db))
     except Exception as e:
         logger.error("Metrics collection failed: %s", e)
+    finally:
+        db.close()
+
+
+def _run_auto_optimizer():
+    """Run optimization cycles for all products with optimization enabled."""
+    from app.database import SessionLocal
+    from app.engines.optimizer import run_optimization_cycle
+    from app.models import OptimizationConfig
+
+    db = SessionLocal()
+    try:
+        configs = db.query(OptimizationConfig).filter(OptimizationConfig.enabled.is_(True)).all()
+        for config in configs:
+            try:
+                result = asyncio.run(run_optimization_cycle(db, config.product_id, config))
+                if result["actions_taken"] > 0:
+                    logger.info(
+                        "Optimization for product %s: %d actions (paused=%d, promoted=%d)",
+                        config.product_id,
+                        result["actions_taken"],
+                        result["paused"],
+                        result["promoted"],
+                    )
+            except Exception as e:
+                logger.error("Optimization failed for product %s: %s", config.product_id, e)
     finally:
         db.close()
