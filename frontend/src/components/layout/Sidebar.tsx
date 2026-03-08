@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: "Home" },
+  { href: "/command-center", label: "Command Center", icon: "Radar" },
   { href: "/products", label: "Products", icon: "Package" },
   { href: "/content", label: "Content", icon: "FileText" },
   { href: "/generate", label: "Generate", icon: "Sparkles" },
@@ -56,6 +57,11 @@ const icons: Record<string, React.ReactNode> = {
   Layers: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+    </svg>
+  ),
+  Radar: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a10 10 0 0110 10M12 2v10l7.07 7.07M12 2a10 10 0 00-10 10 10 10 0 0010 10 10 10 0 007.07-2.93" />
     </svg>
   ),
   Zap: (

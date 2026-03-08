@@ -146,6 +146,8 @@ export const api = {
     request<Insights>(`/api/analytics/insights?product_id=${productId}`),
   triggerCollect: () =>
     request<{ collected: number }>("/api/analytics/collect", { method: "POST" }),
+  getCommandCenter: (includeAi: boolean = false) =>
+    request<CommandCenter>(`/api/analytics/command-center?include_ai=${includeAi}`),
 
   // Screenshots
   uploadScreenshot: async (productId: string, file: File): Promise<{ path: string; screenshots: string[] }> => {
@@ -440,6 +442,55 @@ export interface Insights {
   insights: string[];
   recommendations: string[];
   content_angles: string[];
+}
+
+// Command Center types
+
+export interface CommandCenterProductSummary {
+  id: string;
+  name: string;
+  product_type: string;
+  total_variations: number;
+  status_breakdown: Record<string, number>;
+  active_ads: number;
+  paused_ads: number;
+  winners: number;
+  total_spend: number;
+  pain_points_count: number;
+  top_winner: CommandCenterAdEntry | null;
+  recent_actions: { action: string; reason: string; created_at: string }[];
+}
+
+export interface CommandCenterAdEntry {
+  variation_id: string;
+  headline: string;
+  status: string;
+  ctr: number;
+  cpm: number;
+  impressions: number;
+  spend: number;
+}
+
+export interface CommandCenterAIRecommendations {
+  executive_summary: string;
+  immediate_actions: string[];
+  budget_recommendations: string[];
+  next_tests: string[];
+}
+
+export interface CommandCenter {
+  summary: {
+    total_products: number;
+    total_active_ads: number;
+    total_paused_ads: number;
+    total_winners: number;
+    total_spend: number;
+    content_performance: AnalyticsOverview;
+  };
+  products: CommandCenterProductSummary[];
+  top_winners: CommandCenterAdEntry[];
+  worst_losers: CommandCenterAdEntry[];
+  ai_recommendations?: CommandCenterAIRecommendations;
 }
 
 // Bulk Ad Generator types

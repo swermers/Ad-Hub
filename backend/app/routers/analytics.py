@@ -6,6 +6,8 @@ from app.database import get_db
 from app.engines.analytics import (
     collect_metrics_for_all_posts,
     generate_insights,
+    get_command_center,
+    get_command_center_with_ai,
     get_overview,
     get_top_performers,
 )
@@ -130,6 +132,20 @@ async def analytics_insights(
     db: Session = Depends(get_db),
 ):
     return await generate_insights(db, product_id)
+
+
+@router.get("/command-center")
+async def command_center(
+    include_ai: bool = False,
+    db: Session = Depends(get_db),
+):
+    """Get comprehensive snapshot of all ad performance across products.
+
+    Set include_ai=true to get AI-generated strategic recommendations (slower).
+    """
+    if include_ai:
+        return await get_command_center_with_ai(db)
+    return await get_command_center(db)
 
 
 def _run_collect(connection_id: str | None):
