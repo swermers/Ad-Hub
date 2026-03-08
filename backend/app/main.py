@@ -1,8 +1,10 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import create_tables
@@ -70,6 +72,12 @@ app.include_router(pain_points.router, prefix="/api/products", tags=["pain-point
 app.include_router(bulk_generator.router, prefix="/api/products", tags=["bulk-generator"])
 app.include_router(bulk_upload.router, prefix="/api/products", tags=["bulk-upload"])
 app.include_router(optimizer.router, prefix="/api/products", tags=["optimizer"])
+
+
+# Serve uploaded files (screenshots, ad images, etc.)
+uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 
 @app.get("/api/health")

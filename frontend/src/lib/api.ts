@@ -147,6 +147,22 @@ export const api = {
   triggerCollect: () =>
     request<{ collected: number }>("/api/analytics/collect", { method: "POST" }),
 
+  // Screenshots
+  uploadScreenshot: async (productId: string, file: File): Promise<{ path: string; screenshots: string[] }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE}/api/products/${productId}/screenshots`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) throw new Error("Upload failed");
+    return res.json();
+  },
+  deleteScreenshot: (productId: string, path: string) =>
+    request<{ screenshots: string[] }>(`/api/products/${productId}/screenshots?path=${encodeURIComponent(path)}`, {
+      method: "DELETE",
+    }),
+
   // Ad Templates
   listTemplates: (productId?: string) => {
     const qs = productId ? `?product_id=${productId}` : "";
@@ -250,8 +266,11 @@ export interface Product {
   target_audience: string;
   pain_points: string;
   differentiators: string;
+  product_type: string;
   brand_voice: string | null;
   brand_brief: string | null;
+  brand_colors: string | null;
+  screenshots: string | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -264,6 +283,7 @@ export interface ProductCreate {
   target_audience?: string;
   pain_points?: string;
   differentiators?: string;
+  product_type?: string;
 }
 
 export interface CrawlStatus {
