@@ -17,8 +17,11 @@ class Product(Base):
     target_audience: Mapped[str] = mapped_column(Text, default="")
     pain_points: Mapped[str] = mapped_column(Text, default="")
     differentiators: Mapped[str] = mapped_column(Text, default="")
+    product_type: Mapped[str] = mapped_column(String(50), default="other")  # saas, physical, service, other
     brand_voice: Mapped[str | None] = mapped_column(Text)
     brand_brief: Mapped[str | None] = mapped_column(Text)
+    brand_colors: Mapped[str | None] = mapped_column(Text)  # JSON: ["#hex1", "#hex2", ...]
+    screenshots: Mapped[str | None] = mapped_column(Text)  # JSON: ["/uploads/screenshots/uuid.png", ...]
     status: Mapped[str] = mapped_column(String(20), default="onboarding")
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)

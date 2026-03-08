@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -9,6 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import CrawledPage, Product, UploadedDocument
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -92,6 +95,30 @@ def _run_crawl(task_id: str, product_id: str, url: str, max_pages: int):
             ]
             if texts:
                 vs.add_documents(product_id, texts, metadatas)
+
+            # Save extracted brand colors to the product
+            if pages and "_extracted_colors" in pages[0]:
+                colors = pages[0]["_extracted_colors"]
+                if colors:
+                    product_obj = db.query(Product).filter(Product.id == product_id).first()
+                    if product_obj:
+                        product_obj.brand_colors = json.dumps(colors)
+                        db.commit()
+
+            # Try to capture a screenshot of the homepage
+            try:
+                from app.engines.ingestion import capture_screenshot
+
+                screenshot_path = asyncio.run(capture_screenshot(url, product_id))
+                if screenshot_path:
+                    product_obj = db.query(Product).filter(Product.id == product_id).first()
+                    if product_obj:
+                        existing = json.loads(product_obj.screenshots) if product_obj.screenshots else []
+                        existing.append(screenshot_path)
+                        product_obj.screenshots = json.dumps(existing)
+                        db.commit()
+            except Exception as e:
+                logger.info("Screenshot capture skipped: %s", e)
 
             _task_status[task_id] = {
                 "status": "completed",

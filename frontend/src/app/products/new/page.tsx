@@ -14,6 +14,7 @@ export default function NewProductPage() {
     target_audience: "",
     pain_points: "",
     differentiators: "",
+    product_type: "other",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,6 +75,32 @@ export default function NewProductPage() {
           onChange={(v) => setForm({ ...form, differentiators: v })}
           placeholder="What makes this different from alternatives?"
         />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Product Type
+          </label>
+          <div className="flex gap-2">
+            {[
+              { value: "saas", label: "SaaS / Software" },
+              { value: "physical", label: "Physical Product" },
+              { value: "service", label: "Service Business" },
+              { value: "other", label: "Other" },
+            ].map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setForm({ ...form, product_type: t.value })}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                  form.product_type === t.value
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="flex gap-3">
           <button

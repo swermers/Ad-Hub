@@ -90,6 +90,7 @@ class MetaClient:
         body: str,
         link_url: str,
         image_url: str | None = None,
+        image_hash: str | None = None,
     ) -> dict:
         """Create an ad creative."""
         async with httpx.AsyncClient() as client:
@@ -101,7 +102,9 @@ class MetaClient:
                     "name": headline,
                 },
             }
-            if image_url:
+            if image_hash:
+                object_story_spec["link_data"]["image_hash"] = image_hash
+            elif image_url:
                 object_story_spec["link_data"]["picture"] = image_url
 
             resp = await client.post(
@@ -111,6 +114,66 @@ class MetaClient:
                     "name": name,
                     "object_story_spec": object_story_spec,
                 },
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def upload_image(self, image_bytes: bytes, name: str = "ad_image") -> dict:
+        """Upload an image to the ad account and return the image hash."""
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{META_GRAPH_URL}/act_{self.ad_account_id}/adimages",
+                headers=self._headers(),
+                files={"filename": (f"{name}.png", image_bytes, "image/png")},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            images = data.get("images", {})
+            if images:
+                first_image = next(iter(images.values()))
+                return {"hash": first_image.get("hash", "")}
+            return {"hash": ""}
+
+    async def create_ad(
+        self,
+        ad_set_id: str,
+        creative_id: str,
+        name: str,
+        status: str = "PAUSED",
+    ) -> dict:
+        """Create an ad within an ad set."""
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{META_GRAPH_URL}/act_{self.ad_account_id}/ads",
+                headers=self._headers(),
+                json={
+                    "name": name,
+                    "adset_id": ad_set_id,
+                    "creative": {"creative_id": creative_id},
+                    "status": status,
+                },
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def get_adset_ads(self, ad_set_id: str) -> list[dict]:
+        """List all ads in an ad set."""
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{META_GRAPH_URL}/{ad_set_id}/ads",
+                headers=self._headers(),
+                params={"fields": "id,name,status,creative"},
+            )
+            resp.raise_for_status()
+            return resp.json().get("data", [])
+
+    async def update_ad_status(self, ad_id: str, status: str) -> dict:
+        """Update an ad's status (ACTIVE, PAUSED, etc.)."""
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{META_GRAPH_URL}/{ad_id}",
+                headers=self._headers(),
+                json={"status": status},
             )
             resp.raise_for_status()
             return resp.json()
