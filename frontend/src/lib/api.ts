@@ -252,6 +252,18 @@ export const api = {
     request<OptimizationLogItem[]>(`/api/products/${productId}/optimization-log?limit=${limit}`),
   getWinnerAnalysis: (productId: string) =>
     request<WinnerAnalysis>(`/api/products/${productId}/winner-analysis`),
+  triggerAutoIterate: (productId: string) =>
+    request<{ task_id: string; status: string }>(`/api/products/${productId}/auto-iterate`, {
+      method: "POST",
+    }),
+  getAutoIterateStatus: (productId: string, taskId: string) =>
+    request<{ task_id: string; status: string; actions_taken: number; error: string | null; result?: Record<string, unknown> }>(
+      `/api/products/${productId}/auto-iterate-status/${taskId}`
+    ),
+  resetIterations: (productId: string) =>
+    request<{ iterations_run: number; max_iterations: number }>(`/api/products/${productId}/reset-iterations`, {
+      method: "POST",
+    }),
 };
 
 // Types
@@ -600,6 +612,9 @@ export interface OptimizationConfigData {
   winner_budget_multiplier: number;
   check_interval_hours: number;
   enabled: boolean;
+  auto_iterate: boolean;
+  max_iterations: number;
+  iterations_run: number;
 }
 
 export interface RunOptimizationStatus {

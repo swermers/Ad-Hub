@@ -22,6 +22,8 @@ class OptimizationConfigUpdate(BaseModel):
     winner_budget_multiplier: float | None = None
     check_interval_hours: int | None = None
     enabled: bool | None = None
+    auto_iterate: bool | None = None
+    max_iterations: int | None = None
 
 
 class OptimizationConfigResponse(BaseModel):
@@ -34,6 +36,9 @@ class OptimizationConfigResponse(BaseModel):
     winner_budget_multiplier: float
     check_interval_hours: int
     enabled: bool
+    auto_iterate: bool
+    max_iterations: int
+    iterations_run: int
 
 
 class OptimizationLogResponse(BaseModel):
@@ -158,6 +163,67 @@ def get_optimization_status(product_id: str, task_id: str):
     if not status:
         raise HTTPException(status_code=404, detail="Task not found")
     return RunOptimizationResponse(task_id=task_id, **status)
+
+
+@router.post("/{product_id}/auto-iterate")
+def trigger_auto_iterate(
+    product_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Manually trigger the auto-iterate engine to analyze winners and generate next batch."""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    config = db.query(OptimizationConfig).filter(OptimizationConfig.product_id == product_id).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="No optimization config. Create one first.")
+
+    task_id = str(uuid.uuid4())
+    _task_status[task_id] = {"status": "pending", "actions_taken": 0, "error": None}
+
+    def _run_iterate(task_id: str, product_id: str):
+        from app.database import SessionLocal
+        from app.engines.auto_iterate import run_auto_iterate
+
+        _task_status[task_id] = {"status": "running", "actions_taken": 0, "error": None}
+        db_inner = SessionLocal()
+        try:
+            cfg = db_inner.query(OptimizationConfig).filter(OptimizationConfig.product_id == product_id).first()
+            result = asyncio.run(run_auto_iterate(db_inner, product_id, cfg))
+            _task_status[task_id] = {
+                "status": "completed",
+                "actions_taken": result.get("variations_created", 0),
+                "error": None,
+                "result": result,
+            }
+        except Exception as e:
+            _task_status[task_id] = {"status": "failed", "actions_taken": 0, "error": str(e)}
+        finally:
+            db_inner.close()
+
+    background_tasks.add_task(_run_iterate, task_id, product_id)
+    return {"task_id": task_id, "status": "pending"}
+
+
+@router.get("/{product_id}/auto-iterate-status/{task_id}")
+def get_auto_iterate_status(product_id: str, task_id: str):
+    status = _task_status.get(task_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"task_id": task_id, **status}
+
+
+@router.post("/{product_id}/reset-iterations")
+def reset_iterations(product_id: str, db: Session = Depends(get_db)):
+    """Reset the auto-iterate counter so it can run again."""
+    config = db.query(OptimizationConfig).filter(OptimizationConfig.product_id == product_id).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="No optimization config found")
+    config.iterations_run = 0
+    db.commit()
+    return {"iterations_run": 0, "max_iterations": config.max_iterations}
 
 
 @router.get("/{product_id}/winner-analysis", response_model=WinnerAnalysisResponse)

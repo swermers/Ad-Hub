@@ -17,6 +17,7 @@ export default function OptimizerPage() {
   const [logs, setLogs] = useState<OptimizationLogItem[]>([]);
   const [analysis, setAnalysis] = useState<WinnerAnalysis | null>(null);
   const [running, setRunning] = useState(false);
+  const [iterating, setIterating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"config" | "log" | "analysis">("config");
@@ -44,6 +45,8 @@ export default function OptimizerPage() {
         winner_budget_multiplier: config.winner_budget_multiplier,
         check_interval_hours: config.check_interval_hours,
         enabled: config.enabled,
+        auto_iterate: config.auto_iterate,
+        max_iterations: config.max_iterations,
       });
       setConfig(updated);
     } finally {
@@ -81,10 +84,39 @@ export default function OptimizerPage() {
     }
   };
 
+  const handleTriggerAutoIterate = async () => {
+    if (!productId) return;
+    setIterating(true);
+    try {
+      const result = await api.triggerAutoIterate(productId);
+      const interval = setInterval(async () => {
+        const s = await api.getAutoIterateStatus(productId, result.task_id);
+        if (s.status === "completed" || s.status === "failed") {
+          clearInterval(interval);
+          setIterating(false);
+          const updatedLogs = await api.getOptimizationLog(productId);
+          setLogs(updatedLogs);
+          const updatedConfig = await api.getOptimizationConfig(productId);
+          setConfig(updatedConfig);
+        }
+      }, 3000);
+    } catch {
+      setIterating(false);
+    }
+  };
+
+  const handleResetIterations = async () => {
+    if (!productId) return;
+    await api.resetIterations(productId);
+    const updatedConfig = await api.getOptimizationConfig(productId);
+    setConfig(updatedConfig);
+  };
+
   const actionColors: Record<string, string> = {
     paused: "text-red-600 bg-red-50",
     promoted: "text-green-600 bg-green-50",
     kept: "text-gray-600 bg-gray-50",
+    auto_iterate: "text-purple-600 bg-purple-50",
   };
 
   if (loading) return <div className="text-gray-500">Loading...</div>;
@@ -252,6 +284,61 @@ export default function OptimizerPage() {
                 </div>
               </div>
 
+              {/* Auto-Iterate Flywheel */}
+              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-purple-900">Auto-Iterate Flywheel</p>
+                    <p className="text-sm text-purple-700">
+                      When enabled, automatically generates the next batch of ads after finding winners.
+                      Analyzes winning patterns and creates evolved variations.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setConfig({ ...config, auto_iterate: !config.auto_iterate })}
+                    className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ml-4 ${
+                      config.auto_iterate ? "bg-purple-600" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                        config.auto_iterate ? "left-6" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-purple-800 mb-1">
+                      Max Iterations (safety cap)
+                    </label>
+                    <input
+                      type="number"
+                      value={config.max_iterations}
+                      onChange={(e) => setConfig({ ...config, max_iterations: Number(e.target.value) })}
+                      className="w-full px-3 py-1.5 border border-purple-300 rounded-lg text-sm"
+                      min={1}
+                      max={100}
+                    />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-purple-700">Progress</p>
+                    <p className="text-lg font-bold text-purple-900">
+                      {config.iterations_run} / {config.max_iterations}
+                    </p>
+                  </div>
+                  {config.iterations_run > 0 && (
+                    <button
+                      onClick={handleResetIterations}
+                      className="px-3 py-1.5 text-xs font-medium text-purple-700 bg-white border border-purple-300 rounded-lg hover:bg-purple-50"
+                    >
+                      Reset Counter
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="flex gap-3">
                 <button
                   onClick={handleSaveConfig}
@@ -266,6 +353,13 @@ export default function OptimizerPage() {
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
                 >
                   {running ? "Running..." : "Run Optimization Now"}
+                </button>
+                <button
+                  onClick={handleTriggerAutoIterate}
+                  disabled={iterating}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                >
+                  {iterating ? "Iterating..." : "Run Auto-Iterate Now"}
                 </button>
               </div>
             </div>
