@@ -75,6 +75,9 @@ class OptimizationConfig(Base):
     winner_budget_multiplier: Mapped[float] = mapped_column(Float, default=2.0)
     check_interval_hours: Mapped[int] = mapped_column(Integer, default=6)
     enabled: Mapped[bool] = mapped_column(default=False)
+    auto_iterate: Mapped[bool] = mapped_column(default=False)
+    max_iterations: Mapped[int] = mapped_column(Integer, default=10)  # safety cap on auto-generated batches
+    iterations_run: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

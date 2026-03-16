@@ -111,8 +111,13 @@ def _collect_all_metrics():
 
 
 def _run_auto_optimizer():
-    """Run optimization cycles for all products with optimization enabled."""
+    """Run optimization cycles for all products with optimization enabled.
+
+    After optimization, if auto_iterate is enabled and the optimizer found winners,
+    trigger the auto-iterate engine to generate the next batch of ad variations.
+    """
     from app.database import SessionLocal
+    from app.engines.auto_iterate import run_auto_iterate
     from app.engines.optimizer import run_optimization_cycle
     from app.models import OptimizationConfig
 
@@ -130,6 +135,28 @@ def _run_auto_optimizer():
                         result["paused"],
                         result["promoted"],
                     )
+
+                # Auto-iterate: if enabled and optimizer found winners, generate next batch
+                if config.auto_iterate and result.get("promoted", 0) > 0:
+                    try:
+                        iterate_result = asyncio.run(run_auto_iterate(db, config.product_id, config))
+                        if iterate_result["status"] == "generated":
+                            logger.info(
+                                "Auto-iterate for product %s: created %d variations (iteration %d/%d)",
+                                config.product_id,
+                                iterate_result["variations_created"],
+                                iterate_result["iteration"],
+                                iterate_result["max_iterations"],
+                            )
+                        elif iterate_result["status"] == "skipped":
+                            logger.debug(
+                                "Auto-iterate skipped for product %s: %s",
+                                config.product_id,
+                                iterate_result["reason"],
+                            )
+                    except Exception as e:
+                        logger.error("Auto-iterate failed for product %s: %s", config.product_id, e)
+
             except Exception as e:
                 logger.error("Optimization failed for product %s: %s", config.product_id, e)
     finally:
