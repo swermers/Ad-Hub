@@ -10,10 +10,12 @@ import { SwissGridComposition } from "./SwissGridComposition";
 import { SwissMinimalComposition } from "./SwissMinimalComposition";
 import { SwissCarouselComposition } from "./SwissCarouselComposition";
 import { SwissStoryComposition } from "./SwissStoryComposition";
+import { SwissBoldComposition } from "./SwissBoldComposition";
 import type { AspectRatio } from "../types";
 import { ASPECT_DIMENSIONS } from "../types";
 
 export type VideoStyle =
+  | "swiss-bold"
   | "swiss-type"
   | "swiss-grid"
   | "swiss-minimal"
@@ -50,6 +52,7 @@ const STYLE_CONFIG: Record<VideoStyle, {
   /** Override aspect ratio for this style (e.g. story forces 9:16) */
   forceAspect?: AspectRatio;
 }> = {
+  "swiss-bold": { component: SwissBoldComposition, durationSeconds: 5 },
   "swiss-type": { component: SwissTypeComposition, durationSeconds: 5 },
   "swiss-grid": { component: SwissGridComposition, durationSeconds: 5 },
   "swiss-minimal": { component: SwissMinimalComposition, durationSeconds: 5 },
@@ -102,6 +105,7 @@ export function VideoPreview({
 
 /** Swiss styles first — they're the primary design language */
 export const VIDEO_STYLE_OPTIONS: { value: VideoStyle; label: string; description: string }[] = [
+  { value: "swiss-bold", label: "Bold Editorial", description: "Saturated card, oversized type, emphasis contrast — scroll-stopping" },
   { value: "swiss-type", label: "Swiss Type", description: "Oversized typography with geometric accents" },
   { value: "swiss-grid", label: "Swiss Grid", description: "Color blocks on a strict grid layout" },
   { value: "swiss-minimal", label: "Swiss Minimal", description: "Maximum whitespace, single focal statement" },

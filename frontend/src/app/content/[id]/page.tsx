@@ -27,7 +27,7 @@ export default function ContentDetailPage() {
   const [defaultsSet, setDefaultsSet] = useState(false);
   const [showVisual, setShowVisual] = useState(true);
   const [previewMode, setPreviewMode] = useState<"video" | "static">("video");
-  const [videoStyle, setVideoStyle] = useState<VideoStyle>("swiss-type");
+  const [videoStyle, setVideoStyle] = useState<VideoStyle>("swiss-bold");
 
   useEffect(() => {
     api
