@@ -8,8 +8,10 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import create_tables
+from app.middleware import AuthMiddleware
 from app.routers import (
     analytics,
+    auth,
     bulk_generator,
     bulk_upload,
     connections,
@@ -51,6 +53,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Ad-Hub", version="0.2.0", lifespan=lifespan)
 
+app.add_middleware(AuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -60,6 +63,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(products.router, prefix="/api/products", tags=["products"])
 app.include_router(ingestion.router, prefix="/api/products", tags=["ingestion"])
 app.include_router(generation.router, prefix="/api/products", tags=["generation"])

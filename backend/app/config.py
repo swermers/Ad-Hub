@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     meta_app_secret: str = ""
     meta_access_token: str = ""
 
+    # Auth
+    auth_password: str = ""
+    auth_secret: str = "change-me-in-production"
+
     # Scheduler
     scheduler_enabled: bool = True
     scheduler_interval_minutes: int = 1

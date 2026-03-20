@@ -1,0 +1,14 @@
+.git
+frontend
+node_modules
+*.md
+docker-compose.yml
+backend/__pycache__
+backend/*.pyc
+backend/.env
+backend/*.db
+backend/chroma_data/
+backend/tests/
+backend/.ruff_cache/
+backend/.pytest_cache/
+backend/.venv
