@@ -138,6 +138,12 @@ def _run_bulk_generation(
         )
 
         for v in variations:
+            # Build template_config_override from any color fields returned by AI
+            config_override = {}
+            for color_key in ("backgroundColor", "textColor", "accentColor"):
+                if v.get(color_key):
+                    config_override[color_key] = v[color_key]
+
             ad_var = AdVariation(
                 product_id=product_id,
                 batch_id=batch_id,
@@ -146,6 +152,7 @@ def _run_bulk_generation(
                 headline=v["headline"],
                 body=v["body"],
                 cta=v["cta"],
+                template_config_override=json.dumps(config_override) if config_override else None,
                 status="draft",
             )
             db.add(ad_var)

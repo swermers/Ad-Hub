@@ -222,6 +222,43 @@ async def generate_ad_variations(
     template_type = template.template_type if hasattr(template, "template_type") else "pain_solution"
     template_instruction = template_instructions.get(template_type, template_instructions["pain_solution"])
 
+    # Extract brand colors from product
+    brand_colors = []
+    if product.brand_colors:
+        try:
+            brand_colors = json.loads(product.brand_colors)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Also try to pull colors from brand brief visual_identity
+    brief_colors = []
+    if brand_brief:
+        try:
+            brief_obj = json.loads(brand_brief) if isinstance(brand_brief, str) else brand_brief
+            vi = brief_obj.get("visual_identity", {})
+            brief_colors = vi.get("primary_colors", [])
+        except (json.JSONDecodeError, TypeError, AttributeError):
+            pass
+
+    all_brand_colors = list(dict.fromkeys(brief_colors + brand_colors))  # dedupe, brief colors first
+
+    color_instruction = ""
+    if all_brand_colors:
+        color_instruction = f"""
+BRAND COLORS (use these for the ad visual styling):
+{json.dumps(all_brand_colors[:6])}
+For each variation, pick colors from this palette:
+- backgroundColor: a dark or dominant brand color (or darken one for readability)
+- textColor: a contrasting color for text readability (usually white or light)
+- accentColor: a vibrant brand color for CTAs and highlights"""
+    else:
+        color_instruction = """
+COLOR STYLING:
+For each variation, suggest visually appealing colors:
+- backgroundColor: the dominant background color (hex)
+- textColor: text color for readability (hex)
+- accentColor: accent color for CTAs and highlights (hex)"""
+
     system_prompt = f"""You are an expert Facebook ad copywriter. You write concise, high-converting ad copy.
 
 Product: {product.name}
@@ -237,6 +274,7 @@ Funnel Stage: {funnel_stage}
 {f"Product Knowledge: {rag_context}" if rag_context else ""}
 
 Ad Format: {template_instruction}
+{color_instruction}
 
 CONSTRAINTS:
 - Headline: max 40 characters
@@ -263,7 +301,10 @@ Return ONLY a JSON array:
     {{
         "headline": "max 40 chars",
         "body": "max 125 chars",
-        "cta": "max 30 chars"
+        "cta": "max 30 chars",
+        "backgroundColor": "#hex color",
+        "textColor": "#hex color",
+        "accentColor": "#hex color"
     }}
 ]
 
@@ -280,12 +321,17 @@ Return ONLY the JSON array, no additional text."""
             variations = [{"headline": "Check this out", "body": result["content"][:125], "cta": "Learn More"}]
 
         for v in variations:
-            all_variations.append({
+            entry = {
                 "pain_point_id": pp_id,
                 "headline": v.get("headline", "")[:255],
                 "body": v.get("body", ""),
                 "cta": v.get("cta", "Learn More")[:255],
-            })
+            }
+            # Pass through color styling from AI
+            for color_key in ("backgroundColor", "textColor", "accentColor"):
+                if v.get(color_key):
+                    entry[color_key] = v[color_key]
+            all_variations.append(entry)
 
     return all_variations
 

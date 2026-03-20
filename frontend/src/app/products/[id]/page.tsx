@@ -284,27 +284,60 @@ export default function ProductDetailPage() {
     loadData();
   }, [loadData]);
 
+  const crawlIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const crawlTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [crawlError, setCrawlError] = useState<string | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (crawlIntervalRef.current) clearInterval(crawlIntervalRef.current);
+      if (crawlTimeoutRef.current) clearTimeout(crawlTimeoutRef.current);
+    };
+  }, []);
+
   const handleCrawl = async () => {
     setCrawling(true);
+    setCrawlError(null);
     try {
       const status = await api.startCrawl(id);
       setCrawlStatus(status);
-      const interval = setInterval(async () => {
+
+      let retries = 0;
+      crawlIntervalRef.current = setInterval(async () => {
         try {
           const s = await api.getCrawlStatus(id, status.task_id);
           setCrawlStatus(s);
+          retries = 0; // reset on success
           if (s.status === "completed" || s.status === "failed") {
-            clearInterval(interval);
+            if (crawlIntervalRef.current) clearInterval(crawlIntervalRef.current);
+            if (crawlTimeoutRef.current) clearTimeout(crawlTimeoutRef.current);
             setCrawling(false);
+            if (s.status === "failed") {
+              setCrawlError(s.error || "Crawl failed");
+            }
             loadData();
           }
-        } catch {
-          clearInterval(interval);
-          setCrawling(false);
+        } catch (err) {
+          retries++;
+          // Allow up to 3 retries before giving up
+          if (retries >= 3) {
+            if (crawlIntervalRef.current) clearInterval(crawlIntervalRef.current);
+            if (crawlTimeoutRef.current) clearTimeout(crawlTimeoutRef.current);
+            setCrawling(false);
+            setCrawlError(err instanceof Error ? err.message : "Lost connection to crawl task. Please try again.");
+          }
         }
       }, 2000);
+
+      // 5-minute timeout as a safety net
+      crawlTimeoutRef.current = setTimeout(() => {
+        if (crawlIntervalRef.current) clearInterval(crawlIntervalRef.current);
+        setCrawling(false);
+        setCrawlError("Crawl timed out after 5 minutes. Check if your site is accessible.");
+      }, 5 * 60 * 1000);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Crawl failed");
+      setCrawlError(err instanceof Error ? err.message : "Crawl failed to start");
       setCrawling(false);
     }
   };
@@ -613,6 +646,19 @@ export default function ProductDetailPage() {
             {crawling ? "Crawling..." : "Crawl Website"}
           </button>
         </div>
+
+        {crawlError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <p className="font-medium">Crawl failed</p>
+            <p className="mt-1">{crawlError}</p>
+            <button
+              onClick={() => setCrawlError(null)}
+              className="mt-2 text-xs text-red-600 hover:underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {crawlStatus && crawling && (
           <div className="mb-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
