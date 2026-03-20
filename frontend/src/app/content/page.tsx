@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { api, type ContentPiece, type Product } from "@/lib/api";
 import { TemplateRenderer } from "@/components/ad-templates/TemplateRenderer";
 import type { AspectRatio } from "@/components/ad-templates/types";
+import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
 
 export default function ContentPage() {
   const [content, setContent] = useState<ContentPiece[]>([]);
@@ -161,8 +162,8 @@ function ContentCard({
     }
   }
 
-  const bgColor = brandColors[0] || "#0f0f23";
-  const accentColor = brandColors[1] || brandColors[0] || "#6c63ff";
+  // Smart color scheme from brand colors
+  const colorScheme = buildColorSchemeFromSeed(brandColors, piece.product_id);
 
   // Get screenshot
   let screenshotUrl: string | undefined;
@@ -179,11 +180,12 @@ function ContentCard({
     }
   }
 
-  const headline =
-    piece.hook || piece.title || piece.body.split("\n")[0].slice(0, 50);
-  const bodyText = piece.hook
-    ? piece.body.replace(piece.hook, "").trim().slice(0, 80)
-    : piece.body.split("\n").slice(1).join(" ").trim().slice(0, 80);
+  const rawHL = piece.hook || piece.title || piece.body.split("\n")[0];
+  const headline = rawHL.length > 40 ? rawHL.slice(0, 37) + "..." : rawHL;
+  const rawBody = piece.hook
+    ? piece.body.replace(piece.hook, "").trim()
+    : piece.body.split("\n").slice(1).join(" ").trim();
+  const bodyText = rawBody.length > 70 ? rawBody.slice(0, 67) + "..." : rawBody;
   const ctaText = piece.cta || "Learn More";
 
   const templateType = piece.template_type || "bold_hook";
@@ -223,9 +225,9 @@ function ContentCard({
                 body={bodyText}
                 cta={ctaText}
                 aspectRatio={aspectRatio}
-                backgroundColor={bgColor}
-                textColor="#ffffff"
-                accentColor={accentColor}
+                backgroundColor={colorScheme.backgroundColor}
+                textColor={colorScheme.textColor}
+                accentColor={colorScheme.accentColor}
                 screenshotUrl={screenshotUrl}
               />
             </div>
