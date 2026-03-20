@@ -257,6 +257,12 @@ export default function ProductDetailPage() {
   const [generatingBrief, setGeneratingBrief] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    target_audience: "",
+    pain_points: "",
+    differentiators: "",
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
@@ -331,6 +337,22 @@ export default function ProductDetailPage() {
     setProduct(updated);
   };
 
+  const startEditing = () => {
+    if (!product) return;
+    setEditForm({
+      target_audience: product.target_audience || "",
+      pain_points: product.pain_points || "",
+      differentiators: product.differentiators || "",
+    });
+    setEditing(true);
+  };
+
+  const handleSaveDetails = async () => {
+    const updated = await api.updateProduct(id, editForm);
+    setProduct(updated);
+    setEditing(false);
+  };
+
   const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -399,9 +421,34 @@ export default function ProductDetailPage() {
 
       {/* Product Info */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Product Details
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Product Details
+          </h2>
+          {!editing ? (
+            <button
+              onClick={startEditing}
+              className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              Edit
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditing(false)}
+                className="px-3 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveDetails}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="text-gray-500">Website:</span>{" "}
@@ -432,22 +479,46 @@ export default function ProductDetailPage() {
             </div>
           </div>
           <div className="col-span-2">
-            <span className="text-gray-500">Target Audience:</span>{" "}
-            <span className="text-gray-900">
-              {product.target_audience || "Not set"}
-            </span>
+            <span className="text-gray-500 block mb-1">Target Audience:</span>
+            {editing ? (
+              <textarea
+                value={editForm.target_audience}
+                onChange={(e) => setEditForm({ ...editForm, target_audience: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={2}
+                placeholder="Who is this product for?"
+              />
+            ) : (
+              <span className="text-gray-900">{product.target_audience || "Not set"}</span>
+            )}
           </div>
           <div className="col-span-2">
-            <span className="text-gray-500">Pain Points:</span>{" "}
-            <span className="text-gray-900">
-              {product.pain_points || "Not set"}
-            </span>
+            <span className="text-gray-500 block mb-1">Pain Points:</span>
+            {editing ? (
+              <textarea
+                value={editForm.pain_points}
+                onChange={(e) => setEditForm({ ...editForm, pain_points: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={2}
+                placeholder="What problems does this solve?"
+              />
+            ) : (
+              <span className="text-gray-900">{product.pain_points || "Not set"}</span>
+            )}
           </div>
           <div className="col-span-2">
-            <span className="text-gray-500">Differentiators:</span>{" "}
-            <span className="text-gray-900">
-              {product.differentiators || "Not set"}
-            </span>
+            <span className="text-gray-500 block mb-1">Differentiators:</span>
+            {editing ? (
+              <textarea
+                value={editForm.differentiators}
+                onChange={(e) => setEditForm({ ...editForm, differentiators: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={2}
+                placeholder="What makes this different from alternatives?"
+              />
+            ) : (
+              <span className="text-gray-900">{product.differentiators || "Not set"}</span>
+            )}
           </div>
         </div>
       </div>
