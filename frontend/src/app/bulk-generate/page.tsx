@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
@@ -15,6 +16,15 @@ import { AdPreviewCard } from "@/components/ad-templates/AdPreviewCard";
 import { exportAdsAsZip } from "@/lib/export";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
+
+const VideoPreview = dynamic(
+  () => import("@/components/ad-templates/remotion/VideoPreview").then((m) => m.VideoPreview),
+  { ssr: false, loading: () => <div className="animate-pulse bg-gray-200 rounded-lg" style={{ width: 540, height: 540 }} /> },
+);
+
+const VIDEO_STYLE_OPTIONS_PROMISE = import("@/components/ad-templates/remotion/VideoPreview").then((m) => m.VIDEO_STYLE_OPTIONS);
+
+type VideoStyle = "default" | "pas" | "kinetic";
 
 type Step = "product" | "template" | "pain_points" | "configure" | "preview";
 
@@ -41,6 +51,13 @@ export default function BulkGeneratePage() {
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio>("1:1");
   const [screenshotUrl, setScreenshotUrl] = useState<string>("");
+  const [previewMode, setPreviewMode] = useState<"still" | "video">("still");
+  const [videoStyle, setVideoStyle] = useState<VideoStyle>("default");
+  const [videoStyleOptions, setVideoStyleOptions] = useState<{ value: VideoStyle; label: string; description: string }[]>([]);
+
+  useEffect(() => {
+    VIDEO_STYLE_OPTIONS_PROMISE.then(setVideoStyleOptions).catch(console.error);
+  }, []);
   const exportContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -548,6 +565,21 @@ export default function BulkGeneratePage() {
               Preview ({variations.length} variations)
             </h2>
             <div className="flex gap-2">
+              {/* Still / Video toggle */}
+              <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                <button
+                  onClick={() => setPreviewMode("still")}
+                  className={`px-3 py-1.5 text-sm font-medium ${previewMode === "still" ? "bg-gray-900 text-white" : "bg-white text-gray-600"}`}
+                >
+                  Still
+                </button>
+                <button
+                  onClick={() => setPreviewMode("video")}
+                  className={`px-3 py-1.5 text-sm font-medium ${previewMode === "video" ? "bg-gray-900 text-white" : "bg-white text-gray-600"}`}
+                >
+                  Video
+                </button>
+              </div>
               <button onClick={selectAllVariations} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg">
                 {selectedVariationIds.length === variations.length ? "Deselect all" : "Select all"}
               </button>
@@ -625,17 +657,51 @@ export default function BulkGeneratePage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ maxHeight: "70vh", overflow: "auto", display: "flex", justifyContent: "center", padding: 24 }}>
-              <div style={{ transform: "scale(0.5)", transformOrigin: "top center" }}>
-                <TemplateRenderer
-                  templateType={expandedVariation.template_type || selectedTemplateType}
-                  headline={expandedVariation.headline}
-                  body={expandedVariation.body}
-                  cta={expandedVariation.cta}
-                  aspectRatio={selectedAspectRatio}
-                  screenshotUrl={screenshotUrl || undefined}
-                  {...expandedVariation.template_config}
-                />
-              </div>
+              {previewMode === "video" ? (
+                <div className="flex flex-col items-center gap-4">
+                  {/* Video style selector */}
+                  <div className="flex gap-2">
+                    {videoStyleOptions.map((vs) => (
+                      <button
+                        key={vs.value}
+                        onClick={() => setVideoStyle(vs.value)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          videoStyle === vs.value
+                            ? "bg-gray-900 text-white border-gray-900"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                        }`}
+                        title={vs.description}
+                      >
+                        {vs.label}
+                      </button>
+                    ))}
+                  </div>
+                  <VideoPreview
+                    headline={expandedVariation.headline}
+                    body={expandedVariation.body}
+                    cta={expandedVariation.cta}
+                    aspectRatio={selectedAspectRatio}
+                    screenshotUrl={screenshotUrl || undefined}
+                    backgroundColor={expandedVariation.template_config?.backgroundColor}
+                    textColor={expandedVariation.template_config?.textColor}
+                    accentColor={expandedVariation.template_config?.accentColor}
+                    videoStyle={videoStyle}
+                    previewWidth={480}
+                  />
+                </div>
+              ) : (
+                <div style={{ transform: "scale(0.5)", transformOrigin: "top center" }}>
+                  <TemplateRenderer
+                    templateType={expandedVariation.template_type || selectedTemplateType}
+                    headline={expandedVariation.headline}
+                    body={expandedVariation.body}
+                    cta={expandedVariation.cta}
+                    aspectRatio={selectedAspectRatio}
+                    screenshotUrl={screenshotUrl || undefined}
+                    {...expandedVariation.template_config}
+                  />
+                </div>
+              )}
             </div>
             <div className="p-4 border-t border-gray-200 space-y-2">
               <p className="text-sm font-medium text-gray-900">{expandedVariation.headline}</p>
