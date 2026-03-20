@@ -19,6 +19,7 @@ export default function ContentPage() {
   const [filterType, setFilterType] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -48,7 +49,7 @@ export default function ContentPage() {
       const updated = await api.updateContentStatus(id, status);
       setContent((prev) => prev.map((c) => (c.id === id ? updated : c)));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status");
+      setError(err instanceof Error ? err.message : "Failed to update status");
     }
   };
 
@@ -68,7 +69,29 @@ export default function ContentPage() {
     grouped[piece.product_id].push(piece);
   }
 
-  if (loading) return <div className="text-gray-500">Loading...</div>;
+  if (loading) return (
+    <div className="animate-pulse space-y-4">
+      <div className="flex justify-between">
+        <div className="space-y-2">
+          <div className="h-7 w-48 bg-gray-200 rounded" />
+          <div className="h-4 w-64 bg-gray-100 rounded" />
+        </div>
+        <div className="h-10 w-32 bg-gray-200 rounded-lg" />
+      </div>
+      <div className="flex gap-3">
+        <div className="h-10 w-36 bg-gray-100 rounded-lg" />
+        <div className="h-10 w-36 bg-gray-100 rounded-lg" />
+      </div>
+      {[1, 2].map(i => (
+        <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+          <div className="h-5 w-40 bg-gray-200 rounded" />
+          <div className="grid grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(j => <div key={j} className="aspect-square bg-gray-100 rounded-lg" />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div>
@@ -161,10 +184,25 @@ export default function ContentPage() {
         </select>
       </div>
 
+      {/* Error banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 flex items-center justify-between">
+          <p className="text-sm text-red-700">{error}</p>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-xs">Dismiss</button>
+        </div>
+      )}
+
       {/* Content — grouped by product as folders */}
       {content.length === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <p className="text-gray-500">No content found</p>
+        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+          <p className="text-sm font-medium text-gray-500">No content yet</p>
+          <p className="text-xs text-gray-400 mt-1 mb-4">Generate your first batch of ad content to get started.</p>
+          <Link
+            href="/generate"
+            className="inline-flex px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+          >
+            Generate Content
+          </Link>
         </div>
       ) : (
         <div className="space-y-4">

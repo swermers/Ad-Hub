@@ -8,7 +8,7 @@ import {
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
-import { TYPE, GRID } from "./swissDesign";
+import { TYPE, GRID, PALETTE, headlineSize, SPACE } from "./swissDesign";
 
 export interface SwissGridProps {
   headline: string;
@@ -36,8 +36,8 @@ export function SwissGridComposition({
   headline,
   body,
   cta,
-  backgroundColor = "#ffffff",
-  textColor = "#111111",
+  backgroundColor = PALETTE.light,
+  textColor = PALETTE.dark,
   accentColor = "#2563eb",
   aspectRatio = "1:1",
   brandFont,
@@ -163,7 +163,7 @@ export function SwissGridComposition({
       >
         <h1
           style={{
-            fontSize: headline.length > 20 ? TYPE.h1.size : TYPE.display.size,
+            fontSize: headlineSize(headline),
             fontWeight: TYPE.display.weight,
             lineHeight: TYPE.display.lineHeight,
             letterSpacing: TYPE.display.tracking,
@@ -181,7 +181,7 @@ export function SwissGridComposition({
         style={{
           position: "absolute",
           left: GRID.margin,
-          top: accentBlockH + (headline.length > 20 ? TYPE.h1.size : TYPE.display.size) * TYPE.display.lineHeight + 20,
+          top: accentBlockH + headlineSize(headline) * TYPE.display.lineHeight + SPACE.md,
           maxWidth: GRID.spanWidth(7, width),
           opacity: bodyOpacity,
         }}

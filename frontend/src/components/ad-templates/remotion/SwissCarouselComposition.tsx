@@ -8,7 +8,7 @@ import {
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
-import { TYPE, GRID } from "./swissDesign";
+import { TYPE, GRID, PALETTE, headlineSize, SPACE, isLightColor } from "./swissDesign";
 
 export interface SwissCarouselProps {
   headline: string;
@@ -40,8 +40,8 @@ export function SwissCarouselComposition({
   headline,
   body,
   cta,
-  backgroundColor = "#ffffff",
-  textColor = "#111111",
+  backgroundColor = PALETTE.light,
+  textColor = PALETTE.dark,
   accentColor = "#2563eb",
   aspectRatio = "1:1",
   brandFont,
@@ -131,7 +131,7 @@ export function SwissCarouselComposition({
           left: (accentPos.x / 100) * width,
           top: (accentPos.y / 100) * height,
           width: (accentPos.size / 100) * width,
-          height: (accentPos.size / 100) * width,
+          height: (accentPos.size / 100) * height,
           borderRadius: "50%",
           border: `3px solid ${accentColor}`,
           opacity: slideOpacity * 0.25,
@@ -179,7 +179,7 @@ export function SwissCarouselComposition({
         {/* Slide headline */}
         <h1
           style={{
-            fontSize: currentSlide.text.length > 25 ? TYPE.h1.size : TYPE.display.size,
+            fontSize: headlineSize(currentSlide.text),
             fontWeight: TYPE.display.weight,
             lineHeight: TYPE.display.lineHeight,
             letterSpacing: TYPE.display.tracking,
@@ -233,7 +233,7 @@ export function SwissCarouselComposition({
             <div
               style={{
                 backgroundColor: accentColor,
-                color: "#ffffff",
+                color: isLightColor(accentColor) ? PALETTE.dark : PALETTE.light,
                 fontSize: TYPE.cta.size,
                 fontWeight: TYPE.cta.weight,
                 letterSpacing: TYPE.cta.tracking,
@@ -268,7 +268,6 @@ export function SwissCarouselComposition({
               borderRadius: 4,
               backgroundColor: i === currentSlideIndex ? accentColor : textColor,
               opacity: i === currentSlideIndex ? 1 : 0.2,
-              transition: "width 0.3s, opacity 0.3s",
             }}
           />
         ))}
@@ -308,7 +307,7 @@ function parseSlides(
     .filter((s) => s.length > 3);
 
   const slides: SlideContent[] = [
-    { text: headline, sub: bodyParts[0] },
+    { text: headline, sub: bodyParts[0] || undefined },
   ];
 
   // Add body parts as middle slides

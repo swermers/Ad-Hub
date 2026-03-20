@@ -11,93 +11,109 @@
  * - No ornament — content IS the design
  */
 
-/** Grid system — 12-column with generous gutters */
+/* ─── Color palette ─── */
+
+/** Swiss-appropriate color tokens — never pure black or pure white */
+export const PALETTE = {
+  /** Near-white with warm tint */
+  light: "#fafaf8",
+  /** Near-black with subtle warmth */
+  dark: "#0f0f0e",
+  /** Muted text on light backgrounds */
+  lightMuted: "#6b6b68",
+  /** Muted text on dark backgrounds */
+  darkMuted: "#a0a09c",
+} as const;
+
+/* ─── Grid system ─── */
+
+const _MARGIN = 80;
+const _GUTTER = 40;
+const _COLS = 12;
+
+/** 12-column grid with generous gutters */
 export const GRID = {
-  columns: 12,
-  gutter: 40,
-  margin: 80,
-  /** Get column width for a given canvas width */
+  columns: _COLS,
+  gutter: _GUTTER,
+  margin: _MARGIN,
+  /** Column width for a given canvas width */
   colWidth: (canvasWidth: number) =>
-    (canvasWidth - 80 * 2 - 40 * 11) / 12,
-  /** Get x position for a column start (0-indexed) */
+    (canvasWidth - _MARGIN * 2 - _GUTTER * (_COLS - 1)) / _COLS,
+  /** X position for a column start (0-indexed) */
   colX: (col: number, canvasWidth: number) => {
-    const cw = (canvasWidth - 80 * 2 - 40 * 11) / 12;
-    return 80 + col * (cw + 40);
+    const cw = (canvasWidth - _MARGIN * 2 - _GUTTER * (_COLS - 1)) / _COLS;
+    return _MARGIN + col * (cw + _GUTTER);
   },
-  /** Get span width for N columns */
+  /** Span width for N columns */
   spanWidth: (cols: number, canvasWidth: number) => {
-    const cw = (canvasWidth - 80 * 2 - 40 * 11) / 12;
-    return cols * cw + (cols - 1) * 40;
+    const cw = (canvasWidth - _MARGIN * 2 - _GUTTER * (_COLS - 1)) / _COLS;
+    return cols * cw + (cols - 1) * _GUTTER;
   },
 } as const;
 
+/* ─── Typography ─── */
+
 /**
- * Type scale — based on a 1.333 ratio (perfect fourth).
+ * Type scale — perfect fourth ratio (1.333).
  * All sizes in px at 1080 canvas width.
  */
 export const TYPE = {
-  /** Display: massive headline */
   display: { size: 120, weight: 900, lineHeight: 0.92, tracking: -4 },
-  /** H1: primary headline */
   h1: { size: 80, weight: 900, lineHeight: 0.95, tracking: -3 },
-  /** H2: secondary headline */
   h2: { size: 56, weight: 700, lineHeight: 1.0, tracking: -1.5 },
-  /** Body: supporting text */
   body: { size: 28, weight: 400, lineHeight: 1.4, tracking: 0 },
-  /** Caption: small labels */
   caption: { size: 18, weight: 600, lineHeight: 1.2, tracking: 3 },
-  /** CTA: call to action */
   cta: { size: 24, weight: 800, lineHeight: 1.0, tracking: 2 },
-  /** Font stack */
   fontFamily: "'Inter', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
 } as const;
 
 /**
- * Geometric shape primitives used as compositional accents.
- * These are purely decorative — they create visual rhythm and hierarchy.
+ * Headline length thresholds for font size selection.
+ * Consistent across all compositions.
  */
+export const HEADLINE_SIZE_BREAKPOINT = 20;
+export const HEADLINE_SIZE_BREAKPOINT_TIGHT = 15;
+
+/** Pick the right headline font size for a given text length */
+export function headlineSize(text: string, tight = false): number {
+  const threshold = tight ? HEADLINE_SIZE_BREAKPOINT_TIGHT : HEADLINE_SIZE_BREAKPOINT;
+  return text.length > threshold ? TYPE.h1.size : TYPE.display.size;
+}
+
+/* ─── Geometry ─── */
+
 export type ShapeType = "circle" | "rect" | "line" | "diagonal" | "quarter-arc";
 
 export interface GeometricShape {
   type: ShapeType;
-  x: number;      // percentage of canvas width (0-100)
-  y: number;      // percentage of canvas height (0-100)
-  size: number;   // percentage of canvas width
+  x: number;
+  y: number;
+  size: number;
   rotation?: number;
-  color: string;  // "accent" | "bg" | "text" | hex
+  color: string;
 }
 
-/** Pre-composed shape arrangements for different layout styles */
 export const SHAPE_PRESETS = {
-  /** Large circle + thin line — classic Swiss poster */
   poster: [
     { type: "circle" as ShapeType, x: 70, y: 15, size: 30, color: "accent" },
     { type: "line" as ShapeType, x: 7, y: 55, size: 86, rotation: 0, color: "accent" },
   ],
-  /** Grid of small rectangles — structured, systematic */
   grid: [
     { type: "rect" as ShapeType, x: 7, y: 8, size: 8, color: "accent" },
     { type: "rect" as ShapeType, x: 18, y: 8, size: 8, color: "accent" },
     { type: "rect" as ShapeType, x: 7, y: 19, size: 8, color: "accent" },
   ],
-  /** Single bold diagonal — dynamic energy */
   diagonal: [
     { type: "diagonal" as ShapeType, x: 60, y: 0, size: 100, rotation: -25, color: "accent" },
   ],
-  /** Quarter arc — elegant, organic geometry */
   arc: [
     { type: "quarter-arc" as ShapeType, x: -5, y: 60, size: 50, color: "accent" },
   ],
-  /** Minimal — just a single accent bar */
   bar: [
     { type: "rect" as ShapeType, x: 7, y: 45, size: 4, color: "accent" },
   ],
 } as const;
 
-/**
- * Render a geometric shape to inline CSS styles for a div.
- * Returns style object + optional child content for SVG shapes.
- */
 export function shapeStyle(
   shape: GeometricShape,
   canvasWidth: number,
@@ -116,51 +132,38 @@ export function shapeStyle(
 
   switch (shape.type) {
     case "circle":
-      return {
-        ...base,
-        width: sz,
-        height: sz,
-        borderRadius: "50%",
-        border: `4px solid ${resolvedColor}`,
-        backgroundColor: "transparent",
-      };
+      return { ...base, width: sz, height: sz, borderRadius: "50%", border: `4px solid ${resolvedColor}`, backgroundColor: "transparent" };
     case "rect":
-      return {
-        ...base,
-        width: sz,
-        height: sz,
-        backgroundColor: resolvedColor,
-      };
+      return { ...base, width: sz, height: sz, backgroundColor: resolvedColor };
     case "line":
-      return {
-        ...base,
-        width: sz,
-        height: 3,
-        backgroundColor: resolvedColor,
-        transform: shape.rotation ? `rotate(${shape.rotation}deg)` : undefined,
-        transformOrigin: "left center",
-      };
+      return { ...base, width: sz, height: 3, backgroundColor: resolvedColor, transform: shape.rotation ? `rotate(${shape.rotation}deg)` : undefined, transformOrigin: "left center" };
     case "diagonal":
-      return {
-        ...base,
-        width: sz * 1.5,
-        height: 6,
-        backgroundColor: resolvedColor,
-        transform: `rotate(${shape.rotation ?? -25}deg)`,
-        transformOrigin: "left center",
-      };
+      return { ...base, width: sz * 1.5, height: 6, backgroundColor: resolvedColor, transform: `rotate(${shape.rotation ?? -25}deg)`, transformOrigin: "left center" };
     case "quarter-arc":
-      return {
-        ...base,
-        width: sz,
-        height: sz,
-        borderRadius: "0 100% 0 0",
-        border: `4px solid ${resolvedColor}`,
-        borderBottom: "none",
-        borderLeft: "none",
-        backgroundColor: "transparent",
-      };
+      return { ...base, width: sz, height: sz, borderRadius: "0 100% 0 0", border: `4px solid ${resolvedColor}`, borderBottom: "none", borderLeft: "none", backgroundColor: "transparent" };
     default:
       return base;
   }
 }
+
+/* ─── Utilities ─── */
+
+/** Check if a hex color is perceptually light (for choosing text color) */
+export function isLightColor(hex: string): boolean {
+  const c = hex.replace("#", "");
+  if (c.length < 6) return true;
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+}
+
+/** Standard spacing values for consistent gaps */
+export const SPACE = {
+  xs: 8,
+  sm: 16,
+  md: 28,
+  lg: 40,
+  xl: 56,
+  xxl: 80,
+} as const;

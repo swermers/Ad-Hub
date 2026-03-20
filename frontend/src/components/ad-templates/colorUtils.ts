@@ -75,9 +75,10 @@ function isLight(hex: string): boolean {
 /** Darken a hex color by a factor (0-1) */
 function darken(hex: string, amount: number): string {
   const [r, g, b] = hexToRgb(hex);
-  const nr = Math.round(r * (1 - amount));
-  const ng = Math.round(g * (1 - amount));
-  const nb = Math.round(b * (1 - amount));
+  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  const nr = clamp(r * (1 - amount));
+  const ng = clamp(g * (1 - amount));
+  const nb = clamp(b * (1 - amount));
   return `#${nr.toString(16).padStart(2, "0")}${ng.toString(16).padStart(2, "0")}${nb.toString(16).padStart(2, "0")}`;
 }
 
@@ -137,8 +138,10 @@ export function buildColorScheme(brandColors: string[]): BrandColorScheme {
   return { backgroundColor: bg, textColor, accentColor: accent };
 }
 
+let _fallbackCounter = 0;
 function pickFallback(): BrandColorScheme {
-  const p = FALLBACK_PALETTES[Math.floor(Math.random() * FALLBACK_PALETTES.length)];
+  const p = FALLBACK_PALETTES[_fallbackCounter % FALLBACK_PALETTES.length];
+  _fallbackCounter++;
   return { backgroundColor: p.bg, textColor: p.text, accentColor: p.accent };
 }
 

@@ -8,7 +8,7 @@ import {
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
-import { TYPE, GRID } from "./swissDesign";
+import { TYPE, GRID, PALETTE, headlineSize, isLightColor } from "./swissDesign";
 
 export interface SwissStoryProps {
   headline: string;
@@ -196,7 +196,7 @@ export function SwissStoryComposition({
               <span
                 key={i}
                 style={{
-                  fontSize: headline.length > 20 ? 72 : 96,
+                  fontSize: headlineSize(headline) * 0.8,
                   fontWeight: TYPE.display.weight,
                   lineHeight: 0.95,
                   letterSpacing: TYPE.display.tracking,
@@ -227,7 +227,7 @@ export function SwissStoryComposition({
         {/* Body text */}
         <p
           style={{
-            fontSize: 28,
+            fontSize: TYPE.body.size,
             fontWeight: TYPE.body.weight,
             lineHeight: TYPE.body.lineHeight,
             color: textColor,
@@ -261,7 +261,7 @@ export function SwissStoryComposition({
           style={{
             width: "100%",
             backgroundColor: accentColor,
-            color: "#ffffff",
+            color: isLightColor(accentColor) ? PALETTE.dark : PALETTE.light,
             fontSize: TYPE.cta.size,
             fontWeight: TYPE.cta.weight,
             letterSpacing: TYPE.cta.tracking,

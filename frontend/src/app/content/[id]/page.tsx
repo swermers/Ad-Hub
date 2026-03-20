@@ -20,6 +20,8 @@ export default function ContentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState("bold_hook");
   const [previewAspect, setPreviewAspect] = useState<AspectRatio>("1:1");
   const [defaultsSet, setDefaultsSet] = useState(false);
@@ -63,7 +65,7 @@ export default function ContentDetailPage() {
       setPiece(updated);
       setEditing(false);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -75,7 +77,7 @@ export default function ContentDetailPage() {
       const updated = await api.updateContentStatus(piece.id, status);
       setPiece(updated);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status");
+      setError(err instanceof Error ? err.message : "Failed to update status");
     }
   };
 
@@ -87,13 +89,46 @@ export default function ContentDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!piece || !confirm("Delete this content?")) return;
-    await api.deleteContent(piece.id);
-    router.push("/content");
+    if (!piece) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    try {
+      await api.deleteContent(piece.id);
+      router.push("/content");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
+      setConfirmDelete(false);
+    }
   };
 
-  if (loading) return <div className="text-gray-500">Loading...</div>;
-  if (!piece) return <div className="text-red-500">Content not found</div>;
+  if (loading) return (
+    <div className="max-w-5xl">
+      <div className="animate-pulse space-y-4">
+        <div className="h-4 w-24 bg-gray-200 rounded" />
+        <div className="h-8 w-64 bg-gray-200 rounded" />
+        <div className="grid grid-cols-2 gap-6">
+          <div className="aspect-square bg-gray-100 rounded-xl" />
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-full" />
+            <div className="h-4 bg-gray-200 rounded w-3/4" />
+            <div className="h-4 bg-gray-200 rounded w-1/2" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+  if (!piece) return (
+    <div className="max-w-5xl">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <p className="text-sm font-medium text-red-700">Content not found</p>
+        <button onClick={() => router.push("/content")} className="mt-2 text-xs text-red-500 hover:underline">
+          Back to Content Queue
+        </button>
+      </div>
+    </div>
+  );
 
   // Extract brand colors and font from product/brief
   let brandColors: string[] = [];
@@ -454,6 +489,14 @@ export default function ContentDetailPage() {
         </div>
       </div>
 
+      {/* Error banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 flex items-center justify-between">
+          <p className="text-sm text-red-700">{error}</p>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-xs">Dismiss</button>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex items-center gap-2 mb-6">
         {piece.status === "draft" && (
@@ -495,12 +538,30 @@ export default function ContentDetailPage() {
           </button>
         )}
         <div className="flex-1" />
-        <button
-          onClick={handleDelete}
-          className="px-4 py-2 text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
-        >
-          Delete
-        </button>
+        {confirmDelete ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-red-600">Delete this content?</span>
+            <button
+              onClick={handleDelete}
+              className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700"
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="px-3 py-1.5 text-gray-500 text-xs font-medium hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleDelete}
+            className="px-4 py-2 text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
+          >
+            Delete
+          </button>
+        )}
       </div>
 
       {/* Generation info */}

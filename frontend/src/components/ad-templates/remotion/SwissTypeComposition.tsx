@@ -8,7 +8,7 @@ import {
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
-import { TYPE, GRID, SHAPE_PRESETS, shapeStyle } from "./swissDesign";
+import { TYPE, GRID, SHAPE_PRESETS, shapeStyle, PALETTE, headlineSize } from "./swissDesign";
 
 export interface SwissTypeProps {
   headline: string;
@@ -34,8 +34,8 @@ export function SwissTypeComposition({
   headline,
   body,
   cta,
-  backgroundColor = "#fafafa",
-  textColor = "#111111",
+  backgroundColor = PALETTE.light,
+  textColor = PALETTE.dark,
   accentColor = "#e94560",
   aspectRatio = "1:1",
 }: SwissTypeProps) {
@@ -100,8 +100,6 @@ export function SwissTypeComposition({
     easing: Easing.out(Easing.cubic),
   });
 
-  // Determine if we should use light-on-dark or dark-on-light
-  const isLightBg = isLightColor(backgroundColor);
   const fgColor = textColor;
 
   return (
@@ -161,7 +159,7 @@ export function SwissTypeComposition({
         >
           <h1
             style={{
-              fontSize: headline.length > 20 ? TYPE.h1.size : TYPE.display.size,
+              fontSize: headlineSize(headline),
               fontWeight: TYPE.display.weight,
               lineHeight: TYPE.display.lineHeight,
               letterSpacing: TYPE.display.tracking,
@@ -254,12 +252,4 @@ export function SwissTypeComposition({
       />
     </AbsoluteFill>
   );
-}
-
-function isLightColor(hex: string): boolean {
-  const c = hex.replace("#", "");
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 > 128;
 }

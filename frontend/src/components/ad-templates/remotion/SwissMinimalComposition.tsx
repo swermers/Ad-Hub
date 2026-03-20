@@ -8,7 +8,7 @@ import {
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
-import { TYPE, GRID } from "./swissDesign";
+import { TYPE, GRID, PALETTE, headlineSize, SPACE } from "./swissDesign";
 
 export interface SwissMinimalProps {
   headline: string;
@@ -38,9 +38,9 @@ export function SwissMinimalComposition({
   headline,
   body,
   cta,
-  backgroundColor = "#ffffff",
-  textColor = "#111111",
-  accentColor = "#111111",
+  backgroundColor = PALETTE.light,
+  textColor = PALETTE.dark,
+  accentColor = "#e94560",
   aspectRatio = "1:1",
   brandFont,
 }: SwissMinimalProps) {
@@ -142,7 +142,7 @@ export function SwissMinimalComposition({
         >
           <h1
             style={{
-              fontSize: headline.length > 15 ? TYPE.h1.size : TYPE.display.size,
+              fontSize: headlineSize(headline, true),
               fontWeight: TYPE.display.weight,
               lineHeight: TYPE.display.lineHeight,
               letterSpacing: TYPE.display.tracking,
@@ -157,7 +157,7 @@ export function SwissMinimalComposition({
         </div>
 
         {/* Generous whitespace between headline and body */}
-        <div style={{ height: 56 }} />
+        <div style={{ height: SPACE.xl }} />
 
         {/* Body — understated */}
         <p
@@ -177,7 +177,7 @@ export function SwissMinimalComposition({
         {/* CTA — just a line + text, extremely minimal */}
         <div
           style={{
-            marginTop: 56,
+            marginTop: SPACE.xl,
             display: "flex",
             alignItems: "center",
             gap: 20,
