@@ -14,6 +14,14 @@ CONTENT_TYPE_PROMPTS = {
         "google": "Write a Google Search Ad with: 3 headlines (max 30 chars each), 2 descriptions (max 60 chars each). Be direct and concise.",
         "general": "Write ad copy with: Headline (max 30 chars — bold, direct), Body (max 60 chars — one powerful sentence), and CTA (max 15 chars). Less is more. Swiss design demands brevity.",
     },
+    "carousel": {
+        "meta": "Write a carousel ad for Instagram/Facebook with 5 slides. Each slide needs a punchy headline (max 25 chars). The first slide is the hook, middle slides build the story (problem, benefit, proof), and the last slide is the CTA. Return slide_headlines as pipe-delimited: 'Slide 1|Slide 2|Slide 3|Slide 4|Slide 5'. Also include a body (max 60 chars) and cta (max 15 chars).",
+        "general": "Write a carousel ad with 5 slides. Each slide headline max 25 chars. Structure: Hook → Problem → Benefit → Proof → CTA. Return slide_headlines as pipe-delimited: 'Slide 1|Slide 2|Slide 3|Slide 4|Slide 5'. Also include body (max 60 chars) and cta (max 15 chars).",
+    },
+    "story": {
+        "meta": "Write an Instagram/TikTok Story ad. Headline (max 20 chars — ultra punchy, stop-scroll). Body (max 50 chars). CTA (max 12 chars — action verb). This is a full-screen vertical format — every word must hit hard. Swiss minimalism: maximum impact, minimum words.",
+        "general": "Write a Story/Reel ad. Headline (max 20 chars — stop-scroll energy). Body (max 50 chars). CTA (max 12 chars). Full-screen vertical, designed for thumb-stopping impact.",
+    },
     "email": {
         "general": "Write a marketing email with: Subject line, Preview text (max 90 chars), Email body (3-5 short paragraphs), and CTA button text.",
     },
@@ -87,10 +95,11 @@ Generate {count} unique variations. Each should take a different angle or hook.
 
 {f"Additional instructions: {instructions}" if instructions else ""}
 
-IMPORTANT COPY CONSTRAINTS for ad_copy and social_post:
+IMPORTANT COPY CONSTRAINTS for ad_copy, carousel, and story:
 - hook/headline: MAX 30 characters. Bold, direct, no filler words.
 - body: MAX 60 characters. One powerful statement.
 - cta: MAX 15 characters. Action verb + value.
+- For carousel: include "slide_headlines" as pipe-delimited string ("Slide 1|Slide 2|Slide 3|Slide 4|Slide 5")
 - Every word must earn its place. Swiss minimalism: less is more.
 
 Return your response as a JSON array with this structure:
@@ -99,7 +108,8 @@ Return your response as a JSON array with this structure:
         "title": "short title/label for this piece",
         "body": "the full content text",
         "hook": "the opening hook or headline (max 30 chars for ads)",
-        "cta": "the call to action (max 15 chars for ads)"
+        "cta": "the call to action (max 15 chars for ads)",
+        "slide_headlines": "optional — pipe-delimited slide headlines for carousel format"
     }}
 ]
 
@@ -124,6 +134,15 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                 ]
 
             for piece in pieces:
+                piece_meta = {
+                    "model": result["model"],
+                    "input_tokens": result["input_tokens"],
+                    "output_tokens": result["output_tokens"],
+                    "funnel_stage": funnel_stage,
+                }
+                # Store carousel slide headlines in metadata if present
+                if piece.get("slide_headlines"):
+                    piece_meta["slide_headlines"] = piece["slide_headlines"]
                 all_pieces.append(
                     {
                         "content_type": content_type,
@@ -132,14 +151,7 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                         "body": piece.get("body", ""),
                         "hook": piece.get("hook"),
                         "cta": piece.get("cta"),
-                        "metadata": json.dumps(
-                            {
-                                "model": result["model"],
-                                "input_tokens": result["input_tokens"],
-                                "output_tokens": result["output_tokens"],
-                                "funnel_stage": funnel_stage,
-                            }
-                        ),
+                        "metadata": json.dumps(piece_meta),
                     }
                 )
 
@@ -203,10 +215,11 @@ Generate {count} unique variations. Each should take a different angle or hook.
 
 {f"Additional instructions: {instructions}" if instructions else ""}
 
-IMPORTANT COPY CONSTRAINTS for ad_copy and social_post:
+IMPORTANT COPY CONSTRAINTS for ad_copy, carousel, and story:
 - hook/headline: MAX 30 characters. Bold, direct, no filler words.
 - body: MAX 60 characters. One powerful statement.
 - cta: MAX 15 characters. Action verb + value.
+- For carousel: include "slide_headlines" as pipe-delimited string ("Slide 1|Slide 2|Slide 3|Slide 4|Slide 5")
 - Every word must earn its place. Swiss minimalism: less is more.
 
 Return your response as a JSON array with this structure:
@@ -215,7 +228,8 @@ Return your response as a JSON array with this structure:
         "title": "short title/label for this piece",
         "body": "the full content text",
         "hook": "the opening hook or headline (max 30 chars for ads)",
-        "cta": "the call to action (max 15 chars for ads)"
+        "cta": "the call to action (max 15 chars for ads)",
+        "slide_headlines": "optional — pipe-delimited slide headlines for carousel format"
     }}
 ]
 
@@ -239,6 +253,14 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                 ]
 
             for piece in pieces:
+                piece_meta = {
+                    "model": result["model"],
+                    "input_tokens": result["input_tokens"],
+                    "output_tokens": result["output_tokens"],
+                    "funnel_stage": funnel_stage,
+                }
+                if piece.get("slide_headlines"):
+                    piece_meta["slide_headlines"] = piece["slide_headlines"]
                 all_pieces.append(
                     {
                         "content_type": content_type,
@@ -247,14 +269,7 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                         "body": piece.get("body", ""),
                         "hook": piece.get("hook"),
                         "cta": piece.get("cta"),
-                        "metadata": json.dumps(
-                            {
-                                "model": result["model"],
-                                "input_tokens": result["input_tokens"],
-                                "output_tokens": result["output_tokens"],
-                                "funnel_stage": funnel_stage,
-                            }
-                        ),
+                        "metadata": json.dumps(piece_meta),
                     }
                 )
 

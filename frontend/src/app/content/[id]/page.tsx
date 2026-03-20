@@ -159,6 +159,8 @@ export default function ContentDetailPage() {
   const typeLabel: Record<string, string> = {
     social_post: "Social Post",
     ad_copy: "Ad Copy",
+    carousel: "Carousel",
+    story: "Story / Reel",
     email: "Email",
     blog_draft: "Blog Draft",
   };
@@ -174,12 +176,16 @@ export default function ContentDetailPage() {
   const previewHeight = dims.height * previewScale;
 
   // Determine whether this content type benefits from a visual preview
-  const isVisualContent = piece.content_type === "ad_copy" || piece.content_type === "social_post";
+  const isVisualContent = piece.content_type === "ad_copy" || piece.content_type === "social_post"
+    || piece.content_type === "carousel" || piece.content_type === "story";
 
   let metadata: Record<string, unknown> | null = null;
   if (piece.generation_metadata) {
     try { metadata = JSON.parse(piece.generation_metadata); } catch { metadata = null; }
   }
+
+  // Extract slide headlines from metadata for carousel format
+  const slideHeadlines = metadata?.slide_headlines as string | undefined;
 
   return (
     <div className="max-w-5xl">
@@ -328,6 +334,7 @@ export default function ContentDetailPage() {
                 videoStyle={videoStyle}
                 previewWidth={previewWidth}
                 brandFont={brandFont}
+                slideHeadlines={slideHeadlines}
               />
             ) : (
               <div

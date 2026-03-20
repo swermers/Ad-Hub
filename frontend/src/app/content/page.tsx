@@ -154,6 +154,8 @@ export default function ContentPage() {
           <option value="">All Types</option>
           <option value="social_post">Social Post</option>
           <option value="ad_copy">Ad Copy</option>
+          <option value="carousel">Carousel</option>
+          <option value="story">Story / Reel</option>
           <option value="email">Email</option>
           <option value="blog_draft">Blog Draft</option>
         </select>
@@ -257,7 +259,8 @@ function GridCard({
   onStatusChange: (id: string, status: string) => void;
 }) {
   const isVisual =
-    piece.content_type === "ad_copy" || piece.content_type === "social_post";
+    piece.content_type === "ad_copy" || piece.content_type === "social_post"
+    || piece.content_type === "carousel" || piece.content_type === "story";
 
   const { colorScheme, screenshotUrl } = useProductVisuals(product, piece.product_id);
 
@@ -342,7 +345,8 @@ function ListCard({
   onStatusChange: (id: string, status: string) => void;
 }) {
   const isVisual =
-    piece.content_type === "ad_copy" || piece.content_type === "social_post";
+    piece.content_type === "ad_copy" || piece.content_type === "social_post"
+    || piece.content_type === "carousel" || piece.content_type === "story";
 
   const { colorScheme, screenshotUrl } = useProductVisuals(product, piece.product_id);
 
@@ -360,6 +364,8 @@ function ListCard({
   const typeLabel: Record<string, string> = {
     social_post: "Social Post",
     ad_copy: "Ad Copy",
+    carousel: "Carousel",
+    story: "Story / Reel",
     email: "Email",
     blog_draft: "Blog Draft",
   };
