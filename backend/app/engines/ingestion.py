@@ -303,6 +303,11 @@ async def generate_brand_brief(product, crawled_pages, documents) -> dict:
         except (json.JSONDecodeError, TypeError):
             pass
 
+    # Build color instruction for the prompt
+    color_ref = ""
+    if brand_colors_str:
+        color_ref = f" Reference colors detected from site: {brand_colors_str}."
+
     prompt = f"""Analyze the following product information and generate a comprehensive brand brief.
 
 Product Name: {product.name}
@@ -313,7 +318,6 @@ Product Type: {product_type}
 Target Audience: {product.target_audience}
 Pain Points: {product.pain_points}
 Differentiators: {product.differentiators}
-{brand_colors_str}
 {screenshot_context}
 
 --- Crawled Website Content ---
@@ -335,7 +339,7 @@ Generate a JSON brand brief with these fields:
         "dont": ["things the brand should avoid"]
     }},
     "visual_identity": {{
-        "primary_colors": ["#hex1", "#hex2", "#hex3"],
+        "primary_colors": ["#hex1", "#hex2", "#hex3 — IMPORTANT: these MUST be vibrant, chromatic colors (NOT black, white, or gray). Extract the real brand colors from buttons, links, accents, logos, or gradients on the website. If the site is dark-themed, pick the accent/highlight colors. Every color must have visible hue and saturation.{color_ref}"],
         "style": "description of visual style (modern, rustic, clinical, playful, etc.)",
         "imagery_recommendations": ["type of imagery to use in ads"]
     }},
@@ -363,14 +367,6 @@ Generate a JSON brand brief with these fields:
         "cta_suggestions": ["CTA text suggestions specific to this product"]
     }}
 }}
-
-IMPORTANT for visual_identity.primary_colors:
-- Extract the ACTUAL brand colors from the website (buttons, links, accents, logos, gradients).
-- Do NOT use black (#000000), white (#ffffff), or gray tones as primary colors.
-- Pick 2-4 vibrant, chromatic brand colors that would work in ad templates (backgrounds, CTAs, accents).
-- If the website is very minimal/dark-themed, still identify any accent or highlight colors used.
-- Colors must be valid hex codes like #E94560, #2563EB, etc.
-{f"Use these detected colors as reference if they look like real brand colors: {brand_colors_str}" if brand_colors_str else ""}
 
 Return ONLY the JSON object, no markdown formatting."""
 
