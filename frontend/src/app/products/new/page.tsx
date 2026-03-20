@@ -17,11 +17,23 @@ export default function NewProductPage() {
     product_type: "other",
   });
 
+  const normalizeUrl = (url: string): string => {
+    if (!url) return url;
+    url = url.trim();
+    if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
+    }
+    return url;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const product = await api.createProduct(form);
+      const product = await api.createProduct({
+        ...form,
+        website_url: normalizeUrl(form.website_url),
+      });
       router.push(`/products/${product.id}`);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create product");

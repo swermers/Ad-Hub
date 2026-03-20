@@ -342,24 +342,51 @@ export default function ProductDetailPage() {
     }
   };
 
+  const briefIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const briefTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [briefError, setBriefError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (briefIntervalRef.current) clearInterval(briefIntervalRef.current);
+      if (briefTimeoutRef.current) clearTimeout(briefTimeoutRef.current);
+    };
+  }, []);
+
   const handleGenerateBrief = async () => {
     setGeneratingBrief(true);
+    setBriefError(null);
     try {
       await api.generateBrief(id);
-      const interval = setInterval(async () => {
-        const p = await api.getProduct(id);
-        setProduct(p);
-        if (p.brand_brief) {
-          clearInterval(interval);
-          setGeneratingBrief(false);
+      let retries = 0;
+      briefIntervalRef.current = setInterval(async () => {
+        try {
+          const p = await api.getProduct(id);
+          setProduct(p);
+          retries = 0;
+          if (p.brand_brief) {
+            if (briefIntervalRef.current) clearInterval(briefIntervalRef.current);
+            if (briefTimeoutRef.current) clearTimeout(briefTimeoutRef.current);
+            setGeneratingBrief(false);
+          }
+        } catch {
+          retries++;
+          if (retries >= 5) {
+            if (briefIntervalRef.current) clearInterval(briefIntervalRef.current);
+            if (briefTimeoutRef.current) clearTimeout(briefTimeoutRef.current);
+            setGeneratingBrief(false);
+            setBriefError("Lost connection while generating brief. The brief may still be processing — try refreshing the page in a minute.");
+          }
         }
       }, 3000);
-      setTimeout(() => {
-        clearInterval(interval);
+      // 3 minute timeout (brief generation can take a while with large sites)
+      briefTimeoutRef.current = setTimeout(() => {
+        if (briefIntervalRef.current) clearInterval(briefIntervalRef.current);
         setGeneratingBrief(false);
-      }, 60000);
+        setBriefError("Brief generation timed out. Try refreshing — it may still be processing in the background.");
+      }, 3 * 60 * 1000);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Brief generation failed");
+      setBriefError(err instanceof Error ? err.message : "Brief generation failed to start");
       setGeneratingBrief(false);
     }
   };
@@ -703,6 +730,19 @@ export default function ProductDetailPage() {
             {generatingBrief ? "Generating..." : "Generate Brief"}
           </button>
         </div>
+
+        {briefError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <p className="font-medium">Brief generation issue</p>
+            <p className="mt-1">{briefError}</p>
+            <button
+              onClick={() => setBriefError(null)}
+              className="mt-2 text-xs text-red-600 hover:underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {!briefData ? (
           <p className="text-gray-500 text-sm">

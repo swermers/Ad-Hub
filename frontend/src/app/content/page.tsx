@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, type ContentPiece, type Product } from "@/lib/api";
+import { TemplateRenderer } from "@/components/ad-templates/TemplateRenderer";
+import type { AspectRatio } from "@/components/ad-templates/types";
 
 export default function ContentPage() {
   const [content, setContent] = useState<ContentPiece[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [productMap, setProductMap] = useState<Record<string, Product>>({});
   const [loading, setLoading] = useState(true);
   const [filterProduct, setFilterProduct] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -24,6 +27,9 @@ export default function ContentPage() {
       .then(([c, p]) => {
         setContent(c);
         setProducts(p);
+        const map: Record<string, Product> = {};
+        for (const prod of p) map[prod.id] = prod;
+        setProductMap(map);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -112,55 +118,12 @@ export default function ContentPage() {
       ) : (
         <div className="space-y-3">
           {content.map((piece) => (
-            <div
+            <ContentCard
               key={piece.id}
-              className="bg-white rounded-lg border border-gray-200 p-4"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <Link
-                  href={`/content/${piece.id}`}
-                  className="flex-1 min-w-0"
-                >
-                  <p className="text-sm font-medium text-gray-900 hover:text-blue-600">
-                    {piece.title || "Untitled"}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {piece.content_type} &middot; {piece.platform} &middot;{" "}
-                    {piece.funnel_stage}
-                  </p>
-                </Link>
-                <div className="flex items-center gap-2 ml-4">
-                  <StatusBadge status={piece.status} />
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                {piece.body}
-              </p>
-              <div className="flex gap-2">
-                {piece.status === "draft" && (
-                  <>
-                    <button
-                      onClick={() => handleStatusChange(piece.id, "approved")}
-                      className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleStatusChange(piece.id, "rejected")}
-                      className="px-3 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700"
-                    >
-                      Reject
-                    </button>
-                  </>
-                )}
-                <Link
-                  href={`/content/${piece.id}`}
-                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium hover:bg-gray-200"
-                >
-                  View / Edit
-                </Link>
-              </div>
-            </div>
+              piece={piece}
+              product={productMap[piece.product_id]}
+              onStatusChange={handleStatusChange}
+            />
           ))}
         </div>
       )}
@@ -168,18 +131,183 @@ export default function ContentPage() {
   );
 }
 
+function ContentCard({
+  piece,
+  product,
+  onStatusChange,
+}: {
+  piece: ContentPiece;
+  product?: Product;
+  onStatusChange: (id: string, status: string) => void;
+}) {
+  const isVisual =
+    piece.content_type === "ad_copy" || piece.content_type === "social_post";
+
+  // Extract brand colors from product
+  let brandColors: string[] = [];
+  if (product?.brand_colors) {
+    try {
+      brandColors = JSON.parse(product.brand_colors);
+    } catch {
+      /* */
+    }
+  }
+  if (product?.brand_brief && brandColors.length === 0) {
+    try {
+      const brief = JSON.parse(product.brand_brief);
+      brandColors = brief?.visual_identity?.primary_colors || [];
+    } catch {
+      /* */
+    }
+  }
+
+  const bgColor = brandColors[0] || "#0f0f23";
+  const accentColor = brandColors[1] || brandColors[0] || "#6c63ff";
+
+  // Get screenshot
+  let screenshotUrl: string | undefined;
+  if (product?.screenshots) {
+    try {
+      const shots = JSON.parse(product.screenshots);
+      if (shots.length > 0) {
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        screenshotUrl = `${apiUrl}${shots[0]}`;
+      }
+    } catch {
+      /* */
+    }
+  }
+
+  const headline =
+    piece.hook || piece.title || piece.body.split("\n")[0].slice(0, 50);
+  const bodyText = piece.hook
+    ? piece.body.replace(piece.hook, "").trim().slice(0, 80)
+    : piece.body.split("\n").slice(1).join(" ").trim().slice(0, 80);
+  const ctaText = piece.cta || "Learn More";
+
+  const templateType = piece.template_type || "bold_hook";
+  const aspectRatio: AspectRatio =
+    (piece.aspect_ratio as AspectRatio) || "1:1";
+
+  // Thumbnail is a small fixed-size square
+  const thumbSize = 100;
+
+  const typeLabel: Record<string, string> = {
+    social_post: "Social Post",
+    ad_copy: "Ad Copy",
+    email: "Email",
+    blog_draft: "Blog Draft",
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4 flex gap-4">
+      {/* Visual thumbnail */}
+      {isVisual && (
+        <Link href={`/content/${piece.id}`} className="flex-shrink-0">
+          <div
+            className="rounded-lg overflow-hidden border border-gray-100 shadow-sm"
+            style={{ width: thumbSize, height: thumbSize }}
+          >
+            <div
+              style={{
+                transform: `scale(${thumbSize / 1080})`,
+                transformOrigin: "top left",
+                width: 1080,
+                height: 1080,
+              }}
+            >
+              <TemplateRenderer
+                templateType={templateType}
+                headline={headline}
+                body={bodyText}
+                cta={ctaText}
+                aspectRatio={aspectRatio}
+                backgroundColor={bgColor}
+                textColor="#ffffff"
+                accentColor={accentColor}
+                screenshotUrl={screenshotUrl}
+              />
+            </div>
+          </div>
+        </Link>
+      )}
+
+      {/* Text content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between mb-1">
+          <Link href={`/content/${piece.id}`} className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 hover:text-blue-600 truncate">
+              {piece.title || "Untitled"}
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {typeLabel[piece.content_type] || piece.content_type} &middot;{" "}
+              {piece.platform} &middot; {piece.funnel_stage}
+            </p>
+          </Link>
+          <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+            <StatusBadge status={piece.status} />
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 line-clamp-2 mb-2">{piece.body}</p>
+        <div className="flex gap-2">
+          {piece.status === "draft" && (
+            <>
+              <button
+                onClick={() => onStatusChange(piece.id, "approved")}
+                className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
+              >
+                Approve
+              </button>
+              <button
+                onClick={() => onStatusChange(piece.id, "rejected")}
+                className="px-3 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700"
+              >
+                Reject
+              </button>
+            </>
+          )}
+          <Link
+            href={`/content/${piece.id}`}
+            className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium hover:bg-gray-200"
+          >
+            View / Edit
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    draft: "bg-yellow-100 text-yellow-800",
-    approved: "bg-green-100 text-green-800",
-    posted: "bg-blue-100 text-blue-800",
-    rejected: "bg-red-100 text-red-800",
+  const config: Record<string, { bg: string; dot: string }> = {
+    draft: {
+      bg: "bg-yellow-50 text-yellow-700 border-yellow-200",
+      dot: "bg-yellow-400",
+    },
+    approved: {
+      bg: "bg-green-50 text-green-700 border-green-200",
+      dot: "bg-green-400",
+    },
+    posted: {
+      bg: "bg-blue-50 text-blue-700 border-blue-200",
+      dot: "bg-blue-400",
+    },
+    rejected: {
+      bg: "bg-red-50 text-red-700 border-red-200",
+      dot: "bg-red-400",
+    },
+  };
+  const c = config[status] || {
+    bg: "bg-gray-50 text-gray-700 border-gray-200",
+    dot: "bg-gray-400",
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colors[status] || "bg-gray-100 text-gray-800"}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${c.bg}`}
     >
-      {status}
+      <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+      {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 }

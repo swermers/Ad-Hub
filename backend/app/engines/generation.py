@@ -140,8 +140,117 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
     return all_pieces
 
 
-async def research_pain_points(product, count: int = 20) -> list[dict]:
-    """Use Claude to research and generate structured pain points for a product."""
+def generate_content_batch_sync(
+    product,
+    content_types: list[str],
+    platforms: list[str],
+    count: int = 5,
+    funnel_stage: str = "awareness",
+    instructions: str | None = None,
+) -> list[dict]:
+    """Sync version of generate_content_batch for background threads."""
+    from app.services.claude_client import call_claude_sync
+
+    vs = get_vectorstore()
+    search_query = f"{product.name} {product.description} marketing content"
+    rag_results = vs.query(product.id, search_query, n_results=5)
+    rag_context = "\n\n".join([r["text"] for r in rag_results]) if rag_results else ""
+
+    brand_brief = ""
+    if product.brand_brief:
+        try:
+            brief = json.loads(product.brand_brief)
+            brand_brief = json.dumps(brief, indent=2)
+        except json.JSONDecodeError:
+            brand_brief = product.brand_brief
+
+    system_prompt = f"""You are an expert marketing content creator. You create high-quality, engaging content that drives results.
+
+Product: {product.name}
+Description: {product.description}
+Target Audience: {product.target_audience or "General audience"}
+Pain Points: {product.pain_points or "Not specified"}
+Differentiators: {product.differentiators or "Not specified"}
+
+{f"Brand Brief: {brand_brief}" if brand_brief else ""}
+
+Funnel Stage: {funnel_stage}
+{FUNNEL_STAGE_CONTEXT.get(funnel_stage, "")}
+
+{f"Product Knowledge Context: {rag_context}" if rag_context else ""}
+
+IMPORTANT: Only use factual information from the provided context. Do not invent features or claims."""
+
+    all_pieces = []
+
+    for content_type in content_types:
+        for platform in platforms:
+            type_prompts = CONTENT_TYPE_PROMPTS.get(content_type, {})
+            type_instruction = type_prompts.get(
+                platform,
+                type_prompts.get("general", f"Write {content_type} content for {platform}."),
+            )
+
+            user_prompt = f"""{type_instruction}
+
+Generate {count} unique variations. Each should take a different angle or hook.
+
+{f"Additional instructions: {instructions}" if instructions else ""}
+
+Return your response as a JSON array with this structure:
+[
+    {{
+        "title": "short title/label for this piece",
+        "body": "the full content text",
+        "hook": "the opening hook or headline",
+        "cta": "the call to action"
+    }}
+]
+
+Return ONLY the JSON array, no additional text or markdown formatting."""
+
+            result = call_claude_sync(user_prompt, system=system_prompt)
+
+            try:
+                text = result["content"].strip()
+                if text.startswith("```"):
+                    text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+                pieces = json.loads(text)
+            except (json.JSONDecodeError, IndexError):
+                pieces = [
+                    {
+                        "title": "Generated Content",
+                        "body": result["content"],
+                        "hook": None,
+                        "cta": None,
+                    }
+                ]
+
+            for piece in pieces:
+                all_pieces.append(
+                    {
+                        "content_type": content_type,
+                        "platform": platform,
+                        "title": piece.get("title"),
+                        "body": piece.get("body", ""),
+                        "hook": piece.get("hook"),
+                        "cta": piece.get("cta"),
+                        "metadata": json.dumps(
+                            {
+                                "model": result["model"],
+                                "input_tokens": result["input_tokens"],
+                                "output_tokens": result["output_tokens"],
+                                "funnel_stage": funnel_stage,
+                            }
+                        ),
+                    }
+                )
+
+    return all_pieces
+
+
+def _build_pain_points_prompts(product, count: int):
+    """Build prompts for pain point research (shared)."""
     vs = get_vectorstore()
     search_query = f"{product.name} {product.description} customer pain points problems frustrations"
     rag_results = vs.query(product.id, search_query, n_results=5)
@@ -179,32 +288,36 @@ Return ONLY a JSON array:
 Make pain points specific, not generic. Use the language your target audience would use.
 Return ONLY the JSON array, no additional text."""
 
-    result = await call_claude(user_prompt, system=system_prompt)
+    return user_prompt, system_prompt
 
+
+def _parse_pain_points(result: dict) -> list[dict]:
     try:
         text = result["content"].strip()
         if text.startswith("```"):
             text = text.split("\n", 1)[1].rsplit("```", 1)[0]
-        points = json.loads(text)
+        return json.loads(text)
     except (json.JSONDecodeError, IndexError):
-        points = [{"pain_point": result["content"], "desired_outcome": "", "category": "frustration", "severity": 5}]
-
-    return points
+        return [{"pain_point": result["content"], "desired_outcome": "", "category": "frustration", "severity": 5}]
 
 
-async def generate_ad_variations(
-    product,
-    template,
-    pain_points: list,
-    variations_per: int = 5,
-    funnel_stage: str = "awareness",
-) -> list[dict]:
-    """Generate ad copy variations for each pain point using the template format."""
-    vs = get_vectorstore()
-    search_query = f"{product.name} {product.description} marketing ads"
-    rag_results = vs.query(product.id, search_query, n_results=3)
-    rag_context = "\n\n".join([r["text"] for r in rag_results]) if rag_results else ""
+async def research_pain_points(product, count: int = 20) -> list[dict]:
+    """Async version for route handlers."""
+    user_prompt, system_prompt = _build_pain_points_prompts(product, count)
+    result = await call_claude(user_prompt, system=system_prompt)
+    return _parse_pain_points(result)
 
+
+def research_pain_points_sync(product, count: int = 20) -> list[dict]:
+    """Sync version for background threads."""
+    from app.services.claude_client import call_claude_sync
+    user_prompt, system_prompt = _build_pain_points_prompts(product, count)
+    result = call_claude_sync(user_prompt, system=system_prompt)
+    return _parse_pain_points(result)
+
+
+def _build_ad_system_prompt(product, template, funnel_stage: str, rag_context: str) -> str:
+    """Build the system prompt for ad variation generation (shared by async/sync)."""
     brand_brief = ""
     if product.brand_brief:
         try:
@@ -240,7 +353,7 @@ async def generate_ad_variations(
         except (json.JSONDecodeError, TypeError, AttributeError):
             pass
 
-    all_brand_colors = list(dict.fromkeys(brief_colors + brand_colors))  # dedupe, brief colors first
+    all_brand_colors = list(dict.fromkeys(brief_colors + brand_colors))
 
     color_instruction = ""
     if all_brand_colors:
@@ -259,7 +372,7 @@ For each variation, suggest visually appealing colors:
 - textColor: text color for readability (hex)
 - accentColor: accent color for CTAs and highlights (hex)"""
 
-    system_prompt = f"""You are an expert Facebook ad copywriter. You write concise, high-converting ad copy.
+    return f"""You are an expert Facebook ad copywriter. You write concise, high-converting ad copy.
 
 Product: {product.name}
 Description: {product.description}
@@ -283,14 +396,9 @@ CONSTRAINTS:
 
 Write copy that speaks directly to the pain point. Be specific, not generic."""
 
-    all_variations = []
 
-    for pp in pain_points:
-        pain_text = pp.pain_point if hasattr(pp, "pain_point") else str(pp)
-        outcome_text = pp.desired_outcome if hasattr(pp, "desired_outcome") else ""
-        pp_id = pp.id if hasattr(pp, "id") else None
-
-        user_prompt = f"""Pain Point: {pain_text}
+def _build_ad_user_prompt(pain_text: str, outcome_text: str, variations_per: int) -> str:
+    return f"""Pain Point: {pain_text}
 Desired Outcome: {outcome_text}
 
 Generate {variations_per} unique ad copy variations for this pain point.
@@ -310,15 +418,18 @@ Return ONLY a JSON array:
 
 Return ONLY the JSON array, no additional text."""
 
-        result = await call_claude(user_prompt, system=system_prompt)
 
+def _parse_ad_variations(result: dict, pain_points_data: list[tuple]) -> list[dict]:
+    """Parse Claude response into variation dicts. pain_points_data is list of (pp_id, result)."""
+    all_variations = []
+    for pp_id, res in pain_points_data:
         try:
-            text = result["content"].strip()
+            text = res["content"].strip()
             if text.startswith("```"):
                 text = text.split("\n", 1)[1].rsplit("```", 1)[0]
             variations = json.loads(text)
         except (json.JSONDecodeError, IndexError):
-            variations = [{"headline": "Check this out", "body": result["content"][:125], "cta": "Learn More"}]
+            variations = [{"headline": "Check this out", "body": res["content"][:125], "cta": "Learn More"}]
 
         for v in variations:
             entry = {
@@ -327,13 +438,69 @@ Return ONLY the JSON array, no additional text."""
                 "body": v.get("body", ""),
                 "cta": v.get("cta", "Learn More")[:255],
             }
-            # Pass through color styling from AI
             for color_key in ("backgroundColor", "textColor", "accentColor"):
                 if v.get(color_key):
                     entry[color_key] = v[color_key]
             all_variations.append(entry)
-
     return all_variations
+
+
+async def generate_ad_variations(
+    product,
+    template,
+    pain_points: list,
+    variations_per: int = 5,
+    funnel_stage: str = "awareness",
+) -> list[dict]:
+    """Generate ad copy variations (async - for route handlers)."""
+    vs = get_vectorstore()
+    search_query = f"{product.name} {product.description} marketing ads"
+    rag_results = vs.query(product.id, search_query, n_results=3)
+    rag_context = "\n\n".join([r["text"] for r in rag_results]) if rag_results else ""
+
+    system_prompt = _build_ad_system_prompt(product, template, funnel_stage, rag_context)
+
+    results = []
+    for pp in pain_points:
+        pain_text = pp.pain_point if hasattr(pp, "pain_point") else str(pp)
+        outcome_text = pp.desired_outcome if hasattr(pp, "desired_outcome") else ""
+        pp_id = pp.id if hasattr(pp, "id") else None
+
+        user_prompt = _build_ad_user_prompt(pain_text, outcome_text, variations_per)
+        result = await call_claude(user_prompt, system=system_prompt)
+        results.append((pp_id, result))
+
+    return _parse_ad_variations(None, results)
+
+
+def generate_ad_variations_sync(
+    product,
+    template,
+    pain_points: list,
+    variations_per: int = 5,
+    funnel_stage: str = "awareness",
+) -> list[dict]:
+    """Generate ad copy variations (sync - for background threads)."""
+    from app.services.claude_client import call_claude_sync
+
+    vs = get_vectorstore()
+    search_query = f"{product.name} {product.description} marketing ads"
+    rag_results = vs.query(product.id, search_query, n_results=3)
+    rag_context = "\n\n".join([r["text"] for r in rag_results]) if rag_results else ""
+
+    system_prompt = _build_ad_system_prompt(product, template, funnel_stage, rag_context)
+
+    results = []
+    for pp in pain_points:
+        pain_text = pp.pain_point if hasattr(pp, "pain_point") else str(pp)
+        outcome_text = pp.desired_outcome if hasattr(pp, "desired_outcome") else ""
+        pp_id = pp.id if hasattr(pp, "id") else None
+
+        user_prompt = _build_ad_user_prompt(pain_text, outcome_text, variations_per)
+        result = call_claude_sync(user_prompt, system=system_prompt)
+        results.append((pp_id, result))
+
+    return _parse_ad_variations(None, results)
 
 
 async def analyze_winners(product, winners: list, losers: list) -> dict:

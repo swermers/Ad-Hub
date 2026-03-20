@@ -21,6 +21,8 @@ class ContentPieceResponse(BaseModel):
     cta: str | None
     funnel_stage: str
     status: str
+    template_type: str | None
+    aspect_ratio: str | None
     generation_metadata: str | None
     created_at: datetime
 

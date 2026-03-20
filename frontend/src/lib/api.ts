@@ -368,6 +368,8 @@ export interface GenerateRequest {
   count: number;
   funnel_stage: string;
   instructions?: string;
+  template_type?: string;
+  aspect_ratio?: string;
 }
 
 export interface GenerateStatus {
@@ -388,6 +390,8 @@ export interface ContentPiece {
   cta: string | null;
   funnel_stage: string;
   status: string;
+  template_type: string | null;
+  aspect_ratio: string | null;
   generation_metadata: string | null;
   created_at: string;
 }

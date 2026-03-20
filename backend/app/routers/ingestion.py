@@ -137,9 +137,10 @@ def _run_crawl(task_id: str, product_id: str, url: str, max_pages: int):
 
 
 def _run_brief_generation(product_id: str):
-    """Run brand brief generation in background thread."""
+    """Run brand brief generation in background thread (fully sync)."""
     from app.database import SessionLocal
-    from app.engines.ingestion import generate_brand_brief
+    from app.engines.ingestion import PRODUCT_TYPE_CONTEXT
+    from app.services.claude_client import call_claude_sync
 
     db = SessionLocal()
     try:
@@ -152,11 +153,118 @@ def _run_brief_generation(product_id: str):
             db.query(UploadedDocument).filter(UploadedDocument.product_id == product_id).all()
         )
 
-        brief = asyncio.run(generate_brand_brief(product, pages, documents))
+        # Build prompt (same as generate_brand_brief but sync)
+        page_summaries = []
+        for page in pages[:10]:
+            text = (page.content or "")[:2000]
+            page_summaries.append(f"[{page.page_type}: {page.url}]\n{text}")
+
+        doc_summaries = []
+        for doc in documents[:5]:
+            text = (doc.content or "")[:2000]
+            doc_summaries.append(f"[{doc.doc_type}: {doc.filename}]\n{text}")
+
+        all_content = "\n\n---\n\n".join(page_summaries + doc_summaries)
+
+        product_type = getattr(product, "product_type", "other") or "other"
+        type_context = PRODUCT_TYPE_CONTEXT.get(product_type, PRODUCT_TYPE_CONTEXT["other"])
+
+        brand_colors_str = ""
+        if getattr(product, "brand_colors", None):
+            try:
+                colors = json.loads(product.brand_colors)
+                brand_colors_str = f"\nBrand Colors Detected: {', '.join(colors)}"
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        screenshot_context = ""
+        if getattr(product, "screenshots", None):
+            try:
+                screenshots = json.loads(product.screenshots)
+                if screenshots:
+                    screenshot_context = f"\n{len(screenshots)} screenshot(s) uploaded."
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        prompt = f"""Analyze the following product information and generate a comprehensive brand brief.
+
+Product Name: {product.name}
+Website: {product.website_url or "N/A"}
+Description: {product.description}
+Product Type: {product_type}
+{type_context}
+Target Audience: {product.target_audience}
+Pain Points: {product.pain_points}
+Differentiators: {product.differentiators}
+{brand_colors_str}
+{screenshot_context}
+
+--- Crawled Website Content ---
+{all_content}
+---
+
+Generate a JSON brand brief with these fields:
+{{
+    "product_type_analysis": {{
+        "category": "saas|physical|service|other",
+        "business_model": "description of how the business makes money",
+        "key_features_or_offerings": ["feature/offering 1", "feature/offering 2"]
+    }},
+    "brand_voice": {{
+        "tone": "description of the brand's tone",
+        "vocabulary": ["key words and phrases the brand uses"],
+        "personality": "brand personality traits",
+        "do": ["things the brand should do in content"],
+        "dont": ["things the brand should avoid"]
+    }},
+    "visual_identity": {{
+        "primary_colors": ["#hex1", "#hex2"],
+        "style": "description of visual style",
+        "imagery_recommendations": ["type of imagery to use in ads"]
+    }},
+    "audience_personas": [
+        {{
+            "name": "persona name",
+            "description": "who they are",
+            "pain_points": ["their specific pain points"],
+            "motivations": ["what drives them"]
+        }}
+    ],
+    "messaging_pillars": [
+        {{
+            "pillar": "pillar name",
+            "description": "what this pillar covers",
+            "key_messages": ["specific messages for this pillar"]
+        }}
+    ],
+    "competitive_positioning": "how the product positions against alternatives",
+    "content_themes": ["theme 1", "theme 2", "theme 3"],
+    "value_proposition": "the core value proposition in one sentence",
+    "ad_recommendations": {{
+        "best_formats": ["which ad formats would work best"],
+        "key_angles": ["specific ad angles to test"],
+        "cta_suggestions": ["CTA text suggestions"]
+    }}
+}}
+
+Return ONLY the JSON object, no markdown formatting."""
+
+        result = call_claude_sync(prompt)
+
+        try:
+            text = result["content"].strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+            brief = json.loads(text)
+        except (json.JSONDecodeError, IndexError):
+            brief = {"raw_brief": result["content"]}
+
         product.brand_brief = json.dumps(brief)
         product.status = "active"
         product.updated_at = datetime.now(timezone.utc)
         db.commit()
+    except Exception as e:
+        logger.error("Brief generation failed for %s: %s", product_id, e, exc_info=True)
     finally:
         db.close()
 
@@ -174,9 +282,17 @@ def start_crawl(
     if not product.website_url:
         raise HTTPException(status_code=400, detail="Product has no website URL")
 
+    # Auto-normalize URL if missing scheme
+    crawl_url = product.website_url.strip()
+    if not crawl_url.startswith(("http://", "https://")):
+        crawl_url = "https://" + crawl_url
+        # Also fix the stored URL so it doesn't happen again
+        product.website_url = crawl_url
+        db.commit()
+
     task_id = str(uuid.uuid4())
     _task_status[task_id] = {"status": "pending", "pages_crawled": 0, "error": None}
-    background_tasks.add_task(_run_crawl, task_id, product_id, product.website_url, data.max_pages)
+    background_tasks.add_task(_run_crawl, task_id, product_id, crawl_url, data.max_pages)
     return CrawlStatusResponse(task_id=task_id, status="pending", pages_crawled=0)
 
 
