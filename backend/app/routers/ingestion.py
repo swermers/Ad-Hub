@@ -118,6 +118,22 @@ def _run_crawl(task_id: str, product_id: str, url: str, max_pages: int):
                             product_obj.brand_colors = json.dumps(merged[:10])
                         db.commit()
 
+            # Save extracted fonts to the product
+            if pages and "_extracted_fonts" in pages[0]:
+                crawl_fonts = pages[0]["_extracted_fonts"]
+                if crawl_fonts:
+                    product_obj = db.query(Product).filter(Product.id == product_id).first()
+                    if product_obj:
+                        existing_fonts = []
+                        if product_obj.brand_fonts:
+                            try:
+                                existing_fonts = json.loads(product_obj.brand_fonts)
+                            except (json.JSONDecodeError, TypeError):
+                                pass
+                        merged_fonts = list(dict.fromkeys(existing_fonts + crawl_fonts))
+                        product_obj.brand_fonts = json.dumps(merged_fonts[:10])
+                        db.commit()
+
             # Try to capture a screenshot of the homepage
             try:
                 from app.engines.ingestion import capture_screenshot
@@ -190,6 +206,14 @@ def _run_brief_generation(product_id: str):
             except (json.JSONDecodeError, TypeError):
                 pass
 
+        brand_fonts_str = ""
+        if getattr(product, "brand_fonts", None):
+            try:
+                fonts = json.loads(product.brand_fonts)
+                brand_fonts_str = f"\nBrand Fonts Detected: {', '.join(fonts)}"
+            except (json.JSONDecodeError, TypeError):
+                pass
+
         screenshot_context = ""
         if getattr(product, "screenshots", None):
             try:
@@ -236,6 +260,7 @@ Generate a JSON brand brief with these fields:
     }},
     "visual_identity": {{
         "primary_colors": ["#hex1", "#hex2", "#hex3 — IMPORTANT: these MUST be vibrant, chromatic colors (NOT black, white, or gray). Extract the real brand colors from buttons, links, accents, logos, or gradients on the website. If the site is dark-themed, pick the accent/highlight colors. Every color must have visible hue and saturation.{color_ref}"],
+        "fonts": ["Primary Font Name", "Secondary Font Name — extract the actual font families used on the website headings and body text.{' Detected fonts: ' + brand_fonts_str if brand_fonts_str else ''}"],
         "style": "description of visual style",
         "imagery_recommendations": ["type of imagery to use in ads"]
     }},

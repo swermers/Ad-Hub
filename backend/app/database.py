@@ -67,6 +67,7 @@ def create_tables():
     # Migrate: add new columns to existing tables if missing
     _add_column_if_missing("content_pieces", "template_type", "VARCHAR(50)")
     _add_column_if_missing("content_pieces", "aspect_ratio", "VARCHAR(10)")
+    _add_column_if_missing("products", "brand_fonts", "TEXT")
 
 
 def _add_column_if_missing(table: str, column: str, col_type: str):

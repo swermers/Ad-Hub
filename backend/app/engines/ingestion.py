@@ -25,6 +25,7 @@ async def crawl_website(start_url: str, max_pages: int = 20) -> list[dict]:
     results: list[dict] = []
     queue = [start_url]
     all_colors: set[str] = set()
+    all_fonts: set[str] = set()
 
     async with httpx.AsyncClient(
         follow_redirects=True,
@@ -44,9 +45,11 @@ async def crawl_website(start_url: str, max_pages: int = 20) -> list[dict]:
 
                 html = response.text
 
-                # Extract colors from the raw HTML before stripping styles
+                # Extract colors and fonts from the raw HTML before stripping styles
                 page_colors = _extract_colors_from_html(html)
                 all_colors.update(page_colors)
+                page_fonts = _extract_fonts_from_html(html)
+                all_fonts.update(page_fonts)
 
                 soup = BeautifulSoup(html, "html.parser")
 
@@ -90,9 +93,10 @@ async def crawl_website(start_url: str, max_pages: int = 20) -> list[dict]:
                 logger.warning("Failed to crawl %s: %s", url, e)
                 visited.add(url)
 
-    # Attach extracted colors to the results metadata
+    # Attach extracted colors and fonts to the results metadata
     if results:
         results[0]["_extracted_colors"] = list(all_colors)[:20]
+        results[0]["_extracted_fonts"] = list(all_fonts)[:10]
 
     return results
 
@@ -144,6 +148,72 @@ def _extract_colors_from_html(html: str) -> set[str]:
             filtered.add(c)
 
     return filtered
+
+
+# Generic font names to exclude — we only want real brand fonts
+_GENERIC_FONTS = {
+    "serif", "sans-serif", "monospace", "cursive", "fantasy", "system-ui",
+    "ui-serif", "ui-sans-serif", "ui-monospace", "ui-rounded",
+    "inherit", "initial", "unset", "revert", "none",
+    "arial", "helvetica", "times", "times new roman", "courier",
+    "courier new", "verdana", "georgia", "tahoma", "trebuchet ms",
+    "impact", "comic sans ms",
+}
+
+
+def _extract_fonts_from_html(html: str) -> set[str]:
+    """Extract brand font families from HTML/CSS.
+
+    Extracts from:
+    - Google Fonts <link> tags (fonts.googleapis.com)
+    - CSS font-family declarations in <style> blocks and inline styles
+    - Adobe Fonts / Typekit references
+
+    Filters out generic/system fonts.
+    """
+    fonts: set[str] = set()
+
+    # 1. Google Fonts URLs — most reliable signal
+    # Matches: fonts.googleapis.com/css?family=Open+Sans:400,700|Roboto
+    # And: fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Poppins
+    gf_matches = re.findall(
+        r'fonts\.googleapis\.com/css2?\?[^"\'>\s]*family=([^"\'>\s&]+)',
+        html, re.IGNORECASE,
+    )
+    for match in gf_matches:
+        # Google Fonts uses + for spaces and | to separate families
+        families = match.split("|")
+        for fam in families:
+            # Remove weight/style suffixes like :wght@400;700
+            name = fam.split(":")[0].replace("+", " ").strip()
+            if name and name.lower() not in _GENERIC_FONTS:
+                fonts.add(name)
+
+    # 2. CSS font-family declarations
+    ff_matches = re.findall(
+        r'font-family\s*:\s*([^;}{]+)',
+        html, re.IGNORECASE,
+    )
+    for match in ff_matches:
+        # Parse comma-separated font list, take first non-generic font
+        families = [f.strip().strip("'\"") for f in match.split(",")]
+        for fam in families:
+            fam_lower = fam.lower().strip()
+            if fam_lower and fam_lower not in _GENERIC_FONTS and len(fam) < 60:
+                fonts.add(fam)
+                break  # Only take the primary font from each declaration
+
+    # 3. Adobe Fonts / Typekit
+    typekit_matches = re.findall(
+        r'use\.typekit\.net/([a-z0-9]+)\.(?:css|js)',
+        html, re.IGNORECASE,
+    )
+    if typekit_matches:
+        # We can't resolve the kit ID to font names without an API call,
+        # but we can flag that Adobe Fonts are in use
+        pass
+
+    return fonts
 
 
 def _normalize_hex(color: str) -> str:
@@ -293,6 +363,15 @@ async def generate_brand_brief(product, crawled_pages, documents) -> dict:
         except (json.JSONDecodeError, TypeError):
             pass
 
+    # Brand fonts context
+    brand_fonts_str = ""
+    if getattr(product, "brand_fonts", None):
+        try:
+            fonts = json.loads(product.brand_fonts)
+            brand_fonts_str = f"\nBrand Fonts Detected: {', '.join(fonts)}"
+        except (json.JSONDecodeError, TypeError):
+            pass
+
     # Screenshots context
     screenshot_context = ""
     if getattr(product, "screenshots", None):
@@ -340,6 +419,7 @@ Generate a JSON brand brief with these fields:
     }},
     "visual_identity": {{
         "primary_colors": ["#hex1", "#hex2", "#hex3 — IMPORTANT: these MUST be vibrant, chromatic colors (NOT black, white, or gray). Extract the real brand colors from buttons, links, accents, logos, or gradients on the website. If the site is dark-themed, pick the accent/highlight colors. Every color must have visible hue and saturation.{color_ref}"],
+        "fonts": ["Primary Font Name", "Secondary Font Name — extract the actual font families used on the website headings and body text.{' Detected fonts: ' + brand_fonts_str if brand_fonts_str else ''}"],
         "style": "description of visual style (modern, rustic, clinical, playful, etc.)",
         "imagery_recommendations": ["type of imagery to use in ads"]
     }},

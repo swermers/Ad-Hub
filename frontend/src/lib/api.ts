@@ -330,6 +330,7 @@ export interface Product {
   brand_voice: string | null;
   brand_brief: string | null;
   brand_colors: string | null;
+  brand_fonts: string | null;
   screenshots: string | null;
   status: string;
   created_at: string;

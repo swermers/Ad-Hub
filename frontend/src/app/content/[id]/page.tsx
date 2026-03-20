@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, type ContentPiece, type Product } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
+import { VideoPreview, VIDEO_STYLE_OPTIONS, type VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
 import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
@@ -23,6 +24,8 @@ export default function ContentDetailPage() {
   const [previewAspect, setPreviewAspect] = useState<AspectRatio>("1:1");
   const [defaultsSet, setDefaultsSet] = useState(false);
   const [showVisual, setShowVisual] = useState(true);
+  const [previewMode, setPreviewMode] = useState<"video" | "static">("video");
+  const [videoStyle, setVideoStyle] = useState<VideoStyle>("swiss-type");
 
   useEffect(() => {
     api
@@ -92,8 +95,9 @@ export default function ContentDetailPage() {
   if (loading) return <div className="text-gray-500">Loading...</div>;
   if (!piece) return <div className="text-red-500">Content not found</div>;
 
-  // Extract brand colors
+  // Extract brand colors and font from product/brief
   let brandColors: string[] = [];
+  let brandFont: string | undefined;
   if (product?.brand_colors) {
     try { brandColors = JSON.parse(product.brand_colors); } catch { /* */ }
   }
@@ -103,6 +107,17 @@ export default function ContentDetailPage() {
       const brief = JSON.parse(product.brand_brief);
       const viColors = brief?.visual_identity?.primary_colors || [];
       if (viColors.length > 0 && brandColors.length === 0) brandColors = viColors;
+      // Extract brand font if available
+      const fonts = brief?.visual_identity?.fonts;
+      if (fonts && typeof fonts === "string") brandFont = fonts;
+      else if (Array.isArray(fonts) && fonts.length > 0) brandFont = fonts[0];
+    } catch { /* */ }
+  }
+  // Also check crawl-extracted fonts
+  if (!brandFont && product?.brand_fonts) {
+    try {
+      const crawlFonts = JSON.parse(product.brand_fonts);
+      if (Array.isArray(crawlFonts) && crawlFonts.length > 0) brandFont = crawlFonts[0];
     } catch { /* */ }
   }
 
@@ -124,14 +139,14 @@ export default function ContentDetailPage() {
   const accentColor = colorScheme.accentColor;
   const textColor = colorScheme.textColor;
 
-  // Extract headline for the visual (short, punchy)
+  // Extract headline for the visual — Swiss design demands brevity
   const rawHeadline = piece.hook || piece.title || piece.body.split("\n")[0];
-  const headline = rawHeadline.length > 50 ? rawHeadline.slice(0, 47) + "..." : rawHeadline;
-  // Extract body text (without hook line, max ~90 chars for readability)
+  const headline = rawHeadline.length > 30 ? rawHeadline.slice(0, 27) + "..." : rawHeadline;
+  // Extract body text — concise supporting copy
   const rawBody = piece.hook
     ? piece.body.replace(piece.hook, "").trim()
     : piece.body.split("\n").slice(1).join(" ").trim();
-  const bodyText = rawBody.length > 90 ? rawBody.slice(0, 87) + "..." : rawBody;
+  const bodyText = rawBody.length > 60 ? rawBody.slice(0, 57) + "..." : rawBody;
   const ctaText = piece.cta || "Learn More";
 
   const platformLabel: Record<string, string> = {
@@ -204,39 +219,83 @@ export default function ContentDetailPage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-700">Visual Preview</h3>
-              <button
-                onClick={() => setShowVisual(false)}
-                className="text-xs text-gray-400 hover:text-gray-600"
-              >
-                Hide preview
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Video / Static toggle */}
+                <div className="flex rounded-md border border-gray-200 overflow-hidden">
+                  <button
+                    onClick={() => setPreviewMode("video")}
+                    className={`px-2.5 py-1 text-xs font-medium transition-all ${
+                      previewMode === "video"
+                        ? "bg-gray-900 text-white"
+                        : "bg-white text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    Video
+                  </button>
+                  <button
+                    onClick={() => setPreviewMode("static")}
+                    className={`px-2.5 py-1 text-xs font-medium transition-all ${
+                      previewMode === "static"
+                        ? "bg-gray-900 text-white"
+                        : "bg-white text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    Static
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowVisual(false)}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Hide
+                </button>
+              </div>
             </div>
 
-            {/* Template + Aspect selectors */}
-            <div className="flex gap-2 mb-3 flex-wrap">
-              {TEMPLATE_OPTIONS.slice(0, 6).map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setPreviewTemplate(opt.value)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
-                    previewTemplate === opt.value
-                      ? "bg-gray-900 text-white border-gray-900"
-                      : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-              <select
-                value={previewTemplate}
-                onChange={(e) => setPreviewTemplate(e.target.value)}
-                className="px-2 py-1 rounded-md text-xs border border-gray-200 bg-white text-gray-500"
-              >
-                {TEMPLATE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {/* Style selectors — show video styles or static templates */}
+            {previewMode === "video" ? (
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {VIDEO_STYLE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setVideoStyle(opt.value)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
+                      videoStyle === opt.value
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                    }`}
+                    title={opt.description}
+                  >
+                    {opt.label}
+                  </button>
                 ))}
-              </select>
-            </div>
+              </div>
+            ) : (
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {TEMPLATE_OPTIONS.slice(0, 6).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setPreviewTemplate(opt.value)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
+                      previewTemplate === opt.value
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+                <select
+                  value={previewTemplate}
+                  onChange={(e) => setPreviewTemplate(e.target.value)}
+                  className="px-2 py-1 rounded-md text-xs border border-gray-200 bg-white text-gray-500"
+                >
+                  {TEMPLATE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Aspect ratio pills */}
             <div className="flex gap-2 mb-3">
@@ -255,25 +314,41 @@ export default function ContentDetailPage() {
               ))}
             </div>
 
-            {/* The visual render */}
-            <div
-              className="rounded-xl overflow-hidden shadow-lg border border-gray-200"
-              style={{ width: previewWidth, height: previewHeight }}
-            >
-              <div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left" }}>
-                <TemplateRenderer
-                  templateType={previewTemplate}
-                  headline={headline}
-                  body={bodyText}
-                  cta={ctaText}
-                  aspectRatio={previewAspect}
-                  backgroundColor={bgColor}
-                  textColor={textColor}
-                  accentColor={accentColor}
-                  screenshotUrl={screenshotUrl}
-                />
+            {/* The visual render — Video (primary) or Static (fallback) */}
+            {previewMode === "video" ? (
+              <VideoPreview
+                headline={headline}
+                body={bodyText}
+                cta={ctaText}
+                backgroundColor={bgColor}
+                textColor={textColor}
+                accentColor={accentColor}
+                screenshotUrl={screenshotUrl}
+                aspectRatio={previewAspect}
+                videoStyle={videoStyle}
+                previewWidth={previewWidth}
+                brandFont={brandFont}
+              />
+            ) : (
+              <div
+                className="rounded-xl overflow-hidden shadow-lg border border-gray-200"
+                style={{ width: previewWidth, height: previewHeight }}
+              >
+                <div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left" }}>
+                  <TemplateRenderer
+                    templateType={previewTemplate}
+                    headline={headline}
+                    body={bodyText}
+                    cta={ctaText}
+                    aspectRatio={previewAspect}
+                    backgroundColor={bgColor}
+                    textColor={textColor}
+                    accentColor={accentColor}
+                    screenshotUrl={screenshotUrl}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Brand color swatches if available */}
             {brandColors.length > 0 && (

@@ -48,6 +48,7 @@ class ProductResponse(BaseModel):
     brand_voice: str | None
     brand_brief: str | None
     brand_colors: str | None
+    brand_fonts: str | None
     screenshots: str | None
     status: str
     created_at: datetime
