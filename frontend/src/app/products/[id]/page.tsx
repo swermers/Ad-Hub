@@ -10,6 +10,237 @@ import {
   type CrawlStatus,
 } from "@/lib/api";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
+  const brief = data as any;
+
+  return (
+    <div className="space-y-6">
+      {/* Value Proposition */}
+      {brief.value_proposition && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-blue-900 mb-1">Value Proposition</h3>
+          <p className="text-blue-800">{brief.value_proposition}</p>
+        </div>
+      )}
+
+      {/* Product Type Analysis */}
+      {brief.product_type_analysis && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Product Analysis</h3>
+          <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+            <div><span className="text-gray-500">Category:</span> <span className="capitalize text-gray-900">{brief.product_type_analysis.category}</span></div>
+            <div><span className="text-gray-500">Business Model:</span> <span className="text-gray-900">{brief.product_type_analysis.business_model}</span></div>
+            {brief.product_type_analysis.key_features_or_offerings && (
+              <div>
+                <span className="text-gray-500">Key Features:</span>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {brief.product_type_analysis.key_features_or_offerings.map((f: string, i: number) => (
+                    <span key={i} className="px-2 py-1 bg-white border border-gray-200 rounded text-xs text-gray-700">{f}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Brand Voice */}
+      {brief.brand_voice && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Brand Voice</h3>
+          <div className="bg-gray-50 rounded-lg p-4 space-y-3 text-sm">
+            <div><span className="text-gray-500">Tone:</span> <span className="text-gray-900">{brief.brand_voice.tone}</span></div>
+            <div><span className="text-gray-500">Personality:</span> <span className="text-gray-900">{brief.brand_voice.personality}</span></div>
+            {brief.brand_voice.vocabulary && (
+              <div>
+                <span className="text-gray-500">Key Vocabulary:</span>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {brief.brand_voice.vocabulary.map((w: string, i: number) => (
+                    <span key={i} className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs">{w}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              {brief.brand_voice.do && (
+                <div>
+                  <span className="text-green-700 font-medium text-xs">DO</span>
+                  <ul className="mt-1 space-y-1">
+                    {brief.brand_voice.do.map((item: string, i: number) => (
+                      <li key={i} className="text-xs text-gray-700 flex gap-1.5"><span className="text-green-500 shrink-0">+</span>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {brief.brand_voice.dont && (
+                <div>
+                  <span className="text-red-700 font-medium text-xs">DON&apos;T</span>
+                  <ul className="mt-1 space-y-1">
+                    {brief.brand_voice.dont.map((item: string, i: number) => (
+                      <li key={i} className="text-xs text-gray-700 flex gap-1.5"><span className="text-red-500 shrink-0">-</span>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Visual Identity */}
+      {brief.visual_identity && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Visual Identity</h3>
+          <div className="bg-gray-50 rounded-lg p-4 space-y-3 text-sm">
+            {brief.visual_identity.primary_colors && (
+              <div className="flex items-center gap-3">
+                <span className="text-gray-500">Colors:</span>
+                {brief.visual_identity.primary_colors.map((c: string, i: number) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded border border-gray-200" style={{ backgroundColor: c }} />
+                    <span className="text-xs font-mono text-gray-600">{c}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div><span className="text-gray-500">Style:</span> <span className="text-gray-900">{brief.visual_identity.style}</span></div>
+            {brief.visual_identity.imagery_recommendations && (
+              <div>
+                <span className="text-gray-500">Imagery:</span>
+                <ul className="mt-1 space-y-1">
+                  {brief.visual_identity.imagery_recommendations.map((r: string, i: number) => (
+                    <li key={i} className="text-xs text-gray-700 ml-3">&#8226; {r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Audience Personas */}
+      {brief.audience_personas && brief.audience_personas.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Audience Personas</h3>
+          <div className="grid gap-3">
+            {brief.audience_personas.map((p: any, i: number) => (
+              <div key={i} className="bg-gray-50 rounded-lg p-4 text-sm">
+                <p className="font-medium text-gray-900 mb-1">{p.name}</p>
+                <p className="text-gray-600 text-xs mb-2">{p.description}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {p.pain_points && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-500">Pain Points</span>
+                      <ul className="mt-1 space-y-0.5">
+                        {p.pain_points.map((pp: string, j: number) => (
+                          <li key={j} className="text-xs text-gray-700">&#8226; {pp}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {p.motivations && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-500">Motivations</span>
+                      <ul className="mt-1 space-y-0.5">
+                        {p.motivations.map((m: string, j: number) => (
+                          <li key={j} className="text-xs text-gray-700">&#8226; {m}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Messaging Pillars */}
+      {brief.messaging_pillars && brief.messaging_pillars.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Messaging Pillars</h3>
+          <div className="space-y-3">
+            {brief.messaging_pillars.map((p: any, i: number) => (
+              <div key={i} className="bg-gray-50 rounded-lg p-4 text-sm">
+                <p className="font-medium text-gray-900">{p.pillar}</p>
+                <p className="text-gray-600 text-xs mt-0.5 mb-2">{p.description}</p>
+                {p.key_messages && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {p.key_messages.map((m: string, j: number) => (
+                      <span key={j} className="px-2 py-1 bg-white border border-gray-200 rounded text-xs text-gray-700">{m}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Competitive Positioning */}
+      {brief.competitive_positioning && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Competitive Positioning</h3>
+          <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-4">{brief.competitive_positioning}</p>
+        </div>
+      )}
+
+      {/* Content Themes */}
+      {brief.content_themes && brief.content_themes.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Content Themes</h3>
+          <div className="flex flex-wrap gap-2">
+            {brief.content_themes.map((t: string, i: number) => (
+              <span key={i} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">{t}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Ad Recommendations */}
+      {brief.ad_recommendations && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Ad Recommendations</h3>
+          <div className="grid grid-cols-3 gap-3">
+            {brief.ad_recommendations.best_formats && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs font-medium text-gray-500 mb-2">Best Formats</p>
+                <ul className="space-y-1">
+                  {brief.ad_recommendations.best_formats.map((f: string, i: number) => (
+                    <li key={i} className="text-xs text-gray-700">&#8226; {f}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {brief.ad_recommendations.key_angles && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs font-medium text-gray-500 mb-2">Key Angles</p>
+                <ul className="space-y-1">
+                  {brief.ad_recommendations.key_angles.map((a: string, i: number) => (
+                    <li key={i} className="text-xs text-gray-700">&#8226; {a}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {brief.ad_recommendations.cta_suggestions && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs font-medium text-gray-500 mb-2">CTA Suggestions</p>
+                <ul className="space-y-1">
+                  {brief.ad_recommendations.cta_suggestions.map((c: string, i: number) => (
+                    <li key={i} className="text-xs text-gray-700">&#8226; {c}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 const PRODUCT_TYPES = [
   { value: "saas", label: "SaaS / Software" },
   { value: "physical", label: "Physical Product" },
@@ -361,9 +592,7 @@ export default function ProductDetailPage() {
             No brand brief yet. Crawl your website first, then generate a brief.
           </p>
         ) : (
-          <pre className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 overflow-x-auto whitespace-pre-wrap">
-            {JSON.stringify(briefData, null, 2)}
-          </pre>
+          <BrandBriefDisplay data={briefData} />
         )}
       </div>
     </div>
