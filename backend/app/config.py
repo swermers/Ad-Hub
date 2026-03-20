@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     twitter_client_secret: str = ""
     twitter_bearer_token: str = ""
 
+    # Image Generation (OpenAI DALL-E 3)
+    openai_api_key: str = ""
+    image_gen_model: str = "dall-e-3"
+    image_gen_size: str = "1024x1024"
+
     # Meta/Facebook Ads API
     meta_app_id: str = ""
     meta_app_secret: str = ""

@@ -2,7 +2,8 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api, type ContentPiece, type Product } from "@/lib/api";
+import { useRef } from "react";
+import { api, type ContentPiece, type Product, type GenerateImageStatus } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
 import { VideoPreview, VIDEO_STYLE_OPTIONS, type VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
 import type { AspectRatio } from "@/components/ad-templates/types";
@@ -28,6 +29,9 @@ export default function ContentDetailPage() {
   const [showVisual, setShowVisual] = useState(true);
   const [previewMode, setPreviewMode] = useState<"video" | "static">("video");
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("swiss-bold");
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const [imageGenStatus, setImageGenStatus] = useState<GenerateImageStatus | null>(null);
+  const imageGenPollRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     api
@@ -183,6 +187,44 @@ export default function ContentDetailPage() {
     : piece.body.split("\n").slice(1).join(" ").trim();
   const bodyText = rawBody.length > 60 ? rawBody.slice(0, 57) + "..." : rawBody;
   const ctaText = piece.cta || "Learn More";
+
+  const handleGenerateImage = async () => {
+    if (!piece) return;
+    setGeneratingImage(true);
+    setImageGenStatus(null);
+    try {
+      const status = await api.generateImage(piece.product_id, {
+        content_id: piece.id,
+        headline,
+        body: bodyText,
+        cta: ctaText,
+        aspect_ratio: previewAspect,
+      });
+      setImageGenStatus(status);
+
+      if (imageGenPollRef.current) clearInterval(imageGenPollRef.current);
+      imageGenPollRef.current = setInterval(async () => {
+        try {
+          const updated = await api.getImageGenStatus(piece.product_id, status.task_id);
+          setImageGenStatus(updated);
+          if (updated.status === "completed" || updated.status === "failed") {
+            if (imageGenPollRef.current) clearInterval(imageGenPollRef.current);
+            setGeneratingImage(false);
+            if (updated.status === "completed") {
+              const refreshed = await api.getContent(piece.id);
+              setPiece(refreshed);
+            }
+          }
+        } catch {
+          if (imageGenPollRef.current) clearInterval(imageGenPollRef.current);
+          setGeneratingImage(false);
+        }
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image generation failed");
+      setGeneratingImage(false);
+    }
+  };
 
   const platformLabel: Record<string, string> = {
     twitter: "Twitter / X",
@@ -529,6 +571,15 @@ export default function ContentDetailPage() {
         >
           {copied ? "Copied!" : "Copy"}
         </button>
+        {isVisualContent && (
+          <button
+            onClick={handleGenerateImage}
+            disabled={generatingImage}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {generatingImage ? "Generating..." : "Generate Image"}
+          </button>
+        )}
         {!editing && (
           <button
             onClick={() => setEditing(true)}
@@ -563,6 +614,42 @@ export default function ContentDetailPage() {
           </button>
         )}
       </div>
+
+      {/* Generated Image */}
+      {(piece.image_url || imageGenStatus) && (
+        <div className="mb-6">
+          {imageGenStatus?.status === "running" && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 flex items-center gap-3">
+              <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-indigo-700">Generating image... Claude is analyzing your brand and creating an ad visual.</p>
+            </div>
+          )}
+          {imageGenStatus?.status === "failed" && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+              <p className="text-sm text-red-700">Image generation failed: {imageGenStatus.error}</p>
+            </div>
+          )}
+          {piece.image_url && (
+            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+              <img
+                src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${piece.image_url}`}
+                alt="Generated ad image"
+                className="w-full max-w-lg"
+              />
+              <div className="bg-gray-50 px-4 py-2 flex items-center justify-between">
+                <span className="text-xs text-gray-400">AI-generated ad image</span>
+                <a
+                  href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${piece.image_url}`}
+                  download
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Download
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Generation info */}
       {metadata && (

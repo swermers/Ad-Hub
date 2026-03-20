@@ -68,6 +68,8 @@ def create_tables():
     _add_column_if_missing("content_pieces", "template_type", "VARCHAR(50)")
     _add_column_if_missing("content_pieces", "aspect_ratio", "VARCHAR(10)")
     _add_column_if_missing("products", "brand_fonts", "TEXT")
+    _add_column_if_missing("products", "reference_images", "TEXT")
+    _add_column_if_missing("content_pieces", "image_url", "TEXT")
 
 
 def _add_column_if_missing(table: str, column: str, col_type: str):

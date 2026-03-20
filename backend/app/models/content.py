@@ -25,6 +25,7 @@ class ContentPiece(Base):
     template_type: Mapped[str | None] = mapped_column(String(50))
     aspect_ratio: Mapped[str | None] = mapped_column(String(10))
     generation_metadata: Mapped[str | None] = mapped_column(Text)
+    image_url: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )

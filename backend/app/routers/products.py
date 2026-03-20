@@ -13,6 +13,8 @@ from app.models import Product
 router = APIRouter()
 
 SCREENSHOT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "screenshots")
+REFERENCE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "references")
+GENERATED_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "generated")
 
 
 class ProductCreate(BaseModel):
@@ -50,6 +52,7 @@ class ProductResponse(BaseModel):
     brand_colors: str | None
     brand_fonts: str | None
     screenshots: str | None
+    reference_images: str | None
     status: str
     created_at: datetime
     updated_at: datetime
@@ -159,3 +162,51 @@ def delete_screenshot(product_id: str, path: str, db: Session = Depends(get_db))
         os.remove(full_path)
 
     return {"screenshots": existing}
+
+
+@router.post("/{product_id}/reference-images")
+async def upload_reference_image(product_id: str, file: UploadFile, db: Session = Depends(get_db)):
+    """Upload a reference/inspiration image for guiding visual style."""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    os.makedirs(REFERENCE_DIR, exist_ok=True)
+    ext = os.path.splitext(file.filename or "reference.png")[1] or ".png"
+    filename = f"{uuid_mod.uuid4()}{ext}"
+    filepath = os.path.join(REFERENCE_DIR, filename)
+
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    ref_path = f"/uploads/references/{filename}"
+
+    existing = json.loads(product.reference_images) if product.reference_images else []
+    existing.append(ref_path)
+    product.reference_images = json.dumps(existing)
+    product.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(product)
+
+    return {"path": ref_path, "reference_images": existing}
+
+
+@router.delete("/{product_id}/reference-images")
+def delete_reference_image(product_id: str, path: str, db: Session = Depends(get_db)):
+    """Remove a reference image from the product."""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    existing = json.loads(product.reference_images) if product.reference_images else []
+    existing = [s for s in existing if s != path]
+    product.reference_images = json.dumps(existing)
+    product.updated_at = datetime.now(timezone.utc)
+    db.commit()
+
+    full_path = os.path.join(REFERENCE_DIR, os.path.basename(path))
+    if os.path.exists(full_path):
+        os.remove(full_path)
+
+    return {"reference_images": existing}

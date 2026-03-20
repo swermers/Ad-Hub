@@ -23,6 +23,7 @@ class Product(Base):
     brand_colors: Mapped[str | None] = mapped_column(Text)  # JSON: ["#hex1", "#hex2", ...]
     brand_fonts: Mapped[str | None] = mapped_column(Text)  # JSON: ["Font Name", ...]
     screenshots: Mapped[str | None] = mapped_column(Text)  # JSON: ["/uploads/screenshots/uuid.png", ...]
+    reference_images: Mapped[str | None] = mapped_column(Text)  # JSON: ["/uploads/references/uuid.png", ...]
     status: Mapped[str] = mapped_column(String(20), default="onboarding")
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)

@@ -203,6 +203,40 @@ export const api = {
       method: "DELETE",
     }),
 
+  // Reference Images
+  uploadReferenceImage: async (productId: string, file: File): Promise<{ path: string; reference_images: string[] }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/products/${productId}/reference-images`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) throw new Error("Upload failed");
+    return res.json();
+  },
+  deleteReferenceImage: (productId: string, path: string) =>
+    request<{ reference_images: string[] }>(`/api/products/${productId}/reference-images?path=${encodeURIComponent(path)}`, {
+      method: "DELETE",
+    }),
+
+  // Image Generation
+  generateImage: (productId: string, data: GenerateImageRequest) =>
+    request<GenerateImageStatus>(`/api/products/${productId}/generate-image`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getImageGenStatus: (productId: string, taskId: string) =>
+    request<GenerateImageStatus>(`/api/products/${productId}/generate-image-status/${taskId}`),
+
   // Ad Templates
   listTemplates: (productId?: string) => {
     const qs = productId ? `?product_id=${productId}` : "";
@@ -332,6 +366,7 @@ export interface Product {
   brand_colors: string | null;
   brand_fonts: string | null;
   screenshots: string | null;
+  reference_images: string | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -394,6 +429,7 @@ export interface ContentPiece {
   template_type: string | null;
   aspect_ratio: string | null;
   generation_metadata: string | null;
+  image_url: string | null;
   created_at: string;
 }
 
@@ -684,6 +720,24 @@ export interface OptimizationLogItem {
   metrics_snapshot: Record<string, number>;
   headline: string | null;
   created_at: string;
+}
+
+export interface GenerateImageRequest {
+  content_id?: string;
+  headline?: string;
+  body?: string;
+  cta?: string;
+  aspect_ratio?: string;
+  style_notes?: string;
+  quality?: string;
+}
+
+export interface GenerateImageStatus {
+  task_id: string;
+  status: string;
+  image_url: string | null;
+  image_prompt: string | null;
+  error: string | null;
 }
 
 export interface WinnerAnalysis {
