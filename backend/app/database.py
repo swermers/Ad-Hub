@@ -1,5 +1,9 @@
-from sqlalchemy import create_engine, event
+import logging
+
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+logger = logging.getLogger(__name__)
 
 from app.config import settings
 
@@ -59,3 +63,17 @@ def create_tables():
     )
 
     Base.metadata.create_all(bind=engine)
+
+    # Migrate: add new columns to existing tables if missing
+    _add_column_if_missing("content_pieces", "template_type", "VARCHAR(50)")
+    _add_column_if_missing("content_pieces", "aspect_ratio", "VARCHAR(10)")
+
+
+def _add_column_if_missing(table: str, column: str, col_type: str):
+    """Safely add a column to an existing table if it doesn't exist."""
+    insp = inspect(engine)
+    existing = [c["name"] for c in insp.get_columns(table)]
+    if column not in existing:
+        with engine.begin() as conn:
+            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
+        logger.info("Added column %s.%s", table, column)

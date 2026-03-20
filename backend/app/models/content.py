@@ -22,6 +22,8 @@ class ContentPiece(Base):
     cta: Mapped[str | None] = mapped_column(String(512))
     funnel_stage: Mapped[str] = mapped_column(String(50), default="awareness")
     status: Mapped[str] = mapped_column(String(20), default="draft")
+    template_type: Mapped[str | None] = mapped_column(String(50))
+    aspect_ratio: Mapped[str | None] = mapped_column(String(10))
     generation_metadata: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)

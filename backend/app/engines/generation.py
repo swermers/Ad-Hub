@@ -140,6 +140,115 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
     return all_pieces
 
 
+def generate_content_batch_sync(
+    product,
+    content_types: list[str],
+    platforms: list[str],
+    count: int = 5,
+    funnel_stage: str = "awareness",
+    instructions: str | None = None,
+) -> list[dict]:
+    """Sync version of generate_content_batch for background threads."""
+    from app.services.claude_client import call_claude_sync
+
+    vs = get_vectorstore()
+    search_query = f"{product.name} {product.description} marketing content"
+    rag_results = vs.query(product.id, search_query, n_results=5)
+    rag_context = "\n\n".join([r["text"] for r in rag_results]) if rag_results else ""
+
+    brand_brief = ""
+    if product.brand_brief:
+        try:
+            brief = json.loads(product.brand_brief)
+            brand_brief = json.dumps(brief, indent=2)
+        except json.JSONDecodeError:
+            brand_brief = product.brand_brief
+
+    system_prompt = f"""You are an expert marketing content creator. You create high-quality, engaging content that drives results.
+
+Product: {product.name}
+Description: {product.description}
+Target Audience: {product.target_audience or "General audience"}
+Pain Points: {product.pain_points or "Not specified"}
+Differentiators: {product.differentiators or "Not specified"}
+
+{f"Brand Brief: {brand_brief}" if brand_brief else ""}
+
+Funnel Stage: {funnel_stage}
+{FUNNEL_STAGE_CONTEXT.get(funnel_stage, "")}
+
+{f"Product Knowledge Context: {rag_context}" if rag_context else ""}
+
+IMPORTANT: Only use factual information from the provided context. Do not invent features or claims."""
+
+    all_pieces = []
+
+    for content_type in content_types:
+        for platform in platforms:
+            type_prompts = CONTENT_TYPE_PROMPTS.get(content_type, {})
+            type_instruction = type_prompts.get(
+                platform,
+                type_prompts.get("general", f"Write {content_type} content for {platform}."),
+            )
+
+            user_prompt = f"""{type_instruction}
+
+Generate {count} unique variations. Each should take a different angle or hook.
+
+{f"Additional instructions: {instructions}" if instructions else ""}
+
+Return your response as a JSON array with this structure:
+[
+    {{
+        "title": "short title/label for this piece",
+        "body": "the full content text",
+        "hook": "the opening hook or headline",
+        "cta": "the call to action"
+    }}
+]
+
+Return ONLY the JSON array, no additional text or markdown formatting."""
+
+            result = call_claude_sync(user_prompt, system=system_prompt)
+
+            try:
+                text = result["content"].strip()
+                if text.startswith("```"):
+                    text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+                pieces = json.loads(text)
+            except (json.JSONDecodeError, IndexError):
+                pieces = [
+                    {
+                        "title": "Generated Content",
+                        "body": result["content"],
+                        "hook": None,
+                        "cta": None,
+                    }
+                ]
+
+            for piece in pieces:
+                all_pieces.append(
+                    {
+                        "content_type": content_type,
+                        "platform": platform,
+                        "title": piece.get("title"),
+                        "body": piece.get("body", ""),
+                        "hook": piece.get("hook"),
+                        "cta": piece.get("cta"),
+                        "metadata": json.dumps(
+                            {
+                                "model": result["model"],
+                                "input_tokens": result["input_tokens"],
+                                "output_tokens": result["output_tokens"],
+                                "funnel_stage": funnel_stage,
+                            }
+                        ),
+                    }
+                )
+
+    return all_pieces
+
+
 def _build_pain_points_prompts(product, count: int):
     """Build prompts for pain point research (shared)."""
     vs = get_vectorstore()

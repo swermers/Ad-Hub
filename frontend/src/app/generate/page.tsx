@@ -4,6 +4,28 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { api, type Product, type GenerateStatus } from "@/lib/api";
 
+const TEMPLATE_CHOICES = [
+  { value: "", label: "Auto (Best for platform)" },
+  { value: "bold_hook", label: "Bold Hook" },
+  { value: "pain_solution", label: "Pain → Solution" },
+  { value: "before_after", label: "Before / After" },
+  { value: "stat_proof", label: "Stat / Social Proof" },
+  { value: "testimonial", label: "Testimonial" },
+  { value: "gradient_card", label: "Product Showcase" },
+  { value: "minimal_clean", label: "Minimal Clean" },
+  { value: "split_image", label: "Split Image + Copy" },
+  { value: "story_vertical", label: "Story / Reel" },
+  { value: "carousel_card", label: "Carousel Card" },
+  { value: "ugc_style", label: "UGC / Native" },
+];
+
+const ASPECT_CHOICES = [
+  { value: "", label: "Auto" },
+  { value: "1:1", label: "1:1 Square" },
+  { value: "4:5", label: "4:5 Portrait" },
+  { value: "9:16", label: "9:16 Story" },
+];
+
 function GenerateForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,6 +42,8 @@ function GenerateForm() {
   const [count, setCount] = useState(5);
   const [funnelStage, setFunnelStage] = useState("awareness");
   const [instructions, setInstructions] = useState("");
+  const [templateType, setTemplateType] = useState("");
+  const [aspectRatio, setAspectRatio] = useState("");
 
   useEffect(() => {
     api
@@ -44,6 +68,8 @@ function GenerateForm() {
         count,
         funnel_stage: funnelStage,
         instructions: instructions || undefined,
+        template_type: templateType || undefined,
+        aspect_ratio: aspectRatio || undefined,
       });
       setStatus(result);
 
@@ -185,6 +211,64 @@ function GenerateForm() {
                 onClick={() => setFunnelStage(value)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                   funnelStage === value
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Visual Format */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Visual Template
+          </label>
+          <p className="text-xs text-gray-400 mb-2">
+            Choose how the visual preview will look for generated content
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {TEMPLATE_CHOICES.slice(0, 5).map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setTemplateType(value)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  templateType === value
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+            <select
+              value={templateType}
+              onChange={(e) => setTemplateType(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+            >
+              {TEMPLATE_CHOICES.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Aspect Ratio */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Aspect Ratio
+          </label>
+          <div className="flex gap-2">
+            {ASPECT_CHOICES.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setAspectRatio(value)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  aspectRatio === value
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                 }`}

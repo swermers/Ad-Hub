@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -19,6 +18,8 @@ class GenerateRequest(BaseModel):
     count: int = 5
     funnel_stage: str = "awareness"
     instructions: str | None = None
+    template_type: str | None = None
+    aspect_ratio: str | None = None
 
 
 class GenerateStatusResponse(BaseModel):
@@ -36,10 +37,12 @@ def _run_generation(
     count: int,
     funnel_stage: str,
     instructions: str | None,
+    template_type: str | None = None,
+    aspect_ratio: str | None = None,
 ):
-    """Run content generation in background thread."""
+    """Run content generation in background thread (sync — no asyncio.run)."""
     from app.database import SessionLocal
-    from app.engines.generation import generate_content_batch
+    from app.engines.generation import generate_content_batch_sync
 
     _task_status[task_id] = {
         "status": "running",
@@ -58,15 +61,13 @@ def _run_generation(
             }
             return
 
-        pieces = asyncio.run(
-            generate_content_batch(
-                product=product,
-                content_types=content_types,
-                platforms=platforms,
-                count=count,
-                funnel_stage=funnel_stage,
-                instructions=instructions,
-            )
+        pieces = generate_content_batch_sync(
+            product=product,
+            content_types=content_types,
+            platforms=platforms,
+            count=count,
+            funnel_stage=funnel_stage,
+            instructions=instructions,
         )
 
         for piece_data in pieces:
@@ -79,6 +80,8 @@ def _run_generation(
                 hook=piece_data.get("hook"),
                 cta=piece_data.get("cta"),
                 funnel_stage=funnel_stage,
+                template_type=template_type,
+                aspect_ratio=aspect_ratio,
                 status="draft",
                 generation_metadata=piece_data.get("metadata"),
             )
@@ -123,6 +126,8 @@ def generate_content(
         data.count,
         data.funnel_stage,
         data.instructions,
+        data.template_type,
+        data.aspect_ratio,
     )
 
     return GenerateStatusResponse(task_id=task_id, status="pending", pieces_generated=0)
