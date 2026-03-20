@@ -218,7 +218,7 @@ Generate a JSON brand brief with these fields:
         "dont": ["things the brand should avoid"]
     }},
     "visual_identity": {{
-        "primary_colors": ["#hex1", "#hex2"],
+        "primary_colors": ["#hex1", "#hex2", "#hex3"],
         "style": "description of visual style",
         "imagery_recommendations": ["type of imagery to use in ads"]
     }},
@@ -247,6 +247,14 @@ Generate a JSON brand brief with these fields:
     }}
 }}
 
+IMPORTANT for visual_identity.primary_colors:
+- Extract the ACTUAL brand colors from the website (buttons, links, accents, logos, gradients).
+- Do NOT use black (#000000), white (#ffffff), or gray tones as primary colors.
+- Pick 2-4 vibrant, chromatic brand colors that would work in ad templates (backgrounds, CTAs, accents).
+- If the website is very minimal/dark-themed, still identify any accent or highlight colors used.
+- Colors must be valid hex codes like #E94560, #2563EB, etc.
+{f"Use these detected colors as reference if they look like real brand colors: {brand_colors_str}" if brand_colors_str else ""}
+
 Return ONLY the JSON object, no markdown formatting."""
 
         result = call_claude_sync(prompt)
@@ -260,6 +268,14 @@ Return ONLY the JSON object, no markdown formatting."""
             brief = {"raw_brief": result["content"]}
 
         product.brand_brief = json.dumps(brief)
+
+        # Update brand_colors from the brief's visual_identity if Claude found better ones
+        vi_colors = brief.get("visual_identity", {}).get("primary_colors", [])
+        # Filter to valid hex colors only
+        valid_colors = [c for c in vi_colors if isinstance(c, str) and c.startswith("#") and len(c) in (4, 7)]
+        if valid_colors:
+            product.brand_colors = json.dumps(valid_colors)
+
         product.status = "active"
         product.updated_at = datetime.now(timezone.utc)
         db.commit()

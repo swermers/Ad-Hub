@@ -98,20 +98,112 @@ async def crawl_website(start_url: str, max_pages: int = 20) -> list[dict]:
 
 
 def _extract_colors_from_html(html: str) -> set[str]:
-    """Extract hex color values from inline styles and CSS in HTML."""
+    """Extract brand-relevant hex color values from HTML/CSS.
+
+    Extracts from:
+    - Hex colors (#rgb, #rrggbb)
+    - rgb()/rgba() functions
+    - CSS custom property definitions (--brand-color: ...)
+    - meta theme-color tags
+
+    Filters out neutrals (blacks, whites, grays) using luminance + saturation.
+    """
     colors: set[str] = set()
 
-    # Match hex colors (#rgb, #rrggbb)
-    hex_pattern = re.compile(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b')
-    for match in hex_pattern.finditer(html):
-        color = f"#{match.group(1).lower()}"
-        # Skip near-black and near-white (not useful for branding)
-        if color not in ("#000", "#000000", "#fff", "#ffffff", "#333", "#333333",
-                         "#666", "#666666", "#999", "#999999", "#ccc", "#cccccc",
-                         "#eee", "#eeeeee", "#ddd", "#dddddd", "#f5f5f5", "#fafafa"):
-            colors.add(color)
+    # 1. Extract from meta theme-color (most reliable brand signal)
+    theme_match = re.search(r'<meta[^>]*name=["\']theme-color["\'][^>]*content=["\'](#[0-9a-fA-F]{3,6})["\']', html, re.IGNORECASE)
+    if not theme_match:
+        theme_match = re.search(r'<meta[^>]*content=["\'](#[0-9a-fA-F]{3,6})["\'][^>]*name=["\']theme-color["\']', html, re.IGNORECASE)
+    if theme_match:
+        colors.add(_normalize_hex(theme_match.group(1)))
 
-    return colors
+    # 2. Hex colors (#rgb, #rrggbb) from CSS properties (not from random attributes)
+    # Look specifically in style attributes and style/CSS blocks
+    hex_in_css = re.compile(r'(?:color|background|border|fill|stroke|--[\w-]+)\s*:\s*([^;]*?)(?:;|"|\'|})')
+    for css_match in hex_in_css.finditer(html):
+        value = css_match.group(1)
+        for hex_match in re.finditer(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', value):
+            colors.add(_normalize_hex(f"#{hex_match.group(1)}"))
+
+    # 3. Also catch standalone hex in common patterns (CSS variables, inline styles)
+    hex_pattern = re.compile(r'#([0-9a-fA-F]{6})\b')
+    for match in hex_pattern.finditer(html):
+        colors.add(_normalize_hex(f"#{match.group(1)}"))
+
+    # 4. rgb()/rgba() values
+    rgb_pattern = re.compile(r'rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})')
+    for match in rgb_pattern.finditer(html):
+        r, g, b = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        hex_color = f"#{r:02x}{g:02x}{b:02x}"
+        colors.add(hex_color)
+
+    # Filter out neutrals using luminance + saturation
+    filtered = set()
+    for c in colors:
+        if _is_brand_color(c):
+            filtered.add(c)
+
+    return filtered
+
+
+def _normalize_hex(color: str) -> str:
+    """Normalize #rgb to #rrggbb lowercase."""
+    color = color.lower()
+    if len(color) == 4:  # #rgb
+        return f"#{color[1]*2}{color[2]*2}{color[3]*2}"
+    return color
+
+
+def _hex_to_rgb(color: str) -> tuple[int, int, int]:
+    """Convert hex color to RGB tuple."""
+    color = color.lstrip("#")
+    if len(color) == 3:
+        color = color[0]*2 + color[1]*2 + color[2]*2
+    return int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16)
+
+
+def _rgb_to_hsl(r: int, g: int, b: int) -> tuple[float, float, float]:
+    """Convert RGB to HSL (h: 0-360, s: 0-1, l: 0-1)."""
+    r_n, g_n, b_n = r / 255.0, g / 255.0, b / 255.0
+    mx, mn = max(r_n, g_n, b_n), min(r_n, g_n, b_n)
+    l = (mx + mn) / 2
+
+    if mx == mn:
+        h = s = 0.0
+    else:
+        d = mx - mn
+        s = d / (2.0 - mx - mn) if l > 0.5 else d / (mx + mn)
+        if mx == r_n:
+            h = (g_n - b_n) / d + (6 if g_n < b_n else 0)
+        elif mx == g_n:
+            h = (b_n - r_n) / d + 2
+        else:
+            h = (r_n - g_n) / d + 4
+        h *= 60
+
+    return h, s, l
+
+
+def _is_brand_color(hex_color: str) -> bool:
+    """Return True if the color is likely a brand color (not a neutral)."""
+    try:
+        r, g, b = _hex_to_rgb(hex_color)
+    except (ValueError, IndexError):
+        return False
+
+    _, s, l = _rgb_to_hsl(r, g, b)
+
+    # Skip very dark (near-black) — lightness < 0.08
+    if l < 0.08:
+        return False
+    # Skip very light (near-white) — lightness > 0.95
+    if l > 0.95:
+        return False
+    # Skip grays — low saturation AND mid-range lightness
+    if s < 0.10 and 0.08 <= l <= 0.95:
+        return False
+
+    return True
 
 
 async def capture_screenshot(url: str, product_id: str) -> str | None:
@@ -243,7 +335,7 @@ Generate a JSON brand brief with these fields:
         "dont": ["things the brand should avoid"]
     }},
     "visual_identity": {{
-        "primary_colors": ["#hex1", "#hex2"],
+        "primary_colors": ["#hex1", "#hex2", "#hex3"],
         "style": "description of visual style (modern, rustic, clinical, playful, etc.)",
         "imagery_recommendations": ["type of imagery to use in ads"]
     }},
@@ -271,6 +363,14 @@ Generate a JSON brand brief with these fields:
         "cta_suggestions": ["CTA text suggestions specific to this product"]
     }}
 }}
+
+IMPORTANT for visual_identity.primary_colors:
+- Extract the ACTUAL brand colors from the website (buttons, links, accents, logos, gradients).
+- Do NOT use black (#000000), white (#ffffff), or gray tones as primary colors.
+- Pick 2-4 vibrant, chromatic brand colors that would work in ad templates (backgrounds, CTAs, accents).
+- If the website is very minimal/dark-themed, still identify any accent or highlight colors used.
+- Colors must be valid hex codes like #E94560, #2563EB, etc.
+{f"Use these detected colors as reference if they look like real brand colors: {brand_colors_str}" if brand_colors_str else ""}
 
 Return ONLY the JSON object, no markdown formatting."""
 

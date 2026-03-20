@@ -6,6 +6,7 @@ import { api, type ContentPiece, type Product } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
+import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
 
 export default function ContentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -117,17 +118,20 @@ export default function ContentDetailPage() {
     } catch { /* */ }
   }
 
-  // Pick colors for the visual preview
-  const bgColor = brandColors[0] || "#0f0f23";
-  const accentColor = brandColors[1] || brandColors[0] || "#6c63ff";
-  const textColor = "#ffffff";
+  // Pick colors for the visual preview using smart color scheme
+  const colorScheme = buildColorSchemeFromSeed(brandColors, piece.product_id);
+  const bgColor = colorScheme.backgroundColor;
+  const accentColor = colorScheme.accentColor;
+  const textColor = colorScheme.textColor;
 
-  // Extract headline from hook or first line
-  const headline = piece.hook || piece.title || piece.body.split("\n")[0].slice(0, 60);
-  // Extract body text (without hook line)
-  const bodyText = piece.hook
-    ? piece.body.replace(piece.hook, "").trim().slice(0, 125)
-    : piece.body.split("\n").slice(1).join(" ").trim().slice(0, 125);
+  // Extract headline for the visual (short, punchy)
+  const rawHeadline = piece.hook || piece.title || piece.body.split("\n")[0];
+  const headline = rawHeadline.length > 50 ? rawHeadline.slice(0, 47) + "..." : rawHeadline;
+  // Extract body text (without hook line, max ~90 chars for readability)
+  const rawBody = piece.hook
+    ? piece.body.replace(piece.hook, "").trim()
+    : piece.body.split("\n").slice(1).join(" ").trim();
+  const bodyText = rawBody.length > 90 ? rawBody.slice(0, 87) + "..." : rawBody;
   const ctaText = piece.cta || "Learn More";
 
   const platformLabel: Record<string, string> = {
