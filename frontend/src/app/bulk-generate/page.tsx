@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
@@ -13,6 +14,17 @@ import {
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
 import { AdPreviewCard } from "@/components/ad-templates/AdPreviewCard";
 import { exportAdsAsZip } from "@/lib/export";
+import type { AspectRatio } from "@/components/ad-templates/types";
+import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
+
+const VideoPreview = dynamic(
+  () => import("@/components/ad-templates/remotion/VideoPreview").then((m) => m.VideoPreview),
+  { ssr: false, loading: () => <div className="animate-pulse bg-gray-200 rounded-lg" style={{ width: 540, height: 540 }} /> },
+);
+
+const VIDEO_STYLE_OPTIONS_PROMISE = import("@/components/ad-templates/remotion/VideoPreview").then((m) => m.VIDEO_STYLE_OPTIONS);
+
+type VideoStyle = "default" | "pas" | "kinetic";
 
 type Step = "product" | "template" | "pain_points" | "configure" | "preview";
 
@@ -37,6 +49,15 @@ export default function BulkGeneratePage() {
   const [loading, setLoading] = useState(true);
   const [newTemplateName, setNewTemplateName] = useState("");
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio>("1:1");
+  const [screenshotUrl, setScreenshotUrl] = useState<string>("");
+  const [previewMode, setPreviewMode] = useState<"still" | "video">("still");
+  const [videoStyle, setVideoStyle] = useState<VideoStyle>("default");
+  const [videoStyleOptions, setVideoStyleOptions] = useState<{ value: VideoStyle; label: string; description: string }[]>([]);
+
+  useEffect(() => {
+    VIDEO_STYLE_OPTIONS_PROMISE.then(setVideoStyleOptions).catch(console.error);
+  }, []);
   const exportContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,6 +68,18 @@ export default function BulkGeneratePage() {
     if (productId) {
       api.listTemplates(productId).then(setTemplates).catch(console.error);
       api.listPainPoints(productId).then(setPainPoints).catch(console.error);
+      // Load product screenshots for template previews
+      api.getProduct(productId).then((p) => {
+        if (p.screenshots) {
+          try {
+            const shots: string[] = JSON.parse(p.screenshots);
+            if (shots.length > 0) {
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+              setScreenshotUrl(`${apiUrl}${shots[0]}`);
+            }
+          } catch { /* ignore parse errors */ }
+        }
+      }).catch(console.error);
     }
   }, [productId]);
 
@@ -157,9 +190,9 @@ export default function BulkGeneratePage() {
       .map((v) => {
         const el = document.getElementById(`export-ad-${v.id}`);
         if (!el) return null;
-        return { id: v.id, element: el, name: `ad_${v.headline.replace(/\W+/g, "_").slice(0, 40)}_${v.id.slice(0, 8)}` };
+        return { id: v.id, element: el, name: `ad_${v.headline.replace(/\W+/g, "_").slice(0, 40)}_${v.id.slice(0, 8)}`, aspectRatio: selectedAspectRatio };
       })
-      .filter(Boolean) as { id: string; element: HTMLElement; name: string }[];
+      .filter(Boolean) as { id: string; element: HTMLElement; name: string; aspectRatio: AspectRatio }[];
 
     try {
       await exportAdsAsZip(elements, (current, total) => {
@@ -263,13 +296,50 @@ export default function BulkGeneratePage() {
             </div>
           )}
 
+          {/* Aspect ratio selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Aspect Ratio</label>
+            <div className="flex gap-3">
+              {(Object.keys(ASPECT_DIMENSIONS) as AspectRatio[]).map((ratio) => {
+                const dims = ASPECT_DIMENSIONS[ratio];
+                return (
+                  <button
+                    key={ratio}
+                    onClick={() => setSelectedAspectRatio(ratio)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all ${
+                      selectedAspectRatio === ratio
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div
+                      className="bg-gray-300 rounded"
+                      style={{
+                        width: ratio === "9:16" ? 18 : 24,
+                        height: ratio === "9:16" ? 32 : ratio === "4:5" ? 30 : 24,
+                      }}
+                    />
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-gray-900">{ratio}</p>
+                      <p className="text-xs text-gray-500">{dims.width}&times;{dims.height}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Template preview cards */}
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {TEMPLATE_OPTIONS.map((opt) => {
               const existingTemplate = templates.find((t) => t.template_type === opt.value);
               const isSelected = existingTemplate
                 ? selectedTemplateId === existingTemplate.id
                 : selectedTemplateType === opt.value && !selectedTemplateId;
+              const previewWidth = 220;
+              const previewDims = ASPECT_DIMENSIONS[selectedAspectRatio];
+              const previewScale = previewWidth / previewDims.width;
+              const previewHeight = previewDims.height * previewScale;
 
               return (
                 <div
@@ -284,22 +354,31 @@ export default function BulkGeneratePage() {
                     }
                   }}
                   className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
-                    isSelected ? "border-blue-500 shadow-lg" : "border-gray-200 hover:border-gray-300"
+                    isSelected ? "border-blue-500 shadow-lg ring-2 ring-blue-200" : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
-                  <div style={{ width: 270, height: 270, overflow: "hidden" }}>
-                    <div style={{ transform: "scale(0.25)", transformOrigin: "top left" }}>
+                  <div style={{ width: previewWidth, height: previewHeight, overflow: "hidden" }}>
+                    <div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left" }}>
                       <TemplateRenderer
                         templateType={opt.value}
                         headline="Your Headline Here"
                         body="Your ad body text goes here to show the layout"
                         cta="Try Free"
+                        aspectRatio={selectedAspectRatio}
+                        screenshotUrl={screenshotUrl || undefined}
                       />
                     </div>
                   </div>
                   <div className="p-3 bg-white">
                     <p className="font-medium text-sm text-gray-900">{opt.label}</p>
                     <p className="text-xs text-gray-500 mt-1">{opt.description}</p>
+                    <div className="flex gap-1 mt-2">
+                      {opt.bestFor.map((tag) => (
+                        <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               );
@@ -459,7 +538,8 @@ export default function BulkGeneratePage() {
 
           <div className="p-4 bg-blue-50 rounded-lg text-sm text-blue-700">
             Will generate <strong>{selectedPainPointIds.length * variationsPerPoint}</strong> ad variations
-            using <strong>{TEMPLATE_OPTIONS.find((o) => o.value === selectedTemplateType)?.label}</strong> template.
+            using <strong>{TEMPLATE_OPTIONS.find((o) => o.value === selectedTemplateType)?.label}</strong> template
+            at <strong>{selectedAspectRatio}</strong> ({ASPECT_DIMENSIONS[selectedAspectRatio].width}&times;{ASPECT_DIMENSIONS[selectedAspectRatio].height}).
           </div>
 
           <div className="flex gap-3">
@@ -485,6 +565,21 @@ export default function BulkGeneratePage() {
               Preview ({variations.length} variations)
             </h2>
             <div className="flex gap-2">
+              {/* Still / Video toggle */}
+              <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                <button
+                  onClick={() => setPreviewMode("still")}
+                  className={`px-3 py-1.5 text-sm font-medium ${previewMode === "still" ? "bg-gray-900 text-white" : "bg-white text-gray-600"}`}
+                >
+                  Still
+                </button>
+                <button
+                  onClick={() => setPreviewMode("video")}
+                  className={`px-3 py-1.5 text-sm font-medium ${previewMode === "video" ? "bg-gray-900 text-white" : "bg-white text-gray-600"}`}
+                >
+                  Video
+                </button>
+              </div>
               <button onClick={selectAllVariations} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg">
                 {selectedVariationIds.length === variations.length ? "Deselect all" : "Select all"}
               </button>
@@ -521,6 +616,8 @@ export default function BulkGeneratePage() {
                 selected={selectedVariationIds.includes(v.id)}
                 onToggleSelect={toggleVariation}
                 onClick={() => setExpandedVariation(v)}
+                aspectRatio={selectedAspectRatio}
+                screenshotUrl={screenshotUrl || undefined}
               />
             ))}
           </div>
@@ -539,6 +636,8 @@ export default function BulkGeneratePage() {
                     headline={v.headline}
                     body={v.body}
                     cta={v.cta}
+                    aspectRatio={selectedAspectRatio}
+                    screenshotUrl={screenshotUrl || undefined}
                     {...v.template_config}
                   />
                 </div>
@@ -558,15 +657,51 @@ export default function BulkGeneratePage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ maxHeight: "70vh", overflow: "auto", display: "flex", justifyContent: "center", padding: 24 }}>
-              <div style={{ transform: "scale(0.5)", transformOrigin: "top center" }}>
-                <TemplateRenderer
-                  templateType={expandedVariation.template_type || selectedTemplateType}
-                  headline={expandedVariation.headline}
-                  body={expandedVariation.body}
-                  cta={expandedVariation.cta}
-                  {...expandedVariation.template_config}
-                />
-              </div>
+              {previewMode === "video" ? (
+                <div className="flex flex-col items-center gap-4">
+                  {/* Video style selector */}
+                  <div className="flex gap-2">
+                    {videoStyleOptions.map((vs) => (
+                      <button
+                        key={vs.value}
+                        onClick={() => setVideoStyle(vs.value)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          videoStyle === vs.value
+                            ? "bg-gray-900 text-white border-gray-900"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                        }`}
+                        title={vs.description}
+                      >
+                        {vs.label}
+                      </button>
+                    ))}
+                  </div>
+                  <VideoPreview
+                    headline={expandedVariation.headline}
+                    body={expandedVariation.body}
+                    cta={expandedVariation.cta}
+                    aspectRatio={selectedAspectRatio}
+                    screenshotUrl={screenshotUrl || undefined}
+                    backgroundColor={expandedVariation.template_config?.backgroundColor}
+                    textColor={expandedVariation.template_config?.textColor}
+                    accentColor={expandedVariation.template_config?.accentColor}
+                    videoStyle={videoStyle}
+                    previewWidth={480}
+                  />
+                </div>
+              ) : (
+                <div style={{ transform: "scale(0.5)", transformOrigin: "top center" }}>
+                  <TemplateRenderer
+                    templateType={expandedVariation.template_type || selectedTemplateType}
+                    headline={expandedVariation.headline}
+                    body={expandedVariation.body}
+                    cta={expandedVariation.cta}
+                    aspectRatio={selectedAspectRatio}
+                    screenshotUrl={screenshotUrl || undefined}
+                    {...expandedVariation.template_config}
+                  />
+                </div>
+              )}
             </div>
             <div className="p-4 border-t border-gray-200 space-y-2">
               <p className="text-sm font-medium text-gray-900">{expandedVariation.headline}</p>

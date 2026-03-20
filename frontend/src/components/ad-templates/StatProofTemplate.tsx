@@ -1,5 +1,6 @@
 import React from "react";
-import type { AdTemplateProps } from "./BeforeAfterTemplate";
+import type { AdTemplateProps } from "./types";
+import { getDimensions } from "./types";
 
 export function StatProofTemplate({
   headline,
@@ -8,15 +9,16 @@ export function StatProofTemplate({
   backgroundColor = "#ffffff",
   textColor = "#1a1a1a",
   accentColor = "#2563eb",
+  aspectRatio = "1:1",
   scale = 1,
 }: AdTemplateProps) {
-  const size = 1080 * scale;
+  const { width: size, height } = getDimensions(aspectRatio, scale);
 
   return (
     <div
       style={{
         width: size,
-        height: size,
+        height,
         backgroundColor,
         display: "flex",
         flexDirection: "column",

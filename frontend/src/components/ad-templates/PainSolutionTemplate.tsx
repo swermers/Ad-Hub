@@ -1,5 +1,6 @@
 import React from "react";
-import type { AdTemplateProps } from "./BeforeAfterTemplate";
+import type { AdTemplateProps } from "./types";
+import { getDimensions } from "./types";
 
 export function PainSolutionTemplate({
   headline,
@@ -8,15 +9,16 @@ export function PainSolutionTemplate({
   backgroundColor = "#0f0f23",
   textColor = "#ffffff",
   accentColor = "#6c63ff",
+  aspectRatio = "1:1",
   scale = 1,
 }: AdTemplateProps) {
-  const size = 1080 * scale;
+  const { width: size, height } = getDimensions(aspectRatio, scale);
 
   return (
     <div
       style={{
         width: size,
-        height: size,
+        height,
         backgroundColor,
         display: "flex",
         flexDirection: "column",

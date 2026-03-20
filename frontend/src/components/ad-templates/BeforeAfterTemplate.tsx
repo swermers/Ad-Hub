@@ -1,15 +1,8 @@
 import React from "react";
+import type { AdTemplateProps } from "./types";
+import { getDimensions } from "./types";
 
-export interface AdTemplateProps {
-  headline: string;
-  body: string;
-  cta: string;
-  backgroundColor?: string;
-  textColor?: string;
-  accentColor?: string;
-  logoUrl?: string;
-  scale?: number;
-}
+export type { AdTemplateProps } from "./types";
 
 export function BeforeAfterTemplate({
   headline,
@@ -18,15 +11,17 @@ export function BeforeAfterTemplate({
   backgroundColor = "#1a1a2e",
   textColor = "#ffffff",
   accentColor = "#e94560",
+  aspectRatio = "1:1",
   scale = 1,
 }: AdTemplateProps) {
-  const size = 1080 * scale;
+  const { width: size } = getDimensions(aspectRatio, scale);
+  const height = getDimensions(aspectRatio, scale).height;
 
   return (
     <div
       style={{
         width: size,
-        height: size,
+        height,
         backgroundColor,
         display: "flex",
         flexDirection: "column",

@@ -2,6 +2,8 @@
 
 import React from "react";
 import { TemplateRenderer } from "./TemplateRenderer";
+import type { AspectRatio } from "./types";
+import { ASPECT_DIMENSIONS } from "./types";
 
 interface AdPreviewCardProps {
   variation: {
@@ -17,6 +19,8 @@ interface AdPreviewCardProps {
   selected: boolean;
   onToggleSelect: (id: string) => void;
   onClick: () => void;
+  aspectRatio?: AspectRatio;
+  screenshotUrl?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -28,7 +32,19 @@ const STATUS_COLORS: Record<string, string> = {
   paused: "bg-red-100 text-red-700",
 };
 
-export function AdPreviewCard({ variation, selected, onToggleSelect, onClick }: AdPreviewCardProps) {
+export function AdPreviewCard({
+  variation,
+  selected,
+  onToggleSelect,
+  onClick,
+  aspectRatio = "1:1",
+  screenshotUrl,
+}: AdPreviewCardProps) {
+  const dims = ASPECT_DIMENSIONS[aspectRatio];
+  const previewWidth = 270;
+  const scaleFactor = previewWidth / dims.width;
+  const previewHeight = dims.height * scaleFactor;
+
   return (
     <div
       className={`relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
@@ -57,15 +73,15 @@ export function AdPreviewCard({ variation, selected, onToggleSelect, onClick }: 
       <div
         onClick={onClick}
         style={{
-          width: 270,
-          height: 270,
+          width: previewWidth,
+          height: previewHeight,
           overflow: "hidden",
           position: "relative",
         }}
       >
         <div
           style={{
-            transform: "scale(0.25)",
+            transform: `scale(${scaleFactor})`,
             transformOrigin: "top left",
           }}
         >
@@ -74,6 +90,8 @@ export function AdPreviewCard({ variation, selected, onToggleSelect, onClick }: 
             headline={variation.headline}
             body={variation.body}
             cta={variation.cta}
+            aspectRatio={aspectRatio}
+            screenshotUrl={screenshotUrl}
             {...variation.template_config}
           />
         </div>
