@@ -1,4 +1,3 @@
-import asyncio
 import json
 import os
 import uuid
@@ -102,7 +101,7 @@ def _run_bulk_generation(
     funnel_stage: str,
 ):
     from app.database import SessionLocal
-    from app.engines.generation import generate_ad_variations
+    from app.engines.generation import generate_ad_variations_sync
 
     batch_id = str(uuid.uuid4())
     _task_status[task_id] = {
@@ -127,14 +126,12 @@ def _run_bulk_generation(
             }
             return
 
-        variations = asyncio.run(
-            generate_ad_variations(
-                product=product,
-                template=template,
-                pain_points=pain_points,
-                variations_per=variations_per,
-                funnel_stage=funnel_stage,
-            )
+        variations = generate_ad_variations_sync(
+            product=product,
+            template=template,
+            pain_points=pain_points,
+            variations_per=variations_per,
+            funnel_stage=funnel_stage,
         )
 
         for v in variations:

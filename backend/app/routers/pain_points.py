@@ -56,7 +56,7 @@ def _to_response(pp: PainPoint) -> dict:
 
 def _run_research(task_id: str, product_id: str, count: int):
     from app.database import SessionLocal
-    from app.engines.generation import research_pain_points
+    from app.engines.generation import research_pain_points_sync
 
     _task_status[task_id] = {"status": "running", "points_generated": 0, "error": None}
 
@@ -67,7 +67,7 @@ def _run_research(task_id: str, product_id: str, count: int):
             _task_status[task_id] = {"status": "failed", "points_generated": 0, "error": "Product not found"}
             return
 
-        points = asyncio.run(research_pain_points(product, count=count))
+        points = research_pain_points_sync(product, count=count)
 
         for p in points:
             pp = PainPoint(
