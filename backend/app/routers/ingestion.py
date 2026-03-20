@@ -282,9 +282,17 @@ def start_crawl(
     if not product.website_url:
         raise HTTPException(status_code=400, detail="Product has no website URL")
 
+    # Auto-normalize URL if missing scheme
+    crawl_url = product.website_url.strip()
+    if not crawl_url.startswith(("http://", "https://")):
+        crawl_url = "https://" + crawl_url
+        # Also fix the stored URL so it doesn't happen again
+        product.website_url = crawl_url
+        db.commit()
+
     task_id = str(uuid.uuid4())
     _task_status[task_id] = {"status": "pending", "pages_crawled": 0, "error": None}
-    background_tasks.add_task(_run_crawl, task_id, product_id, product.website_url, data.max_pages)
+    background_tasks.add_task(_run_crawl, task_id, product_id, crawl_url, data.max_pages)
     return CrawlStatusResponse(task_id=task_id, status="pending", pages_crawled=0)
 
 
