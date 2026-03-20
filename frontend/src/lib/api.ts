@@ -1,10 +1,39 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("adhub_token");
+}
+
+export function setToken(token: string) {
+  localStorage.setItem("adhub_token", token);
+}
+
+export function clearToken() {
+  localStorage.removeItem("adhub_token");
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers as Record<string, string>),
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
+    headers,
   });
+
+  if (res.status === 401 && typeof window !== "undefined" && !path.includes("/auth/")) {
+    clearToken();
+    window.location.href = "/login";
+    throw new Error("Session expired");
+  }
+
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(error.detail || "API request failed");
@@ -153,10 +182,19 @@ export const api = {
   uploadScreenshot: async (productId: string, file: File): Promise<{ path: string; screenshots: string[] }> => {
     const formData = new FormData();
     formData.append("file", file);
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
     const res = await fetch(`${API_BASE}/api/products/${productId}/screenshots`, {
       method: "POST",
       body: formData,
+      headers,
     });
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
     if (!res.ok) throw new Error("Upload failed");
     return res.json();
   },
@@ -264,6 +302,14 @@ export const api = {
     request<{ iterations_run: number; max_iterations: number }>(`/api/products/${productId}/reset-iterations`, {
       method: "POST",
     }),
+
+  // Auth
+  login: (password: string) =>
+    request<{ token: string }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
+  checkAuth: () => request<{ ok: boolean }>("/api/auth/me"),
 };
 
 // Types
