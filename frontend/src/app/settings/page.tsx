@@ -100,25 +100,25 @@ export default function SettingsPage() {
   }
 
   const statusColor = (status: string) => {
-    if (status === "active") return "bg-green-100 text-green-800";
-    if (status === "expired") return "bg-yellow-100 text-yellow-800";
-    return "bg-red-100 text-red-800";
+    if (status === "active") return "bg-[#4ade80]/10 text-[#4ade80]";
+    if (status === "expired") return "bg-[#ffbd7f]/10 text-[#ffbd7f]";
+    return "bg-[#ffb4ab]/10 text-[#ffb4ab]";
   };
 
   if (loading) {
-    return <div className="text-gray-500">Loading settings...</div>;
+    return <div className="text-[#E5E1E4]/50">Loading settings...</div>;
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-500 mt-1">Manage platform connections</p>
+          <h1 className="text-2xl font-bold text-[#E5E1E4]">Settings</h1>
+          <p className="text-[#E5E1E4]/50 mt-1">Manage platform connections</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+          className="bg-[#FF9500] text-[#2d1600] px-4 py-2 rounded-lg hover:opacity-90 text-sm font-medium"
         >
           {showForm ? "Cancel" : "Connect Platform"}
         </button>
@@ -127,18 +127,18 @@ export default function SettingsPage() {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-lg border border-gray-200 p-6 mb-6 space-y-4"
+          className="bg-[#201f21] rounded-lg border border-white/10 p-6 mb-6 space-y-4"
         >
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Product
               </label>
               <select
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
                 required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Select product...</option>
                 {products.map((p) => (
@@ -149,13 +149,13 @@ export default function SettingsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Platform
               </label>
               <select
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
               >
                 {PLATFORMS.map((p) => (
                   <option key={p.value} value={p.value}>
@@ -167,7 +167,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
               Access Token
             </label>
             <input
@@ -176,13 +176,13 @@ export default function SettingsPage() {
               onChange={(e) => setAccessToken(e.target.value)}
               required
               placeholder="Paste your API access token"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Account Name (optional)
               </label>
               <input
@@ -190,11 +190,11 @@ export default function SettingsPage() {
                 value={accountName}
                 onChange={(e) => setAccountName(e.target.value)}
                 placeholder="e.g. @myhandle"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Account/Page ID (optional)
               </label>
               <input
@@ -202,7 +202,7 @@ export default function SettingsPage() {
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
                 placeholder="Platform account ID"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
               />
             </div>
           </div>
@@ -211,7 +211,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+              className="bg-[#FF9500] text-[#2d1600] px-4 py-2 rounded-lg hover:opacity-90 text-sm font-medium disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save Connection"}
             </button>
@@ -220,9 +220,9 @@ export default function SettingsPage() {
       )}
 
       {connections.length === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <p className="text-gray-500">No platform connections yet.</p>
-          <p className="text-sm text-gray-400 mt-1">
+        <div className="bg-[#201f21] rounded-lg border border-white/10 p-12 text-center">
+          <p className="text-[#E5E1E4]/50">No platform connections yet.</p>
+          <p className="text-sm text-[#E5E1E4]/40 mt-1">
             Connect your X/Twitter or Meta accounts to start distributing content.
           </p>
         </div>
@@ -231,11 +231,11 @@ export default function SettingsPage() {
           {connections.map((conn) => (
             <div
               key={conn.id}
-              className="bg-white rounded-lg border border-gray-200 p-5 flex items-center justify-between"
+              className="bg-[#201f21] rounded-lg border border-white/10 p-5 flex items-center justify-between"
             >
               <div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-gray-900 capitalize">
+                  <span className="text-sm font-semibold text-[#E5E1E4] capitalize">
                     {conn.platform}
                   </span>
                   <span
@@ -245,19 +245,19 @@ export default function SettingsPage() {
                   </span>
                 </div>
                 {conn.platform_account_name && (
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-[#E5E1E4]/50 mt-1">
                     {conn.platform_account_name}
                   </p>
                 )}
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-[#E5E1E4]/40 mt-1">
                   Connected {new Date(conn.created_at).toLocaleDateString()}
                 </p>
                 {testResult[conn.id] && (
                   <p
                     className={`text-xs mt-1 ${
                       testResult[conn.id].valid
-                        ? "text-green-600"
-                        : "text-red-600"
+                        ? "text-[#4ade80]"
+                        : "text-[#ffb4ab]"
                     }`}
                   >
                     {testResult[conn.id].valid
@@ -270,13 +270,13 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleTest(conn.id)}
                   disabled={testingId === conn.id}
-                  className="text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  className="text-sm px-3 py-1.5 border border-white/10 rounded-lg hover:bg-[#201f21]/5 disabled:opacity-50"
                 >
                   {testingId === conn.id ? "Testing..." : "Test"}
                 </button>
                 <button
                   onClick={() => handleDelete(conn.id)}
-                  className="text-sm px-3 py-1.5 text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
+                  className="text-sm px-3 py-1.5 text-[#ffb4ab] border border-[#ffb4ab]/20 rounded-lg hover:bg-[#ffb4ab]/10"
                 >
                   Disconnect
                 </button>

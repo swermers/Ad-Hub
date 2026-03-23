@@ -1,26 +1,297 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: #131315;
+  --color-foreground: #E5E1E4;
+  --color-surface: #131315;
+  --color-surface-container: #201f21;
+  --color-surface-container-low: #1b1b1d;
+  --color-surface-container-high: #2a2a2c;
+  --color-surface-container-highest: #353437;
+  --color-surface-bright: #39393b;
+  --color-on-surface: #E5E1E4;
+  --color-on-surface-variant: #dbc2ad;
+  --color-primary: #ffbd7f;
+  --color-primary-container: #ff9500;
+  --color-on-primary-fixed: #2d1600;
+  --color-secondary: #c6c4df;
+  --color-secondary-container: #47475d;
+  --color-tertiary: #c5c5ff;
+  --color-tertiary-container: #a4a7ff;
+  --color-error: #ffb4ab;
+  --color-outline: #a38d7a;
+  --color-outline-variant: #554334;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ========== BASE ========== */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #131315;
+  color: #E5E1E4;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(255, 149, 0, 0.3);
+}
+
+/* ========== GLASS MORPHISM ========== */
+.glass-card {
+  background: rgba(35, 34, 37, 0.4);
+  backdrop-filter: blur(56px);
+  -webkit-backdrop-filter: blur(56px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  transform: scale(1.03) translateY(-6px);
+  background: rgba(45, 44, 47, 0.5);
+  backdrop-filter: blur(80px);
+  box-shadow: 0 24px 48px -12px rgba(0,0,0,0.6), 0 0 24px rgba(255, 184, 116, 0.15);
+  border-color: rgba(255, 184, 116, 0.25);
+}
+
+.glass-card-subtle {
+  background: rgba(35, 34, 37, 0.4);
+  backdrop-filter: blur(48px);
+  -webkit-backdrop-filter: blur(48px);
+  border: 1px solid rgba(255, 184, 116, 0.05);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card-subtle:hover {
+  transform: translateY(-4px);
+  background: rgba(45, 44, 47, 0.5);
+  border-color: rgba(255, 184, 116, 0.2);
+  box-shadow: 0 16px 32px -8px rgba(0,0,0,0.4);
+}
+
+.glass-nav {
+  background: rgba(19, 19, 21, 0.4);
+  backdrop-filter: blur(64px);
+  -webkit-backdrop-filter: blur(64px);
+}
+
+.glass-sidebar {
+  background: rgba(19, 19, 21, 0.3);
+  backdrop-filter: blur(80px);
+  -webkit-backdrop-filter: blur(80px);
+}
+
+/* ========== CONTENT PRISM CARDS ========== */
+.content-prism {
+  background: rgba(35, 34, 37, 0.4);
+  backdrop-filter: blur(48px);
+  -webkit-backdrop-filter: blur(48px);
+  border: 1px solid rgba(255, 184, 116, 0.05);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.content-prism:hover {
+  transform: translateY(-10px) scale(1.02);
+  background: rgba(45, 44, 47, 0.5);
+  border-color: rgba(255, 184, 116, 0.3);
+  box-shadow: 0 32px 64px -16px rgba(0,0,0,0.5);
+}
+
+/* ========== LIQUID GLOW BACKGROUNDS ========== */
+.liquid-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 149, 0, 0.15) 0%, rgba(41, 39, 186, 0.08) 50%, transparent 100%);
+  filter: blur(100px);
+  z-index: 0;
+  pointer-events: none;
+  animation: liquid-move 20s infinite alternate ease-in-out;
+}
+
+.liquid-glow-secondary {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(47, 46, 190, 0.12) 0%, transparent 70%);
+  filter: blur(100px);
+  z-index: 0;
+  pointer-events: none;
+  animation: liquid-move 25s infinite alternate-reverse ease-in-out;
+}
+
+.liquid-glow-tertiary {
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 189, 127, 0.1) 0%, transparent 60%);
+  filter: blur(100px);
+  z-index: 0;
+  pointer-events: none;
+  animation: liquid-move 30s infinite alternate ease-in-out;
+  animation-direction: reverse;
+}
+
+@keyframes liquid-move {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(5%, 10%) scale(1.1); }
+  66% { transform: translate(-5%, 5%) scale(0.9); }
+  100% { transform: translate(2%, -8%) scale(1); }
+}
+
+/* ========== ENTRANCE ANIMATIONS ========== */
+.entrance-fade {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fade-in-up {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+
+/* ========== PROGRESS BAR ========== */
+@keyframes progress-grow {
+  from { width: 0; }
+}
+
+.animate-progress {
+  animation: progress-grow 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ========== HOVER EFFECTS ========== */
+.hover-lift {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+.hover-lift:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.haptic-btn {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.haptic-btn:active {
+  transform: scale(0.96);
+}
+
+/* ========== LIQUID FILL EFFECT ========== */
+@keyframes liquid-sweep {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(100%) skewX(-15deg); }
+}
+
+.liquid-fill-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.liquid-fill-effect::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: liquid-sweep 1.8s infinite;
+}
+
+/* ========== WAVE ANIMATION ========== */
+@keyframes wave {
+  0%, 100% { height: 1rem; }
+  50% { height: 2.5rem; }
+}
+
+/* ========== PULSE GLOW ========== */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px 0 rgba(255, 149, 0, 0.2); }
+  50% { box-shadow: 0 0 30px 10px rgba(255, 149, 0, 0.4); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ========== LIQUID BAR CHART ========== */
+@keyframes liquid-fill {
+  0% { height: 0%; opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.liquid-bar {
+  transform-origin: bottom;
+  animation: liquid-fill 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ========== REFRACTION OVERLAY ========== */
+.refraction-overlay {
+  background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
+  background-size: 200% 200%;
+  transition: background-position 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.group:hover .refraction-overlay {
+  background-position: 100% 100%;
+}
+
+/* ========== SCROLLBAR ========== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ========== STATUS BADGES ========== */
+.badge-draft {
+  background: rgba(198, 196, 223, 0.2);
+  color: #c6c4df;
+}
+
+.badge-approved {
+  background: rgba(255, 149, 0, 0.2);
+  color: #FF9500;
+}
+
+.badge-posted {
+  background: rgba(164, 167, 255, 0.2);
+  color: #a4a7ff;
+}
+
+.badge-rejected {
+  background: rgba(255, 180, 171, 0.2);
+  color: #ffb4ab;
+}
+
+.badge-active {
+  background: rgba(255, 149, 0, 0.2);
+  color: #FF9500;
 }

@@ -17,24 +17,24 @@ const STEPS = ["Input", "Brief", "Generate", "Review"] as const;
 type Step = (typeof STEPS)[number];
 
 const DAY_COLORS: Record<string, string> = {
-  Monday: "border-l-blue-500",
-  Tuesday: "border-l-violet-500",
-  Wednesday: "border-l-amber-500",
-  Thursday: "border-l-emerald-500",
-  Friday: "border-l-rose-500",
-  Saturday: "border-l-cyan-500",
-  Sunday: "border-l-gray-400",
+  Monday: "border-l-[#FF9500]",
+  Tuesday: "border-l-[#c5c5ff]",
+  Wednesday: "border-l-[#ffbd7f]",
+  Thursday: "border-l-[#4ade80]",
+  Friday: "border-l-[#ffb4ab]",
+  Saturday: "border-l-[#a4a7ff]",
+  Sunday: "border-l-[#E5E1E4]/40",
 };
 
 const TYPE_BADGES: Record<string, { bg: string; text: string }> = {
-  social_post: { bg: "bg-blue-100", text: "text-blue-700" },
-  blog_draft: { bg: "bg-amber-100", text: "text-amber-700" },
-  newsletter: { bg: "bg-amber-100", text: "text-amber-700" },
-  video_script: { bg: "bg-rose-100", text: "text-rose-700" },
-  x_thread: { bg: "bg-violet-100", text: "text-violet-700" },
-  email: { bg: "bg-emerald-100", text: "text-emerald-700" },
-  carousel: { bg: "bg-cyan-100", text: "text-cyan-700" },
-  ad_copy: { bg: "bg-orange-100", text: "text-orange-700" },
+  social_post: { bg: "bg-[#FF9500]/10", text: "text-[#FF9500]" },
+  blog_draft: { bg: "bg-[#ffbd7f]/10", text: "text-[#ffbd7f]" },
+  newsletter: { bg: "bg-[#ffbd7f]/10", text: "text-[#ffbd7f]" },
+  video_script: { bg: "bg-[#ffb4ab]/10", text: "text-[#ffb4ab]" },
+  x_thread: { bg: "bg-[#c5c5ff]/10", text: "text-[#c5c5ff]" },
+  email: { bg: "bg-[#4ade80]/10", text: "text-[#4ade80]" },
+  carousel: { bg: "bg-[#a4a7ff]/10", text: "text-[#a4a7ff]" },
+  ad_copy: { bg: "bg-[#FF9500]/10", text: "text-[#FF9500]" },
 };
 
 interface BrollItem {
@@ -274,19 +274,19 @@ export default function StudioPage() {
     return (
       <div className="max-w-5xl space-y-6 animate-pulse">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gray-200" />
+          <div className="w-10 h-10 rounded-xl bg-white/10" />
           <div className="space-y-2">
-            <div className="h-5 w-40 bg-gray-200 rounded" />
-            <div className="h-3 w-56 bg-gray-100 rounded" />
+            <div className="h-5 w-40 bg-white/10 rounded" />
+            <div className="h-3 w-56 bg-white/10 rounded" />
           </div>
         </div>
         <div className="flex gap-3">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-10 w-24 bg-gray-100 rounded-xl" />
+            <div key={i} className="h-10 w-24 bg-white/10 rounded-xl" />
           ))}
         </div>
-        <div className="h-48 bg-gray-100 rounded-xl" />
-        <div className="h-32 bg-gray-50 rounded-xl" />
+        <div className="h-48 bg-white/10 rounded-xl" />
+        <div className="h-32 bg-white/5 rounded-xl" />
       </div>
     );
   }
@@ -296,14 +296,14 @@ export default function StudioPage() {
       {/* Header */}
       <div className="mb-10">
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF9500] to-[#ffbd7f] flex items-center justify-center">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Content Studio</h1>
-            <p className="text-gray-500 text-sm">
+            <h1 className="text-2xl font-bold text-[#E5E1E4]">Content Studio</h1>
+            <p className="text-[#E5E1E4]/50 text-sm">
               Voice memo &rarr; full week of content
             </p>
           </div>
@@ -322,10 +322,10 @@ export default function StudioPage() {
                 disabled={!isPast && !isCurrent}
                 className={`relative flex items-center gap-2.5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                   isCurrent
-                    ? "bg-gray-900 text-white shadow-lg shadow-gray-900/20 scale-[1.02]"
+                    ? "bg-[#FF9500] text-[#2d1600] shadow-lg shadow-[#FF9500]/20 scale-[1.02]"
                     : isPast
-                    ? "bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer"
-                    : "bg-gray-50 text-gray-400"
+                    ? "bg-[#FF9500]/10 text-[#FF9500] hover:bg-white/10 cursor-pointer"
+                    : "bg-white/5 text-[#E5E1E4]/40"
                 }`}
               >
                 <span
@@ -333,8 +333,8 @@ export default function StudioPage() {
                     isCurrent
                       ? "bg-white/20"
                       : isPast
-                      ? "bg-blue-200 text-blue-700"
-                      : "bg-gray-200 text-gray-400"
+                      ? "bg-[#FF9500]/20 text-[#FF9500]"
+                      : "bg-white/10 text-[#E5E1E4]/40"
                   }`}
                 >
                   {isPast ? (
@@ -348,10 +348,10 @@ export default function StudioPage() {
                 {s}
               </button>
               {i < STEPS.length - 1 && (
-                <div className="flex-1 mx-2 h-0.5 rounded-full overflow-hidden bg-gray-200">
+                <div className="flex-1 mx-2 h-0.5 rounded-full overflow-hidden bg-white/10">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ease-out ${
-                      isPast ? "w-full bg-blue-500" : "w-0 bg-blue-500"
+                      isPast ? "w-full bg-[#FF9500]" : "w-0 bg-[#FF9500]"
                     }`}
                   />
                 </div>
@@ -373,13 +373,13 @@ export default function StudioPage() {
         <div className="space-y-6">
           {/* Product selector */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
               Product / Brand
             </label>
             <select
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+              className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm bg-[#201f21] text-[#E5E1E4]"
             >
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -391,7 +391,7 @@ export default function StudioPage() {
 
           {/* Audio Upload Zone */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
               Voice Memo
             </label>
             <div
@@ -400,43 +400,43 @@ export default function StudioPage() {
               onDrop={handleDrop}
               className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
                 dragOver
-                  ? "border-blue-400 bg-blue-50"
+                  ? "border-[#FF9500]/40 bg-[#FF9500]/10"
                   : transcribing
-                  ? "border-blue-300 bg-blue-50"
+                  ? "border-[#FF9500]/30 bg-[#FF9500]/10"
                   : audioFilename
-                  ? "border-green-300 bg-green-50"
-                  : "border-gray-300 hover:border-gray-400"
+                  ? "border-[#4ade80]/30 bg-[#4ade80]/10"
+                  : "border-white/10 hover:border-white/20"
               }`}
             >
               {transcribing ? (
                 <div className="flex flex-col items-center gap-2">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
-                  <p className="text-sm font-medium text-blue-700">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FF9500]" />
+                  <p className="text-sm font-medium text-[#FF9500]">
                     Transcribing {audioFilename}...
                   </p>
-                  <p className="text-xs text-blue-500">This may take a moment for longer recordings</p>
+                  <p className="text-xs text-[#FF9500]/70">This may take a moment for longer recordings</p>
                 </div>
               ) : audioFilename && transcript ? (
                 <div className="flex flex-col items-center gap-1">
-                  <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-[#4ade80]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <p className="text-sm font-medium text-green-700">{audioFilename} transcribed</p>
+                  <p className="text-sm font-medium text-[#4ade80]">{audioFilename} transcribed</p>
                   <button
                     onClick={() => { setAudioFilename(null); setTranscript(""); }}
-                    className="text-xs text-gray-500 hover:text-gray-700 underline mt-1"
+                    className="text-xs text-[#E5E1E4]/50 hover:text-[#E5E1E4] underline mt-1"
                   >
                     Clear and start over
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-8 h-8 text-[#E5E1E4]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                   </svg>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-[#dbc2ad]">
                     Drop a voice memo here, or{" "}
-                    <label className="text-blue-600 hover:text-blue-700 cursor-pointer font-medium">
+                    <label className="text-[#FF9500] hover:text-[#FF9500] cursor-pointer font-medium">
                       browse
                       <input
                         type="file"
@@ -449,7 +449,7 @@ export default function StudioPage() {
                       />
                     </label>
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-[#E5E1E4]/40">
                     mp3, m4a, wav, webm, ogg, flac (auto-transcribed via Whisper)
                   </p>
                 </div>
@@ -460,11 +460,11 @@ export default function StudioPage() {
           {/* Transcript text */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-[#dbc2ad]">
                 Transcript
               </label>
               {transcript && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-[#E5E1E4]/40">
                   {transcript.split(/\s+/).filter(Boolean).length} words
                 </span>
               )}
@@ -474,13 +474,13 @@ export default function StudioPage() {
               onChange={(e) => setTranscript(e.target.value)}
               rows={8}
               placeholder="Or paste your transcript here. The Idea Sharpener will find the seed..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-3 bg-[#201f21] border border-white/10 rounded-lg text-sm text-[#E5E1E4] placeholder-[#E5E1E4]/30 leading-relaxed focus:ring-1 focus:ring-[#FF9500]/50 focus:border-[#FF9500]/50"
             />
           </div>
 
           {/* Instructions */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
               Additional Notes (optional)
             </label>
             <textarea
@@ -488,7 +488,7 @@ export default function StudioPage() {
               onChange={(e) => setInstructions(e.target.value)}
               rows={2}
               placeholder="Focus on the energy cost angle. Use the guard dog metaphor if it fits."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 bg-[#201f21] border border-white/10 rounded-lg text-sm text-[#E5E1E4] placeholder-[#E5E1E4]/30"
             />
           </div>
 
@@ -496,7 +496,7 @@ export default function StudioPage() {
           <button
             onClick={handleGenerate}
             disabled={!productId || !transcript.trim() || generating}
-            className="w-full px-6 py-3 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 active:scale-[0.98] disabled:opacity-50 transition-all duration-200"
+            className="w-full px-6 py-3 bg-[#FF9500] text-[#2d1600] rounded-xl text-sm font-medium hover:opacity-90 active:scale-[0.98] disabled:opacity-50 transition-all duration-200"
           >
             {generating ? (
               <span className="flex items-center justify-center gap-2">
@@ -513,27 +513,27 @@ export default function StudioPage() {
       {/* ── Step 2: Brief ─────────────────────────────────────────────── */}
       {step === "Brief" && brief && (
         <div className="space-y-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">
+          <div className="bg-[#201f21] border border-white/10 rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-[#E5E1E4]">
               Idea Sharpener Result
             </h2>
 
             {!!brief.seed && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                <p className="text-xs font-medium text-[#E5E1E4]/50 uppercase tracking-wide mb-1">
                   The Seed
                 </p>
-                <p className="text-gray-900 font-medium">{String(brief.seed)}</p>
+                <p className="text-[#E5E1E4] font-medium">{String(brief.seed)}</p>
               </div>
             )}
 
             {Array.isArray(brief.heat) && brief.heat.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                <p className="text-xs font-medium text-[#E5E1E4]/50 uppercase tracking-wide mb-1">
                   The Heat
                 </p>
                 {(brief.heat as string[]).map((h, i) => (
-                  <p key={i} className="text-gray-700 italic border-l-2 border-amber-400 pl-3 my-1">
+                  <p key={i} className="text-[#dbc2ad] italic border-l-2 border-[#ffbd7f]/50 pl-3 my-1">
                     &ldquo;{h}&rdquo;
                   </p>
                 ))}
@@ -542,34 +542,34 @@ export default function StudioPage() {
 
             {!!brief.audience_hook && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                <p className="text-xs font-medium text-[#E5E1E4]/50 uppercase tracking-wide mb-1">
                   Audience Hook
                 </p>
-                <p className="text-gray-700">{String(brief.audience_hook)}</p>
+                <p className="text-[#dbc2ad]">{String(brief.audience_hook)}</p>
               </div>
             )}
 
             <div className="flex gap-4">
               {!!brief.template_fit && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  <p className="text-xs font-medium text-[#E5E1E4]/50 uppercase tracking-wide mb-1">
                     Template
                   </p>
-                  <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded">
+                  <span className="px-2 py-1 bg-[#FF9500]/10 text-[#FF9500] text-xs font-medium rounded">
                     {String(brief.template_fit)}
                   </span>
                 </div>
               )}
               {!!brief.verdict && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  <p className="text-xs font-medium text-[#E5E1E4]/50 uppercase tracking-wide mb-1">
                     Verdict
                   </p>
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded ${
                       String(brief.verdict).includes("Strong")
-                        ? "bg-green-50 text-green-700"
-                        : "bg-yellow-50 text-yellow-700"
+                        ? "bg-[#4ade80]/10 text-[#4ade80]"
+                        : "bg-[#ffbd7f]/10 text-[#ffbd7f]"
                     }`}
                   >
                     {String(brief.verdict)}
@@ -580,10 +580,10 @@ export default function StudioPage() {
 
             {!!brief.subject_line && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                <p className="text-xs font-medium text-[#E5E1E4]/50 uppercase tracking-wide mb-1">
                   Subject Line
                 </p>
-                <p className="text-gray-900">{String(brief.subject_line)}</p>
+                <p className="text-[#E5E1E4]">{String(brief.subject_line)}</p>
               </div>
             )}
           </div>
@@ -591,13 +591,13 @@ export default function StudioPage() {
           <div className="flex gap-3">
             <button
               onClick={() => animateToStep("Input")}
-              className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 text-sm font-medium bg-[#201f21] border border-white/10 rounded-lg hover:bg-white/5"
             >
               Back to Edit
             </button>
             <button
               onClick={handleGenerate}
-              className="flex-1 px-6 py-3 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+              className="flex-1 px-6 py-3 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:opacity-90"
             >
               Generate Full Week from This Seed
             </button>
@@ -609,34 +609,34 @@ export default function StudioPage() {
       {step === "Generate" && (
         <div className="flex flex-col items-center justify-center py-20 space-y-5">
           <div className="relative">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center animate-pulse">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF9500] to-[#ffbd7f] flex items-center justify-center animate-pulse">
               <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
             </div>
-            <div className="absolute -inset-2 rounded-3xl border-2 border-blue-200 animate-ping opacity-30" />
+            <div className="absolute -inset-2 rounded-3xl border-2 border-[#FF9500]/30 animate-ping opacity-30" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-semibold text-gray-900">
+            <p className="text-sm font-semibold text-[#E5E1E4]">
               {taskStatus?.status === "running"
                 ? "Generating your content week..."
                 : "Starting pipeline..."}
             </p>
-            <p className="text-xs text-gray-500 mt-1.5 max-w-xs mx-auto">
+            <p className="text-xs text-[#E5E1E4]/50 mt-1.5 max-w-xs mx-auto">
               Finding the seed, drafting newsletter, sharpening posts, building thread
             </p>
           </div>
           {taskStatus && taskStatus.pieces_generated > 0 && (
-            <p className="text-xs text-blue-600">
+            <p className="text-xs text-[#FF9500]">
               {taskStatus.pieces_generated} pieces generated so far
             </p>
           )}
           {taskStatus?.status === "failed" && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4 max-w-md">
-              <p className="text-sm text-red-700">{taskStatus.error}</p>
+            <div className="bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 rounded-lg p-4 mt-4 max-w-md">
+              <p className="text-sm text-[#ffb4ab]">{taskStatus.error}</p>
               <button
                 onClick={() => animateToStep("Input")}
-                className="mt-2 px-3 py-1 text-sm bg-white border border-red-300 rounded-lg hover:bg-red-50"
+                className="mt-2 px-3 py-1 text-sm bg-white/10 border border-[#ffb4ab]/20 rounded-lg hover:bg-white/5"
               >
                 Try Again
               </button>
@@ -650,11 +650,11 @@ export default function StudioPage() {
         <div className="space-y-6">
           {/* Weekly theme */}
           {!!brief?.weekly_theme && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
-              <p className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">
+            <div className="bg-gradient-to-r from-[#FF9500]/10 to-[#ffbd7f]/10 border border-[#FF9500]/20 rounded-xl p-4">
+              <p className="text-xs font-medium text-[#FF9500] uppercase tracking-wide mb-1">
                 Weekly Theme
               </p>
-              <p className="text-blue-900 font-medium">
+              <p className="text-[#E5E1E4] font-medium">
                 {String(brief.weekly_theme)}
               </p>
             </div>
@@ -662,14 +662,14 @@ export default function StudioPage() {
 
           {/* B-Roll Suggestions */}
           {(brollResults.length > 0 || brollLoading) && (
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <div className="bg-[#201f21] border border-white/10 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  <p className="text-xs font-semibold text-[#dbc2ad] uppercase tracking-wide">
                     Suggested B-Roll
                   </p>
                   {brollQuery && (
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-[#E5E1E4]/40 mt-0.5">
                       Auto-searched: &ldquo;{brollQuery}&rdquo;
                     </p>
                   )}
@@ -692,14 +692,14 @@ export default function StudioPage() {
                     }}
                     placeholder="Search b-roll..."
                     aria-label="Search b-roll images"
-                    className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow duration-150"
+                    className="text-xs bg-[#201f21] text-[#E5E1E4] placeholder-[#E5E1E4]/30 border border-white/10 rounded-lg px-2.5 py-1.5 w-48 focus:ring-1 focus:ring-[#FF9500]/50 focus:border-[#FF9500]/50 outline-none transition-shadow duration-150"
                   />
                 </div>
               </div>
               {brollLoading ? (
                 <div className="grid grid-cols-4 gap-2">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="aspect-video bg-gray-100 rounded-lg animate-pulse" />
+                    <div key={i} className="aspect-video bg-white/10 rounded-lg animate-pulse" />
                   ))}
                 </div>
               ) : (
@@ -726,16 +726,16 @@ export default function StudioPage() {
           {/* Summary bar */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-[#E5E1E4]/50">
                 {pieces.length} pieces generated
               </p>
               {/* View toggle */}
-              <div className="flex bg-gray-100 rounded-lg p-0.5">
+              <div className="flex bg-white/10 rounded-lg p-0.5">
                 <button
                   onClick={() => setReviewView("grid")}
                   aria-label="Week grid view"
                   className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                    reviewView === "grid" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                    reviewView === "grid" ? "bg-[#201f21] text-[#E5E1E4] shadow-sm" : "text-[#E5E1E4]/50 hover:text-[#E5E1E4]"
                   }`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
@@ -744,7 +744,7 @@ export default function StudioPage() {
                   onClick={() => setReviewView("list")}
                   aria-label="List view"
                   className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                    reviewView === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                    reviewView === "list" ? "bg-[#201f21] text-[#E5E1E4] shadow-sm" : "text-[#E5E1E4]/50 hover:text-[#E5E1E4]"
                   }`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -758,7 +758,7 @@ export default function StudioPage() {
                     if (p.status === "draft") handleStatusChange(p.id, "approved");
                   });
                 }}
-                className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 active:scale-95 transition-all duration-150"
+                className="px-3 py-1.5 text-xs font-medium bg-[#4ade80]/20 text-[#4ade80] rounded-lg hover:bg-[#4ade80]/30 active:scale-95 transition-all duration-150"
               >
                 Approve All
               </button>
@@ -771,13 +771,13 @@ export default function StudioPage() {
                   approved.forEach((p) => handlePublish(p.id, activeConn.id));
                 }}
                 disabled={!pieces.some((p) => p.status === "approved") || connections.length === 0}
-                className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 disabled:opacity-40 transition-all duration-150"
+                className="px-3 py-1.5 text-xs font-medium bg-[#FF9500] text-[#2d1600] rounded-lg hover:opacity-90 active:scale-95 disabled:opacity-40 transition-all duration-150"
               >
                 Publish All Approved
               </button>
               <button
                 onClick={() => animateToStep("Input")}
-                className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-3 py-1.5 text-xs font-medium bg-[#201f21] border border-white/10 rounded-lg hover:bg-white/5"
               >
                 Start Over
               </button>
@@ -793,26 +793,26 @@ export default function StudioPage() {
                   return (m.day || "") === day;
                 });
                 const bgColors: Record<string, string> = {
-                  Monday: "bg-blue-50 border-blue-200",
-                  Tuesday: "bg-violet-50 border-violet-200",
-                  Wednesday: "bg-amber-50 border-amber-200",
-                  Thursday: "bg-emerald-50 border-emerald-200",
-                  Friday: "bg-rose-50 border-rose-200",
-                  Saturday: "bg-cyan-50 border-cyan-200",
-                  Sunday: "bg-gray-50 border-gray-200",
+                  Monday: "bg-[#FF9500]/5 border-[#FF9500]/20",
+                  Tuesday: "bg-[#c5c5ff]/5 border-[#c5c5ff]/20",
+                  Wednesday: "bg-[#ffbd7f]/5 border-[#ffbd7f]/20",
+                  Thursday: "bg-[#4ade80]/5 border-[#4ade80]/20",
+                  Friday: "bg-[#ffb4ab]/5 border-[#ffb4ab]/20",
+                  Saturday: "bg-[#a4a7ff]/5 border-[#a4a7ff]/20",
+                  Sunday: "bg-white/5 border-white/10",
                 };
                 const headerColors: Record<string, string> = {
-                  Monday: "text-blue-700",
-                  Tuesday: "text-violet-700",
-                  Wednesday: "text-amber-700",
-                  Thursday: "text-emerald-700",
-                  Friday: "text-rose-700",
-                  Saturday: "text-cyan-700",
-                  Sunday: "text-gray-500",
+                  Monday: "text-[#FF9500]",
+                  Tuesday: "text-[#c5c5ff]",
+                  Wednesday: "text-[#ffbd7f]",
+                  Thursday: "text-[#4ade80]",
+                  Friday: "text-[#ffb4ab]",
+                  Saturday: "text-[#a4a7ff]",
+                  Sunday: "text-[#E5E1E4]/50",
                 };
                 return (
-                  <div key={day} className={`rounded-xl border p-2 min-h-[140px] ${bgColors[day] || "bg-gray-50 border-gray-200"}`}>
-                    <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${headerColors[day] || "text-gray-500"}`}>
+                  <div key={day} className={`rounded-xl border p-2 min-h-[140px] ${bgColors[day] || "bg-white/5 border-white/10"}`}>
+                    <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${headerColors[day] || "text-[#E5E1E4]/50"}`}>
                       {day.slice(0, 3)}
                     </p>
                     <div className="space-y-1.5">
@@ -825,25 +825,25 @@ export default function StudioPage() {
                               setExpandedPiece(piece.id);
                               setReviewView("list");
                             }}
-                            className="w-full text-left bg-white rounded-lg p-2 shadow-sm hover:shadow transition-shadow border border-white/80"
+                            className="w-full text-left bg-[#201f21] rounded-lg p-2 shadow-sm hover:shadow transition-shadow border border-white/10"
                           >
                             <span className={`inline-block px-1.5 py-0.5 text-[11px] font-medium rounded ${typeBadge.bg} ${typeBadge.text} mb-1`}>
                               {piece.content_type.replace("_", " ")}
                             </span>
-                            <p className="text-xs text-gray-800 font-medium truncate">
+                            <p className="text-xs text-[#E5E1E4] font-medium truncate">
                               {piece.title || piece.hook || piece.body.slice(0, 40)}
                             </p>
                             <div className="flex items-center gap-1 mt-1">
                               <span className={`w-1.5 h-1.5 rounded-full ${
-                                piece.status === "approved" ? "bg-green-500" : piece.status === "rejected" ? "bg-red-500" : "bg-yellow-500"
+                                piece.status === "approved" ? "bg-[#4ade80]" : piece.status === "rejected" ? "bg-[#ffb4ab]" : "bg-[#ffbd7f]"
                               }`} />
-                              <span className="text-[11px] text-gray-400">{piece.status}</span>
+                              <span className="text-[11px] text-[#E5E1E4]/40">{piece.status}</span>
                             </div>
                           </button>
                         );
                       })}
                       {dayPieces.length === 0 && (
-                        <p className="text-[11px] text-gray-400 italic">
+                        <p className="text-[11px] text-[#E5E1E4]/40 italic">
                           {day === "Saturday" || day === "Sunday" ? "Rest day" : "Open slot"}
                         </p>
                       )}
@@ -857,7 +857,7 @@ export default function StudioPage() {
                 return !["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].includes(m.day || "");
               }).length > 0 && (
                 <div className="col-span-7 mt-2">
-                  <p className="text-xs text-gray-400 mb-2">Unassigned</p>
+                  <p className="text-xs text-[#E5E1E4]/40 mb-2">Unassigned</p>
                   <div className="grid grid-cols-4 gap-2">
                     {pieces.filter((p) => {
                       const m = getPieceMeta(p);
@@ -868,12 +868,12 @@ export default function StudioPage() {
                         <button
                           key={piece.id}
                           onClick={() => { setExpandedPiece(piece.id); setReviewView("list"); }}
-                          className="text-left bg-white rounded-lg p-2 shadow-sm hover:shadow transition-shadow border border-gray-200"
+                          className="text-left bg-[#201f21] rounded-lg p-2 shadow-sm hover:shadow transition-shadow border border-white/10"
                         >
                           <span className={`inline-block px-1.5 py-0.5 text-[10px] font-medium rounded ${typeBadge.bg} ${typeBadge.text} mb-1`}>
                             {piece.content_type.replace("_", " ")}
                           </span>
-                          <p className="text-xs text-gray-800 font-medium truncate">
+                          <p className="text-xs text-[#E5E1E4] font-medium truncate">
                             {piece.title || piece.hook || piece.body.slice(0, 40)}
                           </p>
                         </button>
@@ -891,24 +891,24 @@ export default function StudioPage() {
               const meta = getPieceMeta(piece);
               const isExpanded = expandedPiece === piece.id;
               const day = meta.day || "";
-              const dayColor = DAY_COLORS[day] || "border-l-gray-300";
+              const dayColor = DAY_COLORS[day] || "border-l-[#E5E1E4]/30";
               const typeBadge = TYPE_BADGES[piece.content_type] || TYPE_BADGES.social_post;
 
               return (
                 <div
                   key={piece.id}
-                  className={`bg-white border border-gray-200 rounded-xl overflow-hidden border-l-4 ${dayColor}`}
+                  className={`bg-[#201f21] border border-white/10 rounded-xl overflow-hidden border-l-4 ${dayColor}`}
                 >
                   {/* Card header */}
                   <div
-                    className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-white/5 transition-colors"
                     onClick={() =>
                       setExpandedPiece(isExpanded ? null : piece.id)
                     }
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {day && (
-                        <span className="text-xs font-medium text-gray-500 w-20 shrink-0">
+                        <span className="text-xs font-medium text-[#E5E1E4]/50 w-20 shrink-0">
                           {day}
                         </span>
                       )}
@@ -921,10 +921,10 @@ export default function StudioPage() {
                           ? "newsletter"
                           : piece.content_type.replace("_", " ")}
                       </span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-[#E5E1E4]/40">
                         {PLATFORM_LABELS[piece.platform] || piece.platform}
                       </span>
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-[#E5E1E4] truncate">
                         {piece.title || piece.hook || piece.body.slice(0, 60)}
                       </p>
                     </div>
@@ -932,16 +932,16 @@ export default function StudioPage() {
                       <span
                         className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                           piece.status === "approved"
-                            ? "bg-green-100 text-green-700"
+                            ? "bg-[#4ade80]/10 text-[#4ade80]"
                             : piece.status === "rejected"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-yellow-100 text-yellow-800"
+                            ? "bg-[#ffb4ab]/10 text-[#ffb4ab]"
+                            : "bg-[#ffbd7f]/10 text-[#ffbd7f]"
                         }`}
                       >
                         {piece.status}
                       </span>
                       <svg
-                        className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                        className={`w-4 h-4 text-[#E5E1E4]/40 transition-transform duration-200 ${
                           isExpanded ? "rotate-180" : ""
                         }`}
                         fill="none"
@@ -960,17 +960,17 @@ export default function StudioPage() {
 
                   {/* Expanded content */}
                   {isExpanded && (
-                    <div className="px-5 pb-5 border-t border-gray-100">
+                    <div className="px-5 pb-5 border-t border-white/5">
                       {/* Tab bar */}
-                      <div className="flex gap-1 mt-3 mb-4 bg-gray-100 rounded-lg p-0.5 w-fit">
+                      <div className="flex gap-1 mt-3 mb-4 bg-white/10 rounded-lg p-0.5 w-fit">
                         {(["content", "preview", ...(meta.blocks || piece.content_type === "video_script" ? ["video"] : [])] as const).map((tab) => (
                           <button
                             key={tab}
                             onClick={() => setCardTab((prev) => ({ ...prev, [piece.id]: tab as "content" | "preview" | "video" }))}
                             className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-colors ${
                               (cardTab[piece.id] || "content") === tab
-                                ? "bg-white text-gray-900 shadow-sm"
-                                : "text-gray-500 hover:text-gray-700"
+                                ? "bg-[#201f21] text-[#E5E1E4] shadow-sm"
+                                : "text-[#E5E1E4]/50 hover:text-[#E5E1E4]"
                             }`}
                           >
                             {tab}
@@ -1009,10 +1009,10 @@ export default function StudioPage() {
                       {/* Hook */}
                       {piece.hook && (
                         <div className="mt-4 mb-3">
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                          <p className="text-xs font-medium text-[#E5E1E4]/50 uppercase tracking-wide mb-1">
                             Hook
                           </p>
-                          <p className="text-gray-900 font-medium">
+                          <p className="text-[#E5E1E4] font-medium">
                             {piece.hook}
                           </p>
                         </div>
@@ -1020,10 +1020,10 @@ export default function StudioPage() {
 
                       {/* Body */}
                       <div className="mb-3">
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                        <p className="text-xs font-medium text-[#E5E1E4]/50 uppercase tracking-wide mb-1">
                           Body
                         </p>
-                        <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                        <div className="text-sm text-[#dbc2ad] leading-relaxed whitespace-pre-wrap bg-white/5 rounded-lg p-4 max-h-64 overflow-y-auto">
                           {piece.body}
                         </div>
                       </div>
@@ -1031,30 +1031,30 @@ export default function StudioPage() {
                       {/* CTA */}
                       {piece.cta && (
                         <div className="mb-3">
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                          <p className="text-xs font-medium text-[#E5E1E4]/50 uppercase tracking-wide mb-1">
                             CTA
                           </p>
-                          <p className="text-sm text-gray-700">{piece.cta}</p>
+                          <p className="text-sm text-[#dbc2ad]">{piece.cta}</p>
                         </div>
                       )}
 
                       {/* Quality checks (social posts) */}
                       {(meta.specificity_check || meta.tension_check || meta.stealable_line) && (
-                        <div className="mt-3 p-3 bg-blue-50 rounded-lg space-y-1">
+                        <div className="mt-3 p-3 bg-[#FF9500]/10 rounded-lg space-y-1">
                           {meta.specificity_check && (
-                            <p className="text-xs text-blue-700">
+                            <p className="text-xs text-[#FF9500]">
                               <span className="font-medium">Specificity:</span>{" "}
                               {meta.specificity_check}
                             </p>
                           )}
                           {meta.tension_check && (
-                            <p className="text-xs text-blue-700">
+                            <p className="text-xs text-[#FF9500]">
                               <span className="font-medium">Tension:</span>{" "}
                               {meta.tension_check}
                             </p>
                           )}
                           {meta.stealable_line && (
-                            <p className="text-xs text-blue-700">
+                            <p className="text-xs text-[#FF9500]">
                               <span className="font-medium">Stealable line:</span>{" "}
                               &ldquo;{meta.stealable_line}&rdquo;
                             </p>
@@ -1065,20 +1065,20 @@ export default function StudioPage() {
                       {/* Thread tweets */}
                       {Array.isArray(meta.tweets) && meta.tweets.length > 0 && (
                         <div className="mt-3">
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                          <p className="text-xs font-medium text-[#E5E1E4]/50 uppercase tracking-wide mb-2">
                             Thread ({meta.tweets.length} tweets)
                           </p>
                           <div className="space-y-2">
                             {(meta.tweets as string[]).map((tweet, i) => (
                               <div
                                 key={i}
-                                className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 border-l-2 border-violet-300"
+                                className="bg-white/5 rounded-lg p-3 text-sm text-[#dbc2ad] border-l-2 border-[#c5c5ff]/50"
                               >
-                                <span className="text-xs text-gray-400 mr-2">
+                                <span className="text-xs text-[#E5E1E4]/40 mr-2">
                                   {i + 1}/{meta.tweets.length}
                                 </span>
                                 {tweet}
-                                <span className="text-xs text-gray-400 ml-1">
+                                <span className="text-xs text-[#E5E1E4]/40 ml-1">
                                   ({tweet.length}/280)
                                 </span>
                               </div>
@@ -1090,16 +1090,16 @@ export default function StudioPage() {
                       {/* Video blocks */}
                       {Array.isArray(meta.blocks) && meta.blocks.length > 0 && (
                         <div className="mt-3">
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                          <p className="text-xs font-medium text-[#E5E1E4]/50 uppercase tracking-wide mb-2">
                             Breath Blocks ({meta.blocks.length})
                           </p>
                           <div className="space-y-2">
                             {(meta.blocks as string[]).map((block, i) => (
                               <div
                                 key={i}
-                                className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 border-l-2 border-rose-300"
+                                className="bg-white/5 rounded-lg p-3 text-sm text-[#dbc2ad] border-l-2 border-[#ffb4ab]/50"
                               >
-                                <span className="text-xs text-rose-400 font-medium mr-2">
+                                <span className="text-xs text-[#ffb4ab] font-medium mr-2">
                                   Block {i + 1}
                                 </span>
                                 {block}
@@ -1111,7 +1111,7 @@ export default function StudioPage() {
 
                       {/* Notes */}
                       {meta.notes && (
-                        <p className="text-xs text-gray-400 mt-3 italic">
+                        <p className="text-xs text-[#E5E1E4]/40 mt-3 italic">
                           {meta.notes}
                         </p>
                       )}
@@ -1119,18 +1119,18 @@ export default function StudioPage() {
                       {/* end content tab */}
 
                       {/* Actions */}
-                      <div className="flex gap-2 mt-4 pt-3 border-t border-gray-100">
+                      <div className="flex gap-2 mt-4 pt-3 border-t border-white/5">
                         <button
                           onClick={() => handleStatusChange(piece.id, "approved")}
                           disabled={piece.status === "approved"}
-                          className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40"
+                          className="px-3 py-1.5 text-xs font-medium bg-[#4ade80]/20 text-[#4ade80] rounded-lg hover:bg-[#4ade80]/30 disabled:opacity-40"
                         >
                           Approve
                         </button>
                         <button
                           onClick={() => handleStatusChange(piece.id, "rejected")}
                           disabled={piece.status === "rejected"}
-                          className="px-3 py-1.5 text-xs font-medium bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 disabled:opacity-40"
+                          className="px-3 py-1.5 text-xs font-medium bg-white/10 text-[#ffb4ab] border border-[#ffb4ab]/20 rounded-lg hover:bg-white/5 disabled:opacity-40"
                         >
                           Reject
                         </button>
@@ -1138,7 +1138,7 @@ export default function StudioPage() {
                           onClick={() =>
                             router.push(`/content/${piece.id}`)
                           }
-                          className="px-3 py-1.5 text-xs font-medium bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                          className="px-3 py-1.5 text-xs font-medium bg-white/10 text-[#dbc2ad] border border-white/10 rounded-lg hover:bg-white/5"
                         >
                           Edit
                         </button>
@@ -1148,7 +1148,7 @@ export default function StudioPage() {
                             setCopiedId(piece.id);
                             setTimeout(() => setCopiedId(null), 2000);
                           }}
-                          className="px-3 py-1.5 text-xs font-medium bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 active:scale-95 transition-all duration-150 ml-auto"
+                          className="px-3 py-1.5 text-xs font-medium bg-white/10 text-[#dbc2ad] border border-white/10 rounded-lg hover:bg-white/5 active:scale-95 transition-all duration-150 ml-auto"
                         >
                           {copiedId === piece.id ? "Copied" : "Copy"}
                         </button>
@@ -1156,17 +1156,17 @@ export default function StudioPage() {
                         {/* Publish dropdown */}
                         <div className="relative">
                           {publishStatus[piece.id] === "publishing" ? (
-                            <span className="px-3 py-1.5 text-xs font-medium text-blue-600">
+                            <span className="px-3 py-1.5 text-xs font-medium text-[#FF9500]">
                               Publishing...
                             </span>
                           ) : publishStatus[piece.id] === "published" ? (
-                            <span className="px-3 py-1.5 text-xs font-medium text-green-600">
+                            <span className="px-3 py-1.5 text-xs font-medium text-[#4ade80]">
                               Published
                             </span>
                           ) : publishStatus[piece.id] === "failed" ? (
                             <button
                               onClick={() => setPublishingPieceId(piece.id)}
-                              className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50"
+                              className="px-3 py-1.5 text-xs font-medium text-[#ffb4ab] border border-[#ffb4ab]/20 rounded-lg hover:bg-white/5"
                             >
                               Retry
                             </button>
@@ -1178,18 +1178,18 @@ export default function StudioPage() {
                                 )
                               }
                               disabled={piece.status !== "approved" && piece.status !== "posted"}
-                              className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
+                              className="px-3 py-1.5 text-xs font-medium bg-[#FF9500] text-[#2d1600] rounded-lg hover:opacity-90 disabled:opacity-40"
                             >
                               Publish
                             </button>
                           )}
 
                           {publishingPieceId === piece.id && (
-                            <div className="absolute bottom-full right-0 mb-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-2">
+                            <div className="absolute bottom-full right-0 mb-1 w-56 bg-[#201f21] border border-white/10 rounded-lg shadow-lg z-10 p-2">
                               {connections.length === 0 ? (
-                                <p className="text-xs text-gray-500 px-2 py-1">
+                                <p className="text-xs text-[#E5E1E4]/50 px-2 py-1">
                                   No connections.{" "}
-                                  <a href="/settings" className="text-blue-600 underline">
+                                  <a href="/settings" className="text-[#FF9500] underline">
                                     Add one
                                   </a>
                                 </p>
@@ -1200,13 +1200,13 @@ export default function StudioPage() {
                                     <button
                                       key={conn.id}
                                       onClick={() => handlePublish(piece.id, conn.id)}
-                                      className="w-full text-left px-3 py-2 text-xs rounded hover:bg-gray-100 flex items-center gap-2"
+                                      className="w-full text-left px-3 py-2 text-xs rounded hover:bg-white/10 flex items-center gap-2"
                                     >
                                       <span className="font-medium capitalize">
                                         {conn.platform}
                                       </span>
                                       {conn.platform_account_name && (
-                                        <span className="text-gray-400 truncate">
+                                        <span className="text-[#E5E1E4]/40 truncate">
                                           {conn.platform_account_name}
                                         </span>
                                       )}
@@ -1226,18 +1226,18 @@ export default function StudioPage() {
 
           {pieces.length === 0 && (
             <div className="text-center py-16">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-gray-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-white/10 flex items-center justify-center">
+                <svg className="w-6 h-6 text-[#E5E1E4]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <p className="text-sm font-medium text-gray-900 mb-1">No content yet</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm font-medium text-[#E5E1E4] mb-1">No content yet</p>
+              <p className="text-xs text-[#E5E1E4]/50">
                 Paste a transcript and generate to see your content week here
               </p>
               <button
                 onClick={() => animateToStep("Input")}
-                className="mt-4 px-4 py-2 text-xs font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                className="mt-4 px-4 py-2 text-xs font-medium bg-[#FF9500] text-[#2d1600] rounded-lg hover:opacity-90 transition-colors"
               >
                 Get started
               </button>

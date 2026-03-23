@@ -5,9 +5,9 @@ import { api, type Product, type SeedItem } from "@/lib/api";
 
 const STATUS_BADGES: Record<string, { bg: string; text: string; label: string }> = {
   parked: { bg: "bg-amber-100", text: "text-amber-700", label: "Parked" },
-  developing: { bg: "bg-blue-100", text: "text-blue-700", label: "Developing" },
-  used: { bg: "bg-green-100", text: "text-green-700", label: "Used" },
-  archived: { bg: "bg-gray-100", text: "text-gray-500", label: "Archived" },
+  developing: { bg: "bg-[#FF9500]/10", text: "text-[#FF9500]", label: "Developing" },
+  used: { bg: "bg-[#4ade80]/10", text: "text-[#4ade80]", label: "Used" },
+  archived: { bg: "bg-white/10", text: "text-[#E5E1E4]/50", label: "Archived" },
 };
 
 const TEMPLATE_LABELS: Record<string, string> = {
@@ -18,9 +18,9 @@ const TEMPLATE_LABELS: Record<string, string> = {
 };
 
 const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
-  1: { label: "High", color: "text-red-600" },
-  0: { label: "Normal", color: "text-gray-500" },
-  "-1": { label: "Low", color: "text-gray-400" },
+  1: { label: "High", color: "text-[#ffb4ab]" },
+  0: { label: "Normal", color: "text-[#E5E1E4]/50" },
+  "-1": { label: "Low", color: "text-[#E5E1E4]/40" },
 };
 
 export default function SeedBankPage() {
@@ -124,8 +124,8 @@ export default function SeedBankPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Seed Bank</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-[#E5E1E4]">Seed Bank</h1>
+          <p className="text-sm text-[#E5E1E4]/50 mt-1">
             Ideas waiting to grow. Park observations, voice memo insights, and half-formed thoughts here.
           </p>
         </div>
@@ -142,7 +142,7 @@ export default function SeedBankPage() {
         <select
           value={productId}
           onChange={(e) => setProductId(e.target.value)}
-          className="w-full max-w-xs border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          className="w-full max-w-xs border border-white/10 rounded-lg px-3 py-2 text-sm"
         >
           {products.map((p) => (
             <option key={p.id} value={p.id}>
@@ -156,7 +156,7 @@ export default function SeedBankPage() {
       {showAdd && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
               Core Observation
             </label>
             <textarea
@@ -164,12 +164,12 @@ export default function SeedBankPage() {
               onChange={(e) => setNewSeed(e.target.value)}
               placeholder="The one-sentence insight..."
               rows={2}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"
+              className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm resize-none"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Audience Hook
               </label>
               <input
@@ -177,17 +177,17 @@ export default function SeedBankPage() {
                 value={newHook}
                 onChange={(e) => setNewHook(e.target.value)}
                 placeholder="Why someone would stop scrolling..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Template Fit
               </label>
               <select
                 value={newTemplate}
                 onChange={(e) => setNewTemplate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
               >
                 {Object.entries(TEMPLATE_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>
@@ -199,7 +199,7 @@ export default function SeedBankPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Notes
               </label>
               <input
@@ -207,17 +207,17 @@ export default function SeedBankPage() {
                 value={newNotes}
                 onChange={(e) => setNewNotes(e.target.value)}
                 placeholder="Personal context..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Priority
               </label>
               <select
                 value={newPriority}
                 onChange={(e) => setNewPriority(Number(e.target.value))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
               >
                 <option value={1}>High</option>
                 <option value={0}>Normal</option>
@@ -243,14 +243,14 @@ export default function SeedBankPage() {
             onClick={() => setStatusFilter(s)}
             className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
               statusFilter === s
-                ? "bg-gray-900 text-white border-gray-900"
-                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
+                : "bg-[#201f21] text-[#dbc2ad] border-white/10 hover:bg-[#201f21]/5"
             }`}
           >
             {s ? STATUS_BADGES[s]?.label || s : "All"}
           </button>
         ))}
-        <span className="ml-auto text-xs text-gray-400 self-center">
+        <span className="ml-auto text-xs text-[#E5E1E4]/40 self-center">
           {seeds.length} seed{seeds.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -265,15 +265,15 @@ export default function SeedBankPage() {
           return (
             <div
               key={seed.id}
-              className={`bg-white border rounded-xl overflow-hidden transition-shadow ${
+              className={`bg-[#201f21] border rounded-xl overflow-hidden transition-shadow ${
                 seed.priority === 1
                   ? "border-amber-300 shadow-sm"
-                  : "border-gray-200"
+                  : "border-white/10"
               }`}
             >
               {/* Card header */}
               <div
-                className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-[#201f21]/5 transition-colors"
                 onClick={() => setExpandedId(isExpanded ? null : seed.id)}
               >
                 {/* Priority indicator */}
@@ -290,18 +290,18 @@ export default function SeedBankPage() {
                 </button>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 leading-snug">
+                  <p className="text-sm font-medium text-[#E5E1E4] leading-snug">
                     {seed.seed}
                   </p>
                   {seed.audience_hook && (
-                    <p className="text-xs text-gray-500 mt-1 truncate">
+                    <p className="text-xs text-[#E5E1E4]/50 mt-1 truncate">
                       Hook: {seed.audience_hook}
                     </p>
                   )}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-[#E5E1E4]/40">
                     {TEMPLATE_LABELS[seed.template_fit] || seed.template_fit}
                   </span>
                   <span
@@ -309,7 +309,7 @@ export default function SeedBankPage() {
                   >
                     {badge.label}
                   </span>
-                  <span className="text-gray-400 text-xs">
+                  <span className="text-[#E5E1E4]/40 text-xs">
                     {isExpanded ? "\u25B2" : "\u25BC"}
                   </span>
                 </div>
@@ -317,17 +317,17 @@ export default function SeedBankPage() {
 
               {/* Expanded details */}
               {isExpanded && (
-                <div className="px-5 pb-4 border-t border-gray-100 pt-3 space-y-3">
+                <div className="px-5 pb-4 border-t border-white/5 pt-3 space-y-3">
                   {seed.heat.length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-gray-500 mb-1">
+                      <p className="text-xs font-medium text-[#E5E1E4]/50 mb-1">
                         Heat (strongest lines)
                       </p>
                       <ul className="space-y-1">
                         {seed.heat.map((h, i) => (
                           <li
                             key={i}
-                            className="text-sm text-gray-700 pl-3 border-l-2 border-amber-400"
+                            className="text-sm text-[#dbc2ad] pl-3 border-l-2 border-amber-400"
                           >
                             {h}
                           </li>
@@ -337,8 +337,8 @@ export default function SeedBankPage() {
                   )}
 
                   {seed.metaphor && (
-                    <p className="text-sm text-gray-600">
-                      <span className="text-xs font-medium text-gray-500">
+                    <p className="text-sm text-[#dbc2ad]">
+                      <span className="text-xs font-medium text-[#E5E1E4]/50">
                         Metaphor:{" "}
                       </span>
                       {seed.metaphor}
@@ -346,8 +346,8 @@ export default function SeedBankPage() {
                   )}
 
                   {seed.subject_line && (
-                    <p className="text-sm text-gray-600">
-                      <span className="text-xs font-medium text-gray-500">
+                    <p className="text-sm text-[#dbc2ad]">
+                      <span className="text-xs font-medium text-[#E5E1E4]/50">
                         Subject line:{" "}
                       </span>
                       {seed.subject_line}
@@ -355,39 +355,39 @@ export default function SeedBankPage() {
                   )}
 
                   {seed.weekly_theme && (
-                    <p className="text-sm text-gray-600">
-                      <span className="text-xs font-medium text-gray-500">
+                    <p className="text-sm text-[#dbc2ad]">
+                      <span className="text-xs font-medium text-[#E5E1E4]/50">
                         Weekly theme:{" "}
                       </span>
                       {seed.weekly_theme}
                     </p>
                   )}
 
-                  <p className="text-xs text-gray-400">
-                    <span className="font-medium text-gray-500">
+                  <p className="text-xs text-[#E5E1E4]/40">
+                    <span className="font-medium text-[#E5E1E4]/50">
                       Verdict:{" "}
                     </span>
                     {seed.verdict}
                   </p>
 
                   {seed.notes && (
-                    <p className="text-xs text-gray-500 italic">
+                    <p className="text-xs text-[#E5E1E4]/50 italic">
                       {seed.notes}
                     </p>
                   )}
 
                   {seed.raw_transcript && (
                     <details className="text-xs">
-                      <summary className="text-gray-400 cursor-pointer hover:text-gray-600">
+                      <summary className="text-[#E5E1E4]/40 cursor-pointer hover:text-[#dbc2ad]">
                         Original transcript
                       </summary>
-                      <p className="mt-1 text-gray-500 whitespace-pre-wrap bg-gray-50 rounded p-2">
+                      <p className="mt-1 text-[#E5E1E4]/50 whitespace-pre-wrap bg-white/5 rounded p-2">
                         {seed.raw_transcript}
                       </p>
                     </details>
                   )}
 
-                  <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
+                  <div className="flex items-center gap-2 text-xs text-[#E5E1E4]/40 pt-1">
                     <span>
                       Source: {seed.source}
                     </span>
@@ -400,11 +400,11 @@ export default function SeedBankPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 pt-2 border-t border-gray-100">
+                  <div className="flex gap-2 pt-2 border-t border-white/5">
                     {seed.status === "parked" && (
                       <button
                         onClick={() => handleStatusChange(seed.id, "developing")}
-                        className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        className="px-3 py-1.5 text-xs font-medium bg-[#FF9500] text-[#2d1600] rounded-lg hover:opacity-90"
                       >
                         Start Developing
                       </button>
@@ -412,7 +412,7 @@ export default function SeedBankPage() {
                     {seed.status === "developing" && (
                       <button
                         onClick={() => handleStatusChange(seed.id, "used")}
-                        className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        className="px-3 py-1.5 text-xs font-medium bg-[#4ade80]/20 text-[#4ade80] rounded-lg hover:opacity-90"
                       >
                         Mark Used
                       </button>
@@ -420,7 +420,7 @@ export default function SeedBankPage() {
                     {seed.status !== "archived" && (
                       <button
                         onClick={() => handleStatusChange(seed.id, "archived")}
-                        className="px-3 py-1.5 text-xs font-medium bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                        className="px-3 py-1.5 text-xs font-medium bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg hover:bg-[#201f21]/5"
                       >
                         Archive
                       </button>
@@ -428,7 +428,7 @@ export default function SeedBankPage() {
                     {seed.status === "archived" && (
                       <button
                         onClick={() => handleStatusChange(seed.id, "parked")}
-                        className="px-3 py-1.5 text-xs font-medium bg-white text-amber-600 border border-amber-300 rounded-lg hover:bg-amber-50"
+                        className="px-3 py-1.5 text-xs font-medium bg-[#201f21] text-amber-600 border border-amber-300 rounded-lg hover:bg-amber-50"
                       >
                         Unarchive
                       </button>
@@ -437,13 +437,13 @@ export default function SeedBankPage() {
                       onClick={() => {
                         navigator.clipboard.writeText(seed.seed);
                       }}
-                      className="px-3 py-1.5 text-xs font-medium bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      className="px-3 py-1.5 text-xs font-medium bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg hover:bg-[#201f21]/5"
                     >
                       Copy
                     </button>
                     <button
                       onClick={() => handleDelete(seed.id)}
-                      className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 ml-auto"
+                      className="px-3 py-1.5 text-xs font-medium text-[#ffb4ab] border border-[#ffb4ab]/30 rounded-lg hover:bg-[#ffb4ab]/10 ml-auto"
                     >
                       Delete
                     </button>
@@ -457,7 +457,7 @@ export default function SeedBankPage() {
 
       {seeds.length === 0 && !loading && (
         <div className="text-center py-16">
-          <p className="text-gray-400 text-sm">
+          <p className="text-[#E5E1E4]/40 text-sm">
             No seeds yet. Drop a voice memo in the Content Studio or plant one manually.
           </p>
         </div>
