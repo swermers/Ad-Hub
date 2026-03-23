@@ -1,8 +1,66 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { AuthGuard } from "@/components/AuthGuard";
+
+function TopNav() {
+  const pathname = usePathname();
+
+  const topLinks = [
+    { href: "/", label: "Dashboard" },
+    { href: "/content", label: "Campaigns" },
+    { href: "/analytics", label: "Analytics" },
+  ];
+
+  return (
+    <nav className="fixed top-0 w-full z-50 glass-nav border-b border-white/5 flex justify-between items-center px-8 h-20">
+      <div className="flex items-center gap-8 entrance-fade stagger-1">
+        <span className="text-2xl font-bold tracking-tighter text-[#E5E1E4]">
+          Ad-Hub
+        </span>
+        <div className="hidden md:flex gap-6 ml-4">
+          {topLinks.map((link) => {
+            const isActive =
+              link.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`text-sm transition-colors duration-200 haptic-btn ${
+                  isActive
+                    ? "text-[#FF9500] font-bold border-b-2 border-[#FF9500] pb-1"
+                    : "text-[#E5E1E4]/70 hover:text-[#E5E1E4]"
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex items-center gap-4 entrance-fade stagger-1">
+        <Link
+          href="/products/new"
+          className="bg-[#FF9500] text-[#2d1600] px-5 py-2.5 rounded-lg font-bold text-sm hover:opacity-90 transition-all active:scale-95 hover-lift"
+        >
+          New Product
+        </Link>
+        <div className="flex items-center gap-2">
+          <button className="p-2 text-[#E5E1E4]/70 hover:bg-white/10 rounded-full transition-all hover-lift">
+            <span className="material-symbols-outlined">notifications</span>
+          </button>
+          <button className="p-2 text-[#E5E1E4]/70 hover:bg-white/10 rounded-full transition-all hover-lift">
+            <span className="material-symbols-outlined">account_circle</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,10 +71,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {isLoginPage ? (
         children
       ) : (
-        <div className="flex h-screen">
+        <div className="min-h-screen bg-[#131315]">
+          <TopNav />
           <Sidebar />
-          <main className="flex-1 overflow-y-auto">
-            <div className="p-8">{children}</div>
+          <main className="ml-72 pt-28 min-h-screen relative overflow-hidden">
+            <div className="px-12 pb-20">{children}</div>
           </main>
         </div>
       )}
