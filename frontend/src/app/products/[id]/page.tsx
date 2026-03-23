@@ -36,7 +36,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
                 <span className="text-gray-500">Key Features:</span>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {brief.product_type_analysis.key_features_or_offerings.map((f: string, i: number) => (
-                    <span key={i} className="px-2 py-1 bg-[#201f21] border border-gray-200 rounded text-xs text-gray-700">{f}</span>
+                    <span key={i} className="px-2 py-1 bg-[#201f21] border border-gray-200 rounded text-xs text-[#dbc2ad]">{f}</span>
                   ))}
                 </div>
               </div>
@@ -68,7 +68,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
                   <span className="text-green-700 font-medium text-xs">DO</span>
                   <ul className="mt-1 space-y-1">
                     {brief.brand_voice.do.map((item: string, i: number) => (
-                      <li key={i} className="text-xs text-gray-700 flex gap-1.5"><span className="text-green-500 shrink-0">+</span>{item}</li>
+                      <li key={i} className="text-xs text-[#dbc2ad] flex gap-1.5"><span className="text-green-500 shrink-0">+</span>{item}</li>
                     ))}
                   </ul>
                 </div>
@@ -78,7 +78,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
                   <span className="text-red-700 font-medium text-xs">DON&apos;T</span>
                   <ul className="mt-1 space-y-1">
                     {brief.brand_voice.dont.map((item: string, i: number) => (
-                      <li key={i} className="text-xs text-gray-700 flex gap-1.5"><span className="text-red-500 shrink-0">-</span>{item}</li>
+                      <li key={i} className="text-xs text-[#dbc2ad] flex gap-1.5"><span className="text-red-500 shrink-0">-</span>{item}</li>
                     ))}
                   </ul>
                 </div>
@@ -99,7 +99,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
                 {brief.visual_identity.primary_colors.map((c: string, i: number) => (
                   <div key={i} className="flex items-center gap-1.5">
                     <div className="w-5 h-5 rounded border border-gray-200" style={{ backgroundColor: c }} />
-                    <span className="text-xs font-mono text-gray-600">{c}</span>
+                    <span className="text-xs font-mono text-[#dbc2ad]">{c}</span>
                   </div>
                 ))}
               </div>
@@ -110,7 +110,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
                 <span className="text-gray-500">Imagery:</span>
                 <ul className="mt-1 space-y-1">
                   {brief.visual_identity.imagery_recommendations.map((r: string, i: number) => (
-                    <li key={i} className="text-xs text-gray-700 ml-3">&#8226; {r}</li>
+                    <li key={i} className="text-xs text-[#dbc2ad] ml-3">&#8226; {r}</li>
                   ))}
                 </ul>
               </div>
@@ -127,14 +127,14 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
             {brief.audience_personas.map((p: any, i: number) => (
               <div key={i} className="bg-gray-50 rounded-lg p-4 text-sm">
                 <p className="font-medium text-[#E5E1E4] mb-1">{p.name}</p>
-                <p className="text-gray-600 text-xs mb-2">{p.description}</p>
+                <p className="text-[#dbc2ad] text-xs mb-2">{p.description}</p>
                 <div className="grid grid-cols-2 gap-3">
                   {p.pain_points && (
                     <div>
                       <span className="text-xs font-medium text-gray-500">Pain Points</span>
                       <ul className="mt-1 space-y-0.5">
                         {p.pain_points.map((pp: string, j: number) => (
-                          <li key={j} className="text-xs text-gray-700">&#8226; {pp}</li>
+                          <li key={j} className="text-xs text-[#dbc2ad]">&#8226; {pp}</li>
                         ))}
                       </ul>
                     </div>
@@ -144,7 +144,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
                       <span className="text-xs font-medium text-gray-500">Motivations</span>
                       <ul className="mt-1 space-y-0.5">
                         {p.motivations.map((m: string, j: number) => (
-                          <li key={j} className="text-xs text-gray-700">&#8226; {m}</li>
+                          <li key={j} className="text-xs text-[#dbc2ad]">&#8226; {m}</li>
                         ))}
                       </ul>
                     </div>
@@ -164,11 +164,11 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
             {brief.messaging_pillars.map((p: any, i: number) => (
               <div key={i} className="bg-gray-50 rounded-lg p-4 text-sm">
                 <p className="font-medium text-[#E5E1E4]">{p.pillar}</p>
-                <p className="text-gray-600 text-xs mt-0.5 mb-2">{p.description}</p>
+                <p className="text-[#dbc2ad] text-xs mt-0.5 mb-2">{p.description}</p>
                 {p.key_messages && (
                   <div className="flex flex-wrap gap-1.5">
                     {p.key_messages.map((m: string, j: number) => (
-                      <span key={j} className="px-2 py-1 bg-[#201f21] border border-gray-200 rounded text-xs text-gray-700">{m}</span>
+                      <span key={j} className="px-2 py-1 bg-[#201f21] border border-gray-200 rounded text-xs text-[#dbc2ad]">{m}</span>
                     ))}
                   </div>
                 )}
@@ -182,7 +182,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
       {brief.competitive_positioning && (
         <div>
           <h3 className="text-sm font-semibold text-[#E5E1E4] mb-2">Competitive Positioning</h3>
-          <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-4">{brief.competitive_positioning}</p>
+          <p className="text-sm text-[#dbc2ad] bg-gray-50 rounded-lg p-4">{brief.competitive_positioning}</p>
         </div>
       )}
 
@@ -192,7 +192,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
           <h3 className="text-sm font-semibold text-[#E5E1E4] mb-2">Content Themes</h3>
           <div className="flex flex-wrap gap-2">
             {brief.content_themes.map((t: string, i: number) => (
-              <span key={i} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">{t}</span>
+              <span key={i} className="px-3 py-1.5 bg-gray-100 text-[#dbc2ad] rounded-full text-sm font-medium">{t}</span>
             ))}
           </div>
         </div>
@@ -208,7 +208,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
                 <p className="text-xs font-medium text-gray-500 mb-2">Best Formats</p>
                 <ul className="space-y-1">
                   {brief.ad_recommendations.best_formats.map((f: string, i: number) => (
-                    <li key={i} className="text-xs text-gray-700">&#8226; {f}</li>
+                    <li key={i} className="text-xs text-[#dbc2ad]">&#8226; {f}</li>
                   ))}
                 </ul>
               </div>
@@ -218,7 +218,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
                 <p className="text-xs font-medium text-gray-500 mb-2">Key Angles</p>
                 <ul className="space-y-1">
                   {brief.ad_recommendations.key_angles.map((a: string, i: number) => (
-                    <li key={i} className="text-xs text-gray-700">&#8226; {a}</li>
+                    <li key={i} className="text-xs text-[#dbc2ad]">&#8226; {a}</li>
                   ))}
                 </ul>
               </div>
@@ -228,7 +228,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
                 <p className="text-xs font-medium text-gray-500 mb-2">CTA Suggestions</p>
                 <ul className="space-y-1">
                   {brief.ad_recommendations.cta_suggestions.map((c: string, i: number) => (
-                    <li key={i} className="text-xs text-gray-700">&#8226; {c}</li>
+                    <li key={i} className="text-xs text-[#dbc2ad]">&#8226; {c}</li>
                   ))}
                 </ul>
               </div>
@@ -561,7 +561,7 @@ export default function ProductDetailPage() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                     product.product_type === t.value
                       ? "bg-[#FF9500] text-[#2d1600] border-blue-600"
-                      : "bg-[#201f21] text-gray-700 border-gray-300 hover:bg-gray-50"
+                      : "bg-[#201f21] text-[#dbc2ad] border-gray-300 hover:bg-gray-50"
                   }`}
                 >
                   {t.label}
@@ -739,7 +739,7 @@ export default function ProductDetailPage() {
                   className="w-8 h-8 rounded-lg border border-gray-200 shadow-sm"
                   style={{ backgroundColor: color }}
                 />
-                <span className="text-xs font-mono text-gray-600">{color}</span>
+                <span className="text-xs font-mono text-[#dbc2ad]">{color}</span>
               </div>
             ))}
           </div>
@@ -796,7 +796,7 @@ export default function ProductDetailPage() {
                   </p>
                   <p className="text-xs text-gray-500 truncate">{page.url}</p>
                 </div>
-                <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                <span className="px-2 py-1 bg-gray-100 text-[#dbc2ad] rounded text-xs">
                   {page.page_type}
                 </span>
               </div>

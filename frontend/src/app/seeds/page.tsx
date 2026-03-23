@@ -124,7 +124,7 @@ export default function SeedBankPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Seed Bank</h1>
+          <h1 className="text-2xl font-bold text-[#E5E1E4]">Seed Bank</h1>
           <p className="text-sm text-gray-500 mt-1">
             Ideas waiting to grow. Park observations, voice memo insights, and half-formed thoughts here.
           </p>
@@ -156,7 +156,7 @@ export default function SeedBankPage() {
       {showAdd && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
               Core Observation
             </label>
             <textarea
@@ -169,7 +169,7 @@ export default function SeedBankPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Audience Hook
               </label>
               <input
@@ -181,7 +181,7 @@ export default function SeedBankPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Template Fit
               </label>
               <select
@@ -199,7 +199,7 @@ export default function SeedBankPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Notes
               </label>
               <input
@@ -211,7 +211,7 @@ export default function SeedBankPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                 Priority
               </label>
               <select
@@ -244,7 +244,7 @@ export default function SeedBankPage() {
             className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
               statusFilter === s
                 ? "bg-[#FF9500] text-[#2d1600] border-gray-900"
-                : "bg-white text-gray-600 border-gray-300 hover:bg-white/5"
+                : "bg-[#201f21] text-gray-600 border-gray-300 hover:bg-[#201f21]/5"
             }`}
           >
             {s ? STATUS_BADGES[s]?.label || s : "All"}
@@ -265,7 +265,7 @@ export default function SeedBankPage() {
           return (
             <div
               key={seed.id}
-              className={`bg-white border rounded-xl overflow-hidden transition-shadow ${
+              className={`bg-[#201f21] border rounded-xl overflow-hidden transition-shadow ${
                 seed.priority === 1
                   ? "border-amber-300 shadow-sm"
                   : "border-gray-200"
@@ -273,7 +273,7 @@ export default function SeedBankPage() {
             >
               {/* Card header */}
               <div
-                className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-white/5 transition-colors"
+                className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-[#201f21]/5 transition-colors"
                 onClick={() => setExpandedId(isExpanded ? null : seed.id)}
               >
                 {/* Priority indicator */}
@@ -290,7 +290,7 @@ export default function SeedBankPage() {
                 </button>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 leading-snug">
+                  <p className="text-sm font-medium text-[#E5E1E4] leading-snug">
                     {seed.seed}
                   </p>
                   {seed.audience_hook && (
@@ -327,7 +327,7 @@ export default function SeedBankPage() {
                         {seed.heat.map((h, i) => (
                           <li
                             key={i}
-                            className="text-sm text-gray-700 pl-3 border-l-2 border-amber-400"
+                            className="text-sm text-[#dbc2ad] pl-3 border-l-2 border-amber-400"
                           >
                             {h}
                           </li>
@@ -420,7 +420,7 @@ export default function SeedBankPage() {
                     {seed.status !== "archived" && (
                       <button
                         onClick={() => handleStatusChange(seed.id, "archived")}
-                        className="px-3 py-1.5 text-xs font-medium bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-white/5"
+                        className="px-3 py-1.5 text-xs font-medium bg-[#201f21] text-gray-600 border border-gray-300 rounded-lg hover:bg-[#201f21]/5"
                       >
                         Archive
                       </button>
@@ -428,7 +428,7 @@ export default function SeedBankPage() {
                     {seed.status === "archived" && (
                       <button
                         onClick={() => handleStatusChange(seed.id, "parked")}
-                        className="px-3 py-1.5 text-xs font-medium bg-white text-amber-600 border border-amber-300 rounded-lg hover:bg-amber-50"
+                        className="px-3 py-1.5 text-xs font-medium bg-[#201f21] text-amber-600 border border-amber-300 rounded-lg hover:bg-amber-50"
                       >
                         Unarchive
                       </button>
@@ -437,7 +437,7 @@ export default function SeedBankPage() {
                       onClick={() => {
                         navigator.clipboard.writeText(seed.seed);
                       }}
-                      className="px-3 py-1.5 text-xs font-medium bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-white/5"
+                      className="px-3 py-1.5 text-xs font-medium bg-[#201f21] text-gray-600 border border-gray-300 rounded-lg hover:bg-[#201f21]/5"
                     >
                       Copy
                     </button>
