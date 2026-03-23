@@ -2,8 +2,10 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api, type ContentPiece, type Product } from "@/lib/api";
+import { useRef } from "react";
+import { api, type ContentPiece, type Product, type GenerateImageStatus } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
+import { VideoPreview, VIDEO_STYLE_OPTIONS, type VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
 import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
@@ -19,10 +21,17 @@ export default function ContentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState("bold_hook");
   const [previewAspect, setPreviewAspect] = useState<AspectRatio>("1:1");
   const [defaultsSet, setDefaultsSet] = useState(false);
   const [showVisual, setShowVisual] = useState(true);
+  const [previewMode, setPreviewMode] = useState<"video" | "static">("video");
+  const [videoStyle, setVideoStyle] = useState<VideoStyle>("swiss-bold");
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const [imageGenStatus, setImageGenStatus] = useState<GenerateImageStatus | null>(null);
+  const imageGenPollRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     api
@@ -60,7 +69,7 @@ export default function ContentDetailPage() {
       setPiece(updated);
       setEditing(false);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -72,7 +81,7 @@ export default function ContentDetailPage() {
       const updated = await api.updateContentStatus(piece.id, status);
       setPiece(updated);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status");
+      setError(err instanceof Error ? err.message : "Failed to update status");
     }
   };
 
@@ -84,16 +93,50 @@ export default function ContentDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!piece || !confirm("Delete this content?")) return;
-    await api.deleteContent(piece.id);
-    router.push("/content");
+    if (!piece) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    try {
+      await api.deleteContent(piece.id);
+      router.push("/content");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
+      setConfirmDelete(false);
+    }
   };
 
-  if (loading) return <div className="text-gray-500">Loading...</div>;
-  if (!piece) return <div className="text-red-500">Content not found</div>;
+  if (loading) return (
+    <div className="max-w-5xl">
+      <div className="animate-pulse space-y-4">
+        <div className="h-4 w-24 bg-gray-200 rounded" />
+        <div className="h-8 w-64 bg-gray-200 rounded" />
+        <div className="grid grid-cols-2 gap-6">
+          <div className="aspect-square bg-gray-100 rounded-xl" />
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-full" />
+            <div className="h-4 bg-gray-200 rounded w-3/4" />
+            <div className="h-4 bg-gray-200 rounded w-1/2" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+  if (!piece) return (
+    <div className="max-w-5xl">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <p className="text-sm font-medium text-red-700">Content not found</p>
+        <button onClick={() => router.push("/content")} className="mt-2 text-xs text-red-500 hover:underline">
+          Back to Content Queue
+        </button>
+      </div>
+    </div>
+  );
 
-  // Extract brand colors
+  // Extract brand colors and font from product/brief
   let brandColors: string[] = [];
+  let brandFont: string | undefined;
   if (product?.brand_colors) {
     try { brandColors = JSON.parse(product.brand_colors); } catch { /* */ }
   }
@@ -103,6 +146,17 @@ export default function ContentDetailPage() {
       const brief = JSON.parse(product.brand_brief);
       const viColors = brief?.visual_identity?.primary_colors || [];
       if (viColors.length > 0 && brandColors.length === 0) brandColors = viColors;
+      // Extract brand font if available
+      const fonts = brief?.visual_identity?.fonts;
+      if (fonts && typeof fonts === "string") brandFont = fonts;
+      else if (Array.isArray(fonts) && fonts.length > 0) brandFont = fonts[0];
+    } catch { /* */ }
+  }
+  // Also check crawl-extracted fonts
+  if (!brandFont && product?.brand_fonts) {
+    try {
+      const crawlFonts = JSON.parse(product.brand_fonts);
+      if (Array.isArray(crawlFonts) && crawlFonts.length > 0) brandFont = crawlFonts[0];
     } catch { /* */ }
   }
 
@@ -124,15 +178,53 @@ export default function ContentDetailPage() {
   const accentColor = colorScheme.accentColor;
   const textColor = colorScheme.textColor;
 
-  // Extract headline for the visual (short, punchy)
+  // Extract headline for the visual — Swiss design demands brevity
   const rawHeadline = piece.hook || piece.title || piece.body.split("\n")[0];
-  const headline = rawHeadline.length > 50 ? rawHeadline.slice(0, 47) + "..." : rawHeadline;
-  // Extract body text (without hook line, max ~90 chars for readability)
+  const headline = rawHeadline.length > 30 ? rawHeadline.slice(0, 27) + "..." : rawHeadline;
+  // Extract body text — concise supporting copy
   const rawBody = piece.hook
     ? piece.body.replace(piece.hook, "").trim()
     : piece.body.split("\n").slice(1).join(" ").trim();
-  const bodyText = rawBody.length > 90 ? rawBody.slice(0, 87) + "..." : rawBody;
+  const bodyText = rawBody.length > 60 ? rawBody.slice(0, 57) + "..." : rawBody;
   const ctaText = piece.cta || "Learn More";
+
+  const handleGenerateImage = async () => {
+    if (!piece) return;
+    setGeneratingImage(true);
+    setImageGenStatus(null);
+    try {
+      const status = await api.generateImage(piece.product_id, {
+        content_id: piece.id,
+        headline,
+        body: bodyText,
+        cta: ctaText,
+        aspect_ratio: previewAspect,
+      });
+      setImageGenStatus(status);
+
+      if (imageGenPollRef.current) clearInterval(imageGenPollRef.current);
+      imageGenPollRef.current = setInterval(async () => {
+        try {
+          const updated = await api.getImageGenStatus(piece.product_id, status.task_id);
+          setImageGenStatus(updated);
+          if (updated.status === "completed" || updated.status === "failed") {
+            if (imageGenPollRef.current) clearInterval(imageGenPollRef.current);
+            setGeneratingImage(false);
+            if (updated.status === "completed") {
+              const refreshed = await api.getContent(piece.id);
+              setPiece(refreshed);
+            }
+          }
+        } catch {
+          if (imageGenPollRef.current) clearInterval(imageGenPollRef.current);
+          setGeneratingImage(false);
+        }
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image generation failed");
+      setGeneratingImage(false);
+    }
+  };
 
   const platformLabel: Record<string, string> = {
     twitter: "Twitter / X",
@@ -144,6 +236,8 @@ export default function ContentDetailPage() {
   const typeLabel: Record<string, string> = {
     social_post: "Social Post",
     ad_copy: "Ad Copy",
+    carousel: "Carousel",
+    story: "Story / Reel",
     email: "Email",
     blog_draft: "Blog Draft",
   };
@@ -159,12 +253,16 @@ export default function ContentDetailPage() {
   const previewHeight = dims.height * previewScale;
 
   // Determine whether this content type benefits from a visual preview
-  const isVisualContent = piece.content_type === "ad_copy" || piece.content_type === "social_post";
+  const isVisualContent = piece.content_type === "ad_copy" || piece.content_type === "social_post"
+    || piece.content_type === "carousel" || piece.content_type === "story";
 
   let metadata: Record<string, unknown> | null = null;
   if (piece.generation_metadata) {
     try { metadata = JSON.parse(piece.generation_metadata); } catch { metadata = null; }
   }
+
+  // Extract slide headlines from metadata for carousel format
+  const slideHeadlines = metadata?.slide_headlines as string | undefined;
 
   return (
     <div className="max-w-5xl">
@@ -204,39 +302,83 @@ export default function ContentDetailPage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-700">Visual Preview</h3>
-              <button
-                onClick={() => setShowVisual(false)}
-                className="text-xs text-gray-400 hover:text-gray-600"
-              >
-                Hide preview
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Video / Static toggle */}
+                <div className="flex rounded-md border border-gray-200 overflow-hidden">
+                  <button
+                    onClick={() => setPreviewMode("video")}
+                    className={`px-2.5 py-1 text-xs font-medium transition-all ${
+                      previewMode === "video"
+                        ? "bg-gray-900 text-white"
+                        : "bg-white text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    Video
+                  </button>
+                  <button
+                    onClick={() => setPreviewMode("static")}
+                    className={`px-2.5 py-1 text-xs font-medium transition-all ${
+                      previewMode === "static"
+                        ? "bg-gray-900 text-white"
+                        : "bg-white text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    Static
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowVisual(false)}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Hide
+                </button>
+              </div>
             </div>
 
-            {/* Template + Aspect selectors */}
-            <div className="flex gap-2 mb-3 flex-wrap">
-              {TEMPLATE_OPTIONS.slice(0, 6).map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setPreviewTemplate(opt.value)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
-                    previewTemplate === opt.value
-                      ? "bg-gray-900 text-white border-gray-900"
-                      : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-              <select
-                value={previewTemplate}
-                onChange={(e) => setPreviewTemplate(e.target.value)}
-                className="px-2 py-1 rounded-md text-xs border border-gray-200 bg-white text-gray-500"
-              >
-                {TEMPLATE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {/* Style selectors — show video styles or static templates */}
+            {previewMode === "video" ? (
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {VIDEO_STYLE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setVideoStyle(opt.value)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
+                      videoStyle === opt.value
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                    }`}
+                    title={opt.description}
+                  >
+                    {opt.label}
+                  </button>
                 ))}
-              </select>
-            </div>
+              </div>
+            ) : (
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {TEMPLATE_OPTIONS.slice(0, 6).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setPreviewTemplate(opt.value)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
+                      previewTemplate === opt.value
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+                <select
+                  value={previewTemplate}
+                  onChange={(e) => setPreviewTemplate(e.target.value)}
+                  className="px-2 py-1 rounded-md text-xs border border-gray-200 bg-white text-gray-500"
+                >
+                  {TEMPLATE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Aspect ratio pills */}
             <div className="flex gap-2 mb-3">
@@ -255,25 +397,42 @@ export default function ContentDetailPage() {
               ))}
             </div>
 
-            {/* The visual render */}
-            <div
-              className="rounded-xl overflow-hidden shadow-lg border border-gray-200"
-              style={{ width: previewWidth, height: previewHeight }}
-            >
-              <div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left" }}>
-                <TemplateRenderer
-                  templateType={previewTemplate}
-                  headline={headline}
-                  body={bodyText}
-                  cta={ctaText}
-                  aspectRatio={previewAspect}
-                  backgroundColor={bgColor}
-                  textColor={textColor}
-                  accentColor={accentColor}
-                  screenshotUrl={screenshotUrl}
-                />
+            {/* The visual render — Video (primary) or Static (fallback) */}
+            {previewMode === "video" ? (
+              <VideoPreview
+                headline={headline}
+                body={bodyText}
+                cta={ctaText}
+                backgroundColor={bgColor}
+                textColor={textColor}
+                accentColor={accentColor}
+                screenshotUrl={screenshotUrl}
+                aspectRatio={previewAspect}
+                videoStyle={videoStyle}
+                previewWidth={previewWidth}
+                brandFont={brandFont}
+                slideHeadlines={slideHeadlines}
+              />
+            ) : (
+              <div
+                className="rounded-xl overflow-hidden shadow-lg border border-gray-200"
+                style={{ width: previewWidth, height: previewHeight }}
+              >
+                <div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left" }}>
+                  <TemplateRenderer
+                    templateType={previewTemplate}
+                    headline={headline}
+                    body={bodyText}
+                    cta={ctaText}
+                    aspectRatio={previewAspect}
+                    backgroundColor={bgColor}
+                    textColor={textColor}
+                    accentColor={accentColor}
+                    screenshotUrl={screenshotUrl}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Brand color swatches if available */}
             {brandColors.length > 0 && (
@@ -372,6 +531,14 @@ export default function ContentDetailPage() {
         </div>
       </div>
 
+      {/* Error banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 flex items-center justify-between">
+          <p className="text-sm text-red-700">{error}</p>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-xs">Dismiss</button>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex items-center gap-2 mb-6">
         {piece.status === "draft" && (
@@ -404,6 +571,15 @@ export default function ContentDetailPage() {
         >
           {copied ? "Copied!" : "Copy"}
         </button>
+        {isVisualContent && (
+          <button
+            onClick={handleGenerateImage}
+            disabled={generatingImage}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {generatingImage ? "Generating..." : "Generate Image"}
+          </button>
+        )}
         {!editing && (
           <button
             onClick={() => setEditing(true)}
@@ -413,13 +589,67 @@ export default function ContentDetailPage() {
           </button>
         )}
         <div className="flex-1" />
-        <button
-          onClick={handleDelete}
-          className="px-4 py-2 text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
-        >
-          Delete
-        </button>
+        {confirmDelete ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-red-600">Delete this content?</span>
+            <button
+              onClick={handleDelete}
+              className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700"
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="px-3 py-1.5 text-gray-500 text-xs font-medium hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleDelete}
+            className="px-4 py-2 text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
+          >
+            Delete
+          </button>
+        )}
       </div>
+
+      {/* Generated Image */}
+      {(piece.image_url || imageGenStatus) && (
+        <div className="mb-6">
+          {imageGenStatus?.status === "running" && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 flex items-center gap-3">
+              <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-indigo-700">Generating image... Claude is analyzing your brand and creating an ad visual.</p>
+            </div>
+          )}
+          {imageGenStatus?.status === "failed" && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+              <p className="text-sm text-red-700">Image generation failed: {imageGenStatus.error}</p>
+            </div>
+          )}
+          {piece.image_url && (
+            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+              <img
+                src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${piece.image_url}`}
+                alt="Generated ad image"
+                className="w-full max-w-lg"
+              />
+              <div className="bg-gray-50 px-4 py-2 flex items-center justify-between">
+                <span className="text-xs text-gray-400">AI-generated ad image</span>
+                <a
+                  href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${piece.image_url}`}
+                  download
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Download
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Generation info */}
       {metadata && (

@@ -5,11 +5,16 @@
 
 /** Default vibrant palette when brand colors aren't available or are all neutrals */
 const FALLBACK_PALETTES = [
-  { bg: "#1a1a2e", accent: "#e94560", text: "#ffffff" },
-  { bg: "#0f3460", accent: "#e94560", text: "#ffffff" },
-  { bg: "#16213e", accent: "#0f3460", text: "#e94560" },
-  { bg: "#1b262c", accent: "#3282b8", text: "#bbe1fa" },
-  { bg: "#2d132c", accent: "#ee4540", text: "#ffffff" },
+  { bg: "#1a1a2e", accent: "#e94560", text: "#ffffff" },  // Dark navy + coral red
+  { bg: "#0f3460", accent: "#53d8fb", text: "#ffffff" },  // Deep blue + cyan
+  { bg: "#1b262c", accent: "#3282b8", text: "#bbe1fa" },  // Charcoal + ocean blue
+  { bg: "#2d132c", accent: "#c56cf0", text: "#ffffff" },  // Dark plum + violet
+  { bg: "#1a3c34", accent: "#38ef7d", text: "#ffffff" },  // Forest + green
+  { bg: "#2c1654", accent: "#ff6b6b", text: "#ffffff" },  // Deep purple + salmon
+  { bg: "#1c2833", accent: "#f39c12", text: "#ffffff" },  // Midnight + amber
+  { bg: "#1a1a2e", accent: "#6c5ce7", text: "#ffffff" },  // Navy + purple
+  { bg: "#0a3d62", accent: "#78e08f", text: "#ffffff" },  // Dark teal + mint
+  { bg: "#2d3436", accent: "#fd79a8", text: "#ffffff" },  // Graphite + pink
 ];
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -70,9 +75,10 @@ function isLight(hex: string): boolean {
 /** Darken a hex color by a factor (0-1) */
 function darken(hex: string, amount: number): string {
   const [r, g, b] = hexToRgb(hex);
-  const nr = Math.round(r * (1 - amount));
-  const ng = Math.round(g * (1 - amount));
-  const nb = Math.round(b * (1 - amount));
+  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  const nr = clamp(r * (1 - amount));
+  const ng = clamp(g * (1 - amount));
+  const nb = clamp(b * (1 - amount));
   return `#${nr.toString(16).padStart(2, "0")}${ng.toString(16).padStart(2, "0")}${nb.toString(16).padStart(2, "0")}`;
 }
 
@@ -132,8 +138,10 @@ export function buildColorScheme(brandColors: string[]): BrandColorScheme {
   return { backgroundColor: bg, textColor, accentColor: accent };
 }
 
+let _fallbackCounter = 0;
 function pickFallback(): BrandColorScheme {
-  const p = FALLBACK_PALETTES[Math.floor(Math.random() * FALLBACK_PALETTES.length)];
+  const p = FALLBACK_PALETTES[_fallbackCounter % FALLBACK_PALETTES.length];
+  _fallbackCounter++;
   return { backgroundColor: p.bg, textColor: p.text, accentColor: p.accent };
 }
 

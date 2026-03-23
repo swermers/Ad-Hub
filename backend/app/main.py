@@ -17,6 +17,7 @@ from app.routers import (
     connections,
     content,
     generation,
+    image_gen,
     ingestion,
     optimizer,
     pain_points,
@@ -76,10 +77,11 @@ app.include_router(pain_points.router, prefix="/api/products", tags=["pain-point
 app.include_router(bulk_generator.router, prefix="/api/products", tags=["bulk-generator"])
 app.include_router(bulk_upload.router, prefix="/api/products", tags=["bulk-upload"])
 app.include_router(optimizer.router, prefix="/api/products", tags=["optimizer"])
+app.include_router(image_gen.router, prefix="/api/products", tags=["image-gen"])
 
 
-# Serve uploaded files (screenshots, ad images, etc.)
-uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
+# Serve uploaded files (screenshots, references, generated images, etc.)
+uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 os.makedirs(uploads_dir, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 

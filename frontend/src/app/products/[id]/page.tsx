@@ -256,6 +256,7 @@ export default function ProductDetailPage() {
   const [crawlStatus, setCrawlStatus] = useState<CrawlStatus | null>(null);
   const [generatingBrief, setGeneratingBrief] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingRef, setUploadingRef] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -264,6 +265,7 @@ export default function ProductDetailPage() {
     differentiators: "",
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const refImageInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -441,6 +443,34 @@ export default function ProductDetailPage() {
     }
   };
 
+  const handleRefImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingRef(true);
+    try {
+      for (const file of Array.from(files)) {
+        await api.uploadReferenceImage(id, file);
+      }
+      const updated = await api.getProduct(id);
+      setProduct(updated);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploadingRef(false);
+      if (refImageInputRef.current) refImageInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteRefImage = async (path: string) => {
+    try {
+      await api.deleteReferenceImage(id, path);
+      const updated = await api.getProduct(id);
+      setProduct(updated);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (loading) return <div className="text-gray-500">Loading...</div>;
   if (!product) return <div className="text-red-500">Product not found</div>;
 
@@ -454,6 +484,7 @@ export default function ProductDetailPage() {
   }
 
   const screenshots: string[] = product.screenshots ? JSON.parse(product.screenshots) : [];
+  const referenceImages: string[] = product.reference_images ? JSON.parse(product.reference_images) : [];
   const brandColors: string[] = product.brand_colors ? JSON.parse(product.brand_colors) : [];
 
   return (
@@ -630,6 +661,62 @@ export default function ProductDetailPage() {
                 >
                   x
                 </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Reference Images Section */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Reference Images
+          </h2>
+          <div>
+            <input
+              ref={refImageInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleRefImageUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => refImageInputRef.current?.click()}
+              disabled={uploadingRef}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            >
+              {uploadingRef ? "Uploading..." : "Upload References"}
+            </button>
+          </div>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Upload inspiration images, competitor ads, or design references. AI will analyze these to match the visual style when generating images.
+        </p>
+
+        {referenceImages.length === 0 ? (
+          <div className="text-center py-8 bg-gray-50 rounded-lg">
+            <p className="text-gray-400 text-sm">No reference images yet. Upload designs you want your ads to look like.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-4">
+            {referenceImages.map((path, i) => (
+              <div key={i} className="relative group rounded-lg overflow-hidden border border-gray-200">
+                <img
+                  src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${path}`}
+                  alt={`Reference ${i + 1}`}
+                  className="w-full h-40 object-cover"
+                />
+                <button
+                  onClick={() => handleDeleteRefImage(path)}
+                  className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                >
+                  x
+                </button>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-2">
+                  <span className="text-xs text-white/80">Style reference</span>
+                </div>
               </div>
             ))}
           </div>

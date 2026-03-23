@@ -5,10 +5,27 @@ import { Player } from "@remotion/player";
 import { AdComposition } from "./AdComposition";
 import { PASComposition } from "./PASComposition";
 import { KineticTextComposition } from "./KineticTextComposition";
+import { SwissTypeComposition } from "./SwissTypeComposition";
+import { SwissGridComposition } from "./SwissGridComposition";
+import { SwissMinimalComposition } from "./SwissMinimalComposition";
+import { SwissCarouselComposition } from "./SwissCarouselComposition";
+import { SwissStoryComposition } from "./SwissStoryComposition";
+import { SwissBoldComposition } from "./SwissBoldComposition";
+import { SwissStackComposition } from "./SwissStackComposition";
 import type { AspectRatio } from "../types";
 import { ASPECT_DIMENSIONS } from "../types";
 
-export type VideoStyle = "default" | "pas" | "kinetic";
+export type VideoStyle =
+  | "swiss-bold"
+  | "swiss-stack"
+  | "swiss-type"
+  | "swiss-grid"
+  | "swiss-minimal"
+  | "swiss-carousel"
+  | "swiss-story"
+  | "default"
+  | "pas"
+  | "kinetic";
 
 interface VideoPreviewProps {
   headline: string;
@@ -23,12 +40,27 @@ interface VideoPreviewProps {
   previewWidth?: number;
   autoPlay?: boolean;
   loop?: boolean;
+  brandFont?: string;
+  /** Pipe-delimited slide headlines for carousel format */
+  slideHeadlines?: string;
 }
 
 const FPS = 30;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const STYLE_CONFIG: Record<VideoStyle, { component: React.ComponentType<any>; durationSeconds: number }> = {
+const STYLE_CONFIG: Record<VideoStyle, {
+  component: React.ComponentType<any>;
+  durationSeconds: number;
+  /** Override aspect ratio for this style (e.g. story forces 9:16) */
+  forceAspect?: AspectRatio;
+}> = {
+  "swiss-bold": { component: SwissBoldComposition, durationSeconds: 5 },
+  "swiss-stack": { component: SwissStackComposition, durationSeconds: 6 },
+  "swiss-type": { component: SwissTypeComposition, durationSeconds: 5 },
+  "swiss-grid": { component: SwissGridComposition, durationSeconds: 5 },
+  "swiss-minimal": { component: SwissMinimalComposition, durationSeconds: 5 },
+  "swiss-carousel": { component: SwissCarouselComposition, durationSeconds: 10 },
+  "swiss-story": { component: SwissStoryComposition, durationSeconds: 6, forceAspect: "9:16" },
   default: { component: AdComposition, durationSeconds: 5 },
   pas: { component: PASComposition, durationSeconds: 6 },
   kinetic: { component: KineticTextComposition, durationSeconds: 5 },
@@ -40,19 +72,22 @@ export function VideoPreview({
   autoPlay = true,
   loop = true,
   aspectRatio = "1:1",
-  videoStyle = "default",
+  videoStyle = "swiss-type",
+  brandFont,
+  slideHeadlines,
   ...props
 }: VideoPreviewProps) {
-  const dims = ASPECT_DIMENSIONS[aspectRatio];
+  const config = STYLE_CONFIG[videoStyle];
+  const effectiveAspect = config.forceAspect || aspectRatio;
+  const dims = ASPECT_DIMENSIONS[effectiveAspect];
   const scale = previewWidth / dims.width;
   const previewHeight = dims.height * scale;
-  const config = STYLE_CONFIG[videoStyle];
 
   return (
     <div>
       <Player
         component={config.component}
-        inputProps={{ ...props, aspectRatio }}
+        inputProps={{ ...props, aspectRatio: effectiveAspect, brandFont, slideHeadlines }}
         durationInFrames={FPS * config.durationSeconds}
         compositionWidth={dims.width}
         compositionHeight={dims.height}
@@ -71,7 +106,15 @@ export function VideoPreview({
   );
 }
 
+/** Swiss styles first — they're the primary design language */
 export const VIDEO_STYLE_OPTIONS: { value: VideoStyle; label: string; description: string }[] = [
+  { value: "swiss-bold", label: "Bold Editorial", description: "Saturated card, oversized type, emphasis contrast — scroll-stopping" },
+  { value: "swiss-stack", label: "Dark Stack", description: "Dark glass card with stacked items, cross separators, premium feel" },
+  { value: "swiss-type", label: "Swiss Type", description: "Oversized typography with geometric accents" },
+  { value: "swiss-grid", label: "Swiss Grid", description: "Color blocks on a strict grid layout" },
+  { value: "swiss-minimal", label: "Swiss Minimal", description: "Maximum whitespace, single focal statement" },
+  { value: "swiss-carousel", label: "Carousel", description: "Multi-slide carousel with pagination (10s)" },
+  { value: "swiss-story", label: "Story / Reel", description: "Full-screen vertical with swipe-up CTA (9:16)" },
   { value: "default", label: "Smooth Reveal", description: "Elegant text reveal with product entrance" },
   { value: "pas", label: "Problem → Solve", description: "3-scene drama: problem, agitate, solve" },
   { value: "kinetic", label: "Kinetic Type", description: "Words appear one-by-one with bounce effects" },

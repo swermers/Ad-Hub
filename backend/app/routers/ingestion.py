@@ -97,12 +97,41 @@ def _run_crawl(task_id: str, product_id: str, url: str, max_pages: int):
                 vs.add_documents(product_id, texts, metadatas)
 
             # Save extracted brand colors to the product
+            # Only set crawl colors if no brief-generated colors exist yet
             if pages and "_extracted_colors" in pages[0]:
-                colors = pages[0]["_extracted_colors"]
-                if colors:
+                crawl_colors = pages[0]["_extracted_colors"]
+                if crawl_colors:
                     product_obj = db.query(Product).filter(Product.id == product_id).first()
                     if product_obj:
-                        product_obj.brand_colors = json.dumps(colors)
+                        existing_colors = []
+                        if product_obj.brand_colors:
+                            try:
+                                existing_colors = json.loads(product_obj.brand_colors)
+                            except (json.JSONDecodeError, TypeError):
+                                pass
+                        if not existing_colors:
+                            # No colors yet — use crawl colors as initial set
+                            product_obj.brand_colors = json.dumps(crawl_colors)
+                        else:
+                            # Merge new crawl colors with existing (brief colors take priority)
+                            merged = list(dict.fromkeys(existing_colors + crawl_colors))
+                            product_obj.brand_colors = json.dumps(merged[:10])
+                        db.commit()
+
+            # Save extracted fonts to the product
+            if pages and "_extracted_fonts" in pages[0]:
+                crawl_fonts = pages[0]["_extracted_fonts"]
+                if crawl_fonts:
+                    product_obj = db.query(Product).filter(Product.id == product_id).first()
+                    if product_obj:
+                        existing_fonts = []
+                        if product_obj.brand_fonts:
+                            try:
+                                existing_fonts = json.loads(product_obj.brand_fonts)
+                            except (json.JSONDecodeError, TypeError):
+                                pass
+                        merged_fonts = list(dict.fromkeys(existing_fonts + crawl_fonts))
+                        product_obj.brand_fonts = json.dumps(merged_fonts[:10])
                         db.commit()
 
             # Try to capture a screenshot of the homepage
@@ -177,6 +206,14 @@ def _run_brief_generation(product_id: str):
             except (json.JSONDecodeError, TypeError):
                 pass
 
+        brand_fonts_str = ""
+        if getattr(product, "brand_fonts", None):
+            try:
+                fonts = json.loads(product.brand_fonts)
+                brand_fonts_str = f"\nBrand Fonts Detected: {', '.join(fonts)}"
+            except (json.JSONDecodeError, TypeError):
+                pass
+
         screenshot_context = ""
         if getattr(product, "screenshots", None):
             try:
@@ -185,6 +222,11 @@ def _run_brief_generation(product_id: str):
                     screenshot_context = f"\n{len(screenshots)} screenshot(s) uploaded."
             except (json.JSONDecodeError, TypeError):
                 pass
+
+        # Build color instruction for the prompt
+        color_ref = ""
+        if brand_colors_str:
+            color_ref = f" Reference colors detected from site: {brand_colors_str}."
 
         prompt = f"""Analyze the following product information and generate a comprehensive brand brief.
 
@@ -196,7 +238,6 @@ Product Type: {product_type}
 Target Audience: {product.target_audience}
 Pain Points: {product.pain_points}
 Differentiators: {product.differentiators}
-{brand_colors_str}
 {screenshot_context}
 
 --- Crawled Website Content ---
@@ -218,7 +259,8 @@ Generate a JSON brand brief with these fields:
         "dont": ["things the brand should avoid"]
     }},
     "visual_identity": {{
-        "primary_colors": ["#hex1", "#hex2", "#hex3"],
+        "primary_colors": ["#hex1", "#hex2", "#hex3 — IMPORTANT: these MUST be vibrant, chromatic colors (NOT black, white, or gray). Extract the real brand colors from buttons, links, accents, logos, or gradients on the website. If the site is dark-themed, pick the accent/highlight colors. Every color must have visible hue and saturation.{color_ref}"],
+        "fonts": ["Primary Font Name", "Secondary Font Name — extract the actual font families used on the website headings and body text.{' Detected fonts: ' + brand_fonts_str if brand_fonts_str else ''}"],
         "style": "description of visual style",
         "imagery_recommendations": ["type of imagery to use in ads"]
     }},
@@ -247,14 +289,6 @@ Generate a JSON brand brief with these fields:
     }}
 }}
 
-IMPORTANT for visual_identity.primary_colors:
-- Extract the ACTUAL brand colors from the website (buttons, links, accents, logos, gradients).
-- Do NOT use black (#000000), white (#ffffff), or gray tones as primary colors.
-- Pick 2-4 vibrant, chromatic brand colors that would work in ad templates (backgrounds, CTAs, accents).
-- If the website is very minimal/dark-themed, still identify any accent or highlight colors used.
-- Colors must be valid hex codes like #E94560, #2563EB, etc.
-{f"Use these detected colors as reference if they look like real brand colors: {brand_colors_str}" if brand_colors_str else ""}
-
 Return ONLY the JSON object, no markdown formatting."""
 
         result = call_claude_sync(prompt)
@@ -271,8 +305,19 @@ Return ONLY the JSON object, no markdown formatting."""
 
         # Update brand_colors from the brief's visual_identity if Claude found better ones
         vi_colors = brief.get("visual_identity", {}).get("primary_colors", [])
-        # Filter to valid hex colors only
-        valid_colors = [c for c in vi_colors if isinstance(c, str) and c.startswith("#") and len(c) in (4, 7)]
+        # Filter to valid hex colors that are actually chromatic (not black/white/gray)
+        valid_colors = []
+        for c in vi_colors:
+            if not isinstance(c, str) or not c.startswith("#"):
+                continue
+            # Strip any trailing instruction text Claude may have left
+            c = c.split(" ")[0].split("—")[0].strip()
+            if len(c) not in (4, 7):
+                continue
+            # Check it's actually chromatic using the ingestion engine's filter
+            from app.engines.ingestion import _is_brand_color
+            if _is_brand_color(c):
+                valid_colors.append(c)
         if valid_colors:
             product.brand_colors = json.dumps(valid_colors)
 

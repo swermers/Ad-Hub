@@ -149,6 +149,8 @@ function GenerateForm() {
             {[
               ["social_post", "Social Post"],
               ["ad_copy", "Ad Copy"],
+              ["carousel", "Carousel"],
+              ["story", "Story / Reel"],
               ["email", "Email"],
               ["blog_draft", "Blog Draft"],
             ].map(([value, label]) => (
