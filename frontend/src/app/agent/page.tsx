@@ -432,7 +432,7 @@ export default function AgentPage() {
               <p className="text-[#E5E1E4]/50 text-sm">No activity recorded yet.</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-white/5">
               {activity.map((a) => {
                 const actionInfo = ACTION_LABELS[a.action_type] || {
                   label: a.action_type.replace(/_/g, " "),

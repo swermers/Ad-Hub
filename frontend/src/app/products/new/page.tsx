@@ -159,7 +159,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
-        className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+        className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#FF9500]/50 focus:border-[#FF9500]/50"
       />
     </div>
   );
@@ -186,7 +186,7 @@ function TextArea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+        className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#FF9500]/50 focus:border-[#FF9500]/50"
       />
     </div>
   );
