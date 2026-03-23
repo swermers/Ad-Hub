@@ -243,7 +243,7 @@ export default function ContentDetailPage() {
   };
   const funnelColors: Record<string, string> = {
     awareness: "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20",
-    consideration: "bg-amber-50 text-amber-700 border-amber-200",
+    consideration: "bg-[#ffbd7f]/10 text-[#ffbd7f] border-[#ffbd7f]/20",
     conversion: "bg-[#4ade80]/10 text-[#4ade80] border-[#4ade80]/20",
   };
 
@@ -468,9 +468,9 @@ export default function ContentDetailPage() {
 
           {/* Hook callout */}
           {piece.hook && (
-            <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 mb-4">
-              <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-1">Hook</p>
-              <p className="text-sm font-medium text-indigo-900">{piece.hook}</p>
+            <div className="bg-[#FF9500]/10 border border-[#FF9500]/20 rounded-lg px-4 py-3 mb-4">
+              <p className="text-xs font-semibold text-[#FF9500] uppercase tracking-wide mb-1">Hook</p>
+              <p className="text-sm font-medium text-[#FF9500]">{piece.hook}</p>
             </div>
           )}
 
@@ -575,7 +575,7 @@ export default function ContentDetailPage() {
           <button
             onClick={handleGenerateImage}
             disabled={generatingImage}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
           >
             {generatingImage ? "Generating..." : "Generate Image"}
           </button>
@@ -619,9 +619,9 @@ export default function ContentDetailPage() {
       {(piece.image_url || imageGenStatus) && (
         <div className="mb-6">
           {imageGenStatus?.status === "running" && (
-            <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 flex items-center gap-3">
-              <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-indigo-700">Generating image... Claude is analyzing your brand and creating an ad visual.</p>
+            <div className="bg-[#FF9500]/10 border border-[#FF9500]/20 rounded-lg px-4 py-3 flex items-center gap-3">
+              <div className="w-4 h-4 border-2 border-[#FF9500] border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-[#FF9500]">Generating image... Claude is analyzing your brand and creating an ad visual.</p>
             </div>
           )}
           {imageGenStatus?.status === "failed" && (
