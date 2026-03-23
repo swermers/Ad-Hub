@@ -341,7 +341,7 @@ export default function IntelligencePage() {
                     </div>
                     {c.latest_snapshot && (
                       <div className="mt-3 grid grid-cols-2 gap-3">
-                        {c.latest_snapshot.messaging_angles && (
+                        {Array.isArray(c.latest_snapshot.messaging_angles) && (
                           <div>
                             <span className="text-[10px] uppercase tracking-wider text-[#E5E1E4]/40">Messaging Angles</span>
                             <ul className="mt-1 space-y-0.5">
@@ -351,7 +351,7 @@ export default function IntelligencePage() {
                             </ul>
                           </div>
                         )}
-                        {c.latest_snapshot.opportunities && (
+                        {Array.isArray(c.latest_snapshot.opportunities) && (
                           <div>
                             <span className="text-[10px] uppercase tracking-wider text-[#E5E1E4]/40">Opportunities</span>
                             <ul className="mt-1 space-y-0.5">
