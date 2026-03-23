@@ -97,11 +97,12 @@ The human's job reduces to **taste and direction**. The bot handles all executio
 
 ## What Needs Building
 
-### Tier 1 — Polish the Core Loop
-- [ ] Content Studio UX overhaul (wizard transitions, visual hierarchy, week-grid calendar)
-- [ ] B-roll auto-suggestion (auto-query Pexels on generation)
-- [ ] Platform-specific preview in review step
-- [ ] Video preview integration in review step
+### Tier 1 — Polish the Core Loop ✓
+- [x] Content Studio UX overhaul (wizard transitions, visual hierarchy, week-grid calendar)
+- [x] B-roll auto-suggestion (auto-query Pexels on generation)
+- [x] Platform-specific preview in review step
+- [x] Video preview integration in review step
+- [x] Polish pass (interaction states, accessibility, empty states, micro-interactions)
 
 ### Tier 2 — Telegram Agent (Clawd Bot)
 - [ ] Telegram bot integration (python-telegram-bot)
@@ -121,3 +122,45 @@ The human's job reduces to **taste and direction**. The bot handles all executio
 - [ ] Autonomous loop wiring (Sharpener → Generator → Sharpener → Schedule → Monitor → Iterate)
 - [ ] Per-customer bot instance isolation
 - [ ] Subscription/billing infrastructure
+
+### Tier 5 — Marketing Intelligence Layer (Bot as Strategic Partner)
+
+The bot doesn't just execute — it **researches, learns, and advises**. This is what turns
+it from an automation tool into a marketing partner that never sleeps.
+
+**Autonomous Research Loops:**
+- [ ] **Competitor monitoring** — crawl competitor sites, social feeds, Meta Ad Library.
+      Track which angles they run, which ads have been live longest (longevity = winning),
+      what hooks and CTAs they use
+- [ ] **Niche trend detection** — monitor Reddit, X, forums, review sites for emerging
+      pain points, complaints, desires in the customer's vertical. Surface trends before
+      they're saturated
+- [ ] **Hook & copy pattern analysis** — scrape top-performing posts in the niche
+      (viral tweets, high-engagement LinkedIn posts), reverse-engineer structural patterns.
+      Not copying — learning *why* they work (tension, specificity, open loops, etc.)
+- [ ] **Evidence gathering** — find stats, studies, customer reviews, G2/Trustpilot
+      sentiment data to back up ad claims. "87% of teams report X" hits different than
+      a generic claim
+- [ ] **Ad creative benchmarking** — analyze what visual styles, formats, aspect ratios,
+      and CTAs are performing in the customer's vertical right now
+
+**Self-Improvement Cycle:**
+1. Bot runs ads/content
+2. Reads performance data
+3. Researches *why* certain things worked (finds external evidence + patterns)
+4. Generates hypotheses ("Hook pattern X is trending, our top performer used a similar
+   structure — let's test 3 variations with fresh data points")
+5. Creates new content informed by research
+6. Deploys, measures, repeats
+
+**What the Bot Surfaces to the Human:**
+- Weekly intelligence briefing: "Here's what's working in your niche this week"
+- Evidence-backed copy suggestions: "I found 3 stats that support your best-performing angle"
+- Competitor alerts: "Competitor X just launched a new ad campaign targeting your audience"
+- Trend signals: "This pain point is spiking on Reddit — consider testing an angle around it"
+- Creative recommendations: "Carousel format is outperforming single-image by 2.3x in your
+  niche right now"
+
+**The human's role becomes:** taste, direction, and final approval.
+**The bot's role becomes:** strategic marketing partner that researches, creates, deploys,
+monitors, learns, and iterates — 24/7.
