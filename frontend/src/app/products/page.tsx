@@ -16,58 +16,84 @@ export default function ProductsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-gray-500">Loading...</div>;
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-[#FF9500] animate-pulse" />
+          <span className="text-[10px] uppercase font-bold tracking-widest text-[#FF9500]">
+            Loading
+          </span>
+        </div>
+      </div>
+    );
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
+    <div className="relative">
+      <div className="liquid-glow top-0 right-[-10%] opacity-30" />
+
+      <div className="flex items-center justify-between mb-12 entrance-fade stagger-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-          <p className="text-gray-500 mt-1">Manage your products and brands</p>
+          <span className="uppercase tracking-[0.2em] text-[#FF9500] font-bold text-xs mb-4 block">
+            Product Catalog
+          </span>
+          <h1 className="text-5xl font-extrabold tracking-tighter text-[#E5E1E4] leading-none">
+            Products
+          </h1>
         </div>
         <Link
           href="/products/new"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+          className="bg-[#FF9500] text-[#2d1600] px-6 py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-all haptic-btn shadow-[0_8px_32px_rgba(255,149,0,0.2)] flex items-center gap-2"
         >
+          <span className="material-symbols-outlined text-sm">add</span>
           Add Product
         </Link>
       </div>
 
       {products.length === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <p className="text-gray-500 mb-4">No products yet</p>
+        <div className="glass-card-subtle p-16 rounded-3xl text-center entrance-fade stagger-3">
+          <span className="material-symbols-outlined text-5xl text-[#FF9500]/40 mb-4 block">
+            inventory_2
+          </span>
+          <h3 className="text-xl font-bold mb-2">No products yet</h3>
+          <p className="text-[#dbc2ad] mb-6">
+            Add your first product to start generating content.
+          </p>
           <Link
             href="/products/new"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+            className="inline-flex items-center gap-2 bg-[#FF9500] text-[#2d1600] px-6 py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-all haptic-btn"
           >
             Add Your First Product
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {products.map((product) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {products.map((product, index) => (
             <Link
               key={product.id}
               href={`/products/${product.id}`}
-              className="bg-white rounded-lg border border-gray-200 p-6 hover:border-blue-300 hover:shadow-sm transition-all"
+              className="glass-card-subtle p-8 rounded-2xl group entrance-fade"
+              style={{ animationDelay: `${0.15 + index * 0.05}s` }}
             >
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold text-gray-900">{product.name}</h3>
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="font-bold text-[#E5E1E4] text-lg group-hover:text-[#FF9500] transition-colors duration-200">
+                  {product.name}
+                </h3>
                 <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
                     product.status === "active"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
+                      ? "badge-active"
+                      : "badge-draft"
                   }`}
                 >
                   {product.status}
                 </span>
               </div>
-              <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+              <p className="text-sm text-[#dbc2ad] line-clamp-2 mb-4 leading-relaxed">
                 {product.description || "No description"}
               </p>
               {product.website_url && (
-                <p className="text-xs text-gray-400 truncate">
+                <p className="text-[10px] text-[#E5E1E4]/30 truncate uppercase tracking-wider font-medium">
                   {product.website_url}
                 </p>
               )}

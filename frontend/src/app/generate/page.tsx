@@ -108,14 +108,14 @@ function GenerateForm() {
     }
   };
 
-  if (loading) return <div className="text-gray-500">Loading...</div>;
+  if (loading) return <div className="text-[#E5E1E4]/50">Loading...</div>;
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">
+      <h1 className="text-2xl font-bold text-[#E5E1E4] mb-2">
         Generate Content
       </h1>
-      <p className="text-gray-500 mb-8">
+      <p className="text-[#E5E1E4]/50 mb-8">
         Select your product, content type, and platform to generate marketing
         content.
       </p>
@@ -123,13 +123,13 @@ function GenerateForm() {
       <div className="space-y-6">
         {/* Product */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
             Product
           </label>
           <select
             value={productId}
             onChange={(e) => setProductId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+            className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm bg-[#201f21] text-[#E5E1E4]"
           >
             <option value="">Select a product</option>
             {products.map((p) => (
@@ -142,7 +142,7 @@ function GenerateForm() {
 
         {/* Content Types */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
             Content Types
           </label>
           <div className="flex flex-wrap gap-2">
@@ -159,8 +159,8 @@ function GenerateForm() {
                 onClick={() => toggleItem(contentTypes, setContentTypes, value)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                   contentTypes.includes(value)
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
+                    : "bg-[#201f21] text-[#dbc2ad] border-white/10 hover:bg-[#201f21]/5"
                 }`}
               >
                 {label}
@@ -171,7 +171,7 @@ function GenerateForm() {
 
         {/* Platforms */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
             Platforms
           </label>
           <div className="flex flex-wrap gap-2">
@@ -187,8 +187,8 @@ function GenerateForm() {
                 onClick={() => toggleItem(platforms, setPlatforms, value)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                   platforms.includes(value)
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
+                    : "bg-[#201f21] text-[#dbc2ad] border-white/10 hover:bg-[#201f21]/5"
                 }`}
               >
                 {label}
@@ -199,7 +199,7 @@ function GenerateForm() {
 
         {/* Funnel Stage */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
             Funnel Stage
           </label>
           <div className="flex gap-2">
@@ -213,8 +213,8 @@ function GenerateForm() {
                 onClick={() => setFunnelStage(value)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                   funnelStage === value
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
+                    : "bg-[#201f21] text-[#dbc2ad] border-white/10 hover:bg-[#201f21]/5"
                 }`}
               >
                 {label}
@@ -225,10 +225,10 @@ function GenerateForm() {
 
         {/* Visual Format */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
             Visual Template
           </label>
-          <p className="text-xs text-gray-400 mb-2">
+          <p className="text-xs text-[#E5E1E4]/40 mb-2">
             Choose how the visual preview will look for generated content
           </p>
           <div className="flex flex-wrap gap-2">
@@ -238,8 +238,8 @@ function GenerateForm() {
                 onClick={() => setTemplateType(value)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                   templateType === value
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
+                    : "bg-[#201f21] text-[#dbc2ad] border-white/10 hover:bg-[#201f21]/5"
                 }`}
               >
                 {label}
@@ -248,7 +248,7 @@ function GenerateForm() {
             <select
               value={templateType}
               onChange={(e) => setTemplateType(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+              className="px-3 py-2 border border-white/10 rounded-lg text-sm bg-[#201f21] text-[#E5E1E4]"
             >
               {TEMPLATE_CHOICES.map(({ value, label }) => (
                 <option key={value} value={value}>
@@ -261,7 +261,7 @@ function GenerateForm() {
 
         {/* Aspect Ratio */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
             Aspect Ratio
           </label>
           <div className="flex gap-2">
@@ -271,8 +271,8 @@ function GenerateForm() {
                 onClick={() => setAspectRatio(value)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                   aspectRatio === value
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
+                    : "bg-[#201f21] text-[#dbc2ad] border-white/10 hover:bg-[#201f21]/5"
                 }`}
               >
                 {label}
@@ -283,7 +283,7 @@ function GenerateForm() {
 
         {/* Count */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
             Variations per type/platform ({count})
           </label>
           <input
@@ -298,7 +298,7 @@ function GenerateForm() {
 
         {/* Instructions */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
             Additional Instructions (optional)
           </label>
           <textarea
@@ -306,20 +306,20 @@ function GenerateForm() {
             onChange={(e) => setInstructions(e.target.value)}
             rows={3}
             placeholder="e.g., Focus on the new curation features and how they save time..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
           />
         </div>
 
         {/* Status */}
         {status && generating && (
-          <div className="p-4 bg-blue-50 rounded-lg text-sm text-blue-700">
+          <div className="p-4 bg-[#FF9500]/10 rounded-lg text-sm text-[#FF9500]">
             Status: {status.status} | Pieces generated:{" "}
             {status.pieces_generated}
           </div>
         )}
 
         {status?.status === "failed" && (
-          <div className="p-4 bg-red-50 rounded-lg text-sm text-red-700">
+          <div className="p-4 bg-[#ffb4ab]/10 rounded-lg text-sm text-[#ffb4ab]">
             Generation failed: {status.error}
           </div>
         )}
@@ -328,7 +328,7 @@ function GenerateForm() {
         <button
           onClick={handleGenerate}
           disabled={generating || !productId || contentTypes.length === 0}
-          className="w-full px-6 py-3 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+          className="w-full px-6 py-3 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
         >
           {generating ? "Generating..." : "Generate Content"}
         </button>
@@ -339,7 +339,7 @@ function GenerateForm() {
 
 export default function GeneratePage() {
   return (
-    <Suspense fallback={<div className="text-gray-500">Loading...</div>}>
+    <Suspense fallback={<div className="text-[#E5E1E4]/50">Loading...</div>}>
       <GenerateForm />
     </Suspense>
   );

@@ -26,36 +26,53 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">Ad-Hub</h1>
-            <p className="text-sm text-gray-500 mt-1">Enter your password to continue</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#131315] relative overflow-hidden">
+      {/* Background liquid effects */}
+      <div className="liquid-glow top-[-20%] left-[10%] opacity-30" />
+      <div className="liquid-glow-secondary bottom-[-10%] right-[5%] opacity-20" />
+
+      <div className="w-full max-w-sm relative z-10 entrance-fade stagger-2">
+        <div className="glass-card rounded-[2rem] p-10 border border-white/10">
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-extrabold tracking-tighter text-[#E5E1E4] mb-2">
+              Ad-Hub
+            </h1>
+            <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-[#c6c4df]">
+              Enter your password to continue
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-5 py-4 bg-[#201f21] border border-white/10 rounded-xl text-[#E5E1E4] placeholder-[#E5E1E4]/30 focus:outline-none focus:ring-2 focus:ring-[#FF9500]/50 focus:border-[#FF9500]/50 transition-all"
                 autoFocus
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 text-center">{error}</p>
+              <div className="bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 rounded-lg px-4 py-3">
+                <p className="text-sm text-[#ffb4ab] text-center">{error}</p>
+              </div>
             )}
 
             <button
               type="submit"
               disabled={loading || !password}
-              className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full py-4 bg-[#FF9500] text-[#2d1600] font-bold rounded-xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-[0_8px_32px_rgba(255,149,0,0.2)] hover:shadow-[0_12px_48px_rgba(255,149,0,0.4)] hover:-translate-y-0.5 haptic-btn text-sm uppercase tracking-widest"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#2d1600] animate-pulse" />
+                  Signing in
+                </span>
+              ) : (
+                "Sign in"
+              )}
             </button>
           </form>
         </div>

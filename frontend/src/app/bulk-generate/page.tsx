@@ -19,7 +19,7 @@ import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
 
 const VideoPreview = dynamic(
   () => import("@/components/ad-templates/remotion/VideoPreview").then((m) => m.VideoPreview),
-  { ssr: false, loading: () => <div className="animate-pulse bg-gray-200 rounded-lg" style={{ width: 540, height: 540 }} /> },
+  { ssr: false, loading: () => <div className="animate-pulse bg-white/10 rounded-lg" style={{ width: 540, height: 540 }} /> },
 );
 
 const VIDEO_STYLE_OPTIONS_PROMISE = import("@/components/ad-templates/remotion/VideoPreview").then((m) => m.VIDEO_STYLE_OPTIONS);
@@ -205,12 +205,12 @@ export default function BulkGeneratePage() {
     }
   }, [variations, selectedVariationIds]);
 
-  if (loading) return <div className="text-gray-500">Loading...</div>;
+  if (loading) return <div className="text-[#E5E1E4]/50">Loading...</div>;
 
   return (
     <div className="max-w-6xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Bulk Ad Generator</h1>
-      <p className="text-gray-500 mb-6">
+      <h1 className="text-2xl font-bold text-[#E5E1E4] mb-2">Bulk Ad Generator</h1>
+      <p className="text-[#E5E1E4]/50 mb-6">
         Generate hundreds of ad variations from pain points, preview them, and export or upload to Facebook.
       </p>
 
@@ -221,8 +221,8 @@ export default function BulkGeneratePage() {
             key={s}
             className={`flex-1 h-1.5 rounded-full ${
               (["product", "template", "pain_points", "configure", "preview"] as Step[]).indexOf(step) >= i
-                ? "bg-blue-600"
-                : "bg-gray-200"
+                ? "bg-[#FF9500]"
+                : "bg-white/10"
             }`}
           />
         ))}
@@ -231,11 +231,11 @@ export default function BulkGeneratePage() {
       {/* Step 1: Product */}
       {step === "product" && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-800">Select Product</h2>
+          <h2 className="text-lg font-semibold text-[#E5E1E4]">Select Product</h2>
           <select
             value={productId}
             onChange={(e) => setProductId(e.target.value)}
-            className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+            className="w-full max-w-md px-3 py-2 border border-white/10 rounded-lg text-sm bg-[#201f21] text-[#E5E1E4]"
           >
             <option value="">Choose a product...</option>
             {products.map((p) => (
@@ -246,7 +246,7 @@ export default function BulkGeneratePage() {
             <button
               onClick={() => productId && setStep("template")}
               disabled={!productId}
-              className="px-6 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-6 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium disabled:opacity-50"
             >
               Next
             </button>
@@ -258,22 +258,22 @@ export default function BulkGeneratePage() {
       {step === "template" && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-800">Choose Ad Template</h2>
+            <h2 className="text-lg font-semibold text-[#E5E1E4]">Choose Ad Template</h2>
             <button
               onClick={() => setShowCreateTemplate(!showCreateTemplate)}
-              className="text-sm text-blue-600 hover:text-blue-700"
+              className="text-sm text-[#FF9500] hover:text-[#FF9500]"
             >
               + Create new
             </button>
           </div>
 
           {showCreateTemplate && (
-            <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+            <div className="p-4 bg-white/5 rounded-lg space-y-3">
               <input
                 value={newTemplateName}
                 onChange={(e) => setNewTemplateName(e.target.value)}
                 placeholder="Template name..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
               />
               <div className="flex gap-2">
                 {TEMPLATE_OPTIONS.map((opt) => (
@@ -282,15 +282,15 @@ export default function BulkGeneratePage() {
                     onClick={() => setSelectedTemplateType(opt.value)}
                     className={`px-3 py-2 rounded-lg text-sm border ${
                       selectedTemplateType === opt.value
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-gray-700 border-gray-300"
+                        ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
+                        : "bg-[#201f21] text-[#dbc2ad] border-white/10"
                     }`}
                   >
                     {opt.label}
                   </button>
                 ))}
               </div>
-              <button onClick={handleCreateTemplate} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">
+              <button onClick={handleCreateTemplate} className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm">
                 Create Template
               </button>
             </div>
@@ -298,7 +298,7 @@ export default function BulkGeneratePage() {
 
           {/* Aspect ratio selector */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Aspect Ratio</label>
+            <label className="block text-sm font-medium text-[#dbc2ad] mb-2">Aspect Ratio</label>
             <div className="flex gap-3">
               {(Object.keys(ASPECT_DIMENSIONS) as AspectRatio[]).map((ratio) => {
                 const dims = ASPECT_DIMENSIONS[ratio];
@@ -308,20 +308,20 @@ export default function BulkGeneratePage() {
                     onClick={() => setSelectedAspectRatio(ratio)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all ${
                       selectedAspectRatio === ratio
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-[#FF9500] bg-[#FF9500]/10"
+                        : "border-white/10 hover:border-white/10"
                     }`}
                   >
                     <div
-                      className="bg-gray-300 rounded"
+                      className="bg-white/10 rounded"
                       style={{
                         width: ratio === "9:16" ? 18 : 24,
                         height: ratio === "9:16" ? 32 : ratio === "4:5" ? 30 : 24,
                       }}
                     />
                     <div className="text-left">
-                      <p className="text-sm font-medium text-gray-900">{ratio}</p>
-                      <p className="text-xs text-gray-500">{dims.width}&times;{dims.height}</p>
+                      <p className="text-sm font-medium text-[#E5E1E4]">{ratio}</p>
+                      <p className="text-xs text-[#E5E1E4]/50">{dims.width}&times;{dims.height}</p>
                     </div>
                   </button>
                 );
@@ -354,7 +354,7 @@ export default function BulkGeneratePage() {
                     }
                   }}
                   className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
-                    isSelected ? "border-blue-500 shadow-lg ring-2 ring-blue-200" : "border-gray-200 hover:border-gray-300"
+                    isSelected ? "border-[#FF9500] shadow-lg ring-2 ring-[#FF9500]/20" : "border-white/10 hover:border-white/10"
                   }`}
                 >
                   <div style={{ width: previewWidth, height: previewHeight, overflow: "hidden" }}>
@@ -369,12 +369,12 @@ export default function BulkGeneratePage() {
                       />
                     </div>
                   </div>
-                  <div className="p-3 bg-white">
-                    <p className="font-medium text-sm text-gray-900">{opt.label}</p>
-                    <p className="text-xs text-gray-500 mt-1">{opt.description}</p>
+                  <div className="p-3 bg-[#201f21]">
+                    <p className="font-medium text-sm text-[#E5E1E4]">{opt.label}</p>
+                    <p className="text-xs text-[#E5E1E4]/50 mt-1">{opt.description}</p>
                     <div className="flex gap-1 mt-2">
                       {opt.bestFor.map((tag) => (
-                        <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">
+                        <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-white/10 text-[#E5E1E4]/50 rounded">
                           {tag}
                         </span>
                       ))}
@@ -386,7 +386,7 @@ export default function BulkGeneratePage() {
           </div>
 
           <div className="flex gap-3">
-            <button onClick={() => setStep("product")} className="px-6 py-2 border border-gray-300 rounded-lg text-sm">
+            <button onClick={() => setStep("product")} className="px-6 py-2 border border-white/10 rounded-lg text-sm">
               Back
             </button>
             <button
@@ -402,7 +402,7 @@ export default function BulkGeneratePage() {
                 }
                 setStep("pain_points");
               }}
-              className="px-6 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium"
+              className="px-6 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium"
             >
               Next
             </button>
@@ -414,32 +414,32 @@ export default function BulkGeneratePage() {
       {step === "pain_points" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-800">Select Pain Points</h2>
+            <h2 className="text-lg font-semibold text-[#E5E1E4]">Select Pain Points</h2>
             <button
               onClick={handleResearchPainPoints}
               disabled={researching}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium disabled:opacity-50"
             >
               {researching ? "Researching..." : "AI Research Pain Points"}
             </button>
           </div>
 
           {painPoints.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 rounded-xl">
-              <p className="text-gray-500 mb-4">No pain points yet. Use AI to research them or add manually.</p>
+            <div className="text-center py-12 bg-white/5 rounded-xl">
+              <p className="text-[#E5E1E4]/50 mb-4">No pain points yet. Use AI to research them or add manually.</p>
             </div>
           ) : (
             <>
               <div className="flex gap-2 mb-2">
                 <button
                   onClick={() => setSelectedPainPointIds(painPoints.map((p) => p.id))}
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-[#FF9500] hover:underline"
                 >
                   Select all
                 </button>
                 <button
                   onClick={() => setSelectedPainPointIds([])}
-                  className="text-sm text-gray-500 hover:underline"
+                  className="text-sm text-[#E5E1E4]/50 hover:underline"
                 >
                   Clear
                 </button>
@@ -450,8 +450,8 @@ export default function BulkGeneratePage() {
                     key={pp.id}
                     className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                       selectedPainPointIds.includes(pp.id)
-                        ? "border-blue-300 bg-blue-50"
-                        : "border-gray-200 hover:bg-gray-50"
+                        ? "border-[#FF9500]/30 bg-[#FF9500]/10"
+                        : "border-white/10 hover:bg-[#201f21]/5"
                     }`}
                   >
                     <input
@@ -461,13 +461,13 @@ export default function BulkGeneratePage() {
                       className="mt-0.5"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{pp.pain_point}</p>
+                      <p className="text-sm font-medium text-[#E5E1E4]">{pp.pain_point}</p>
                       {pp.desired_outcome && (
-                        <p className="text-xs text-gray-500 mt-1">{pp.desired_outcome}</p>
+                        <p className="text-xs text-[#E5E1E4]/50 mt-1">{pp.desired_outcome}</p>
                       )}
                       <div className="flex gap-2 mt-1">
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{pp.category}</span>
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                        <span className="text-xs bg-white/10 text-[#dbc2ad] px-2 py-0.5 rounded">{pp.category}</span>
+                        <span className="text-xs bg-white/10 text-[#dbc2ad] px-2 py-0.5 rounded">
                           severity: {pp.severity}/10
                         </span>
                       </div>
@@ -478,19 +478,19 @@ export default function BulkGeneratePage() {
             </>
           )}
 
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-[#E5E1E4]/50">
             {selectedPainPointIds.length} selected &times; {variationsPerPoint} variations ={" "}
             <strong>{selectedPainPointIds.length * variationsPerPoint} total ads</strong>
           </p>
 
           <div className="flex gap-3">
-            <button onClick={() => setStep("template")} className="px-6 py-2 border border-gray-300 rounded-lg text-sm">
+            <button onClick={() => setStep("template")} className="px-6 py-2 border border-white/10 rounded-lg text-sm">
               Back
             </button>
             <button
               onClick={() => setStep("configure")}
               disabled={selectedPainPointIds.length === 0}
-              className="px-6 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-6 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium disabled:opacity-50"
             >
               Next
             </button>
@@ -501,10 +501,10 @@ export default function BulkGeneratePage() {
       {/* Step 4: Configure */}
       {step === "configure" && (
         <div className="space-y-6 max-w-lg">
-          <h2 className="text-lg font-semibold text-gray-800">Configure Generation</h2>
+          <h2 className="text-lg font-semibold text-[#E5E1E4]">Configure Generation</h2>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
               Variations per pain point ({variationsPerPoint})
             </label>
             <input
@@ -518,7 +518,7 @@ export default function BulkGeneratePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Funnel Stage</label>
+            <label className="block text-sm font-medium text-[#dbc2ad] mb-2">Funnel Stage</label>
             <div className="flex gap-2">
               {["awareness", "consideration", "conversion"].map((stage) => (
                 <button
@@ -526,8 +526,8 @@ export default function BulkGeneratePage() {
                   onClick={() => setFunnelStage(stage)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium border ${
                     funnelStage === stage
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-700 border-gray-300"
+                      ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
+                      : "bg-[#201f21] text-[#dbc2ad] border-white/10"
                   }`}
                 >
                   {stage.charAt(0).toUpperCase() + stage.slice(1)}
@@ -536,20 +536,20 @@ export default function BulkGeneratePage() {
             </div>
           </div>
 
-          <div className="p-4 bg-blue-50 rounded-lg text-sm text-blue-700">
+          <div className="p-4 bg-[#FF9500]/10 rounded-lg text-sm text-[#FF9500]">
             Will generate <strong>{selectedPainPointIds.length * variationsPerPoint}</strong> ad variations
             using <strong>{TEMPLATE_OPTIONS.find((o) => o.value === selectedTemplateType)?.label}</strong> template
             at <strong>{selectedAspectRatio}</strong> ({ASPECT_DIMENSIONS[selectedAspectRatio].width}&times;{ASPECT_DIMENSIONS[selectedAspectRatio].height}).
           </div>
 
           <div className="flex gap-3">
-            <button onClick={() => setStep("pain_points")} className="px-6 py-2 border border-gray-300 rounded-lg text-sm">
+            <button onClick={() => setStep("pain_points")} className="px-6 py-2 border border-white/10 rounded-lg text-sm">
               Back
             </button>
             <button
               onClick={handleGenerate}
               disabled={generating}
-              className="px-6 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-6 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium disabled:opacity-50"
             >
               {generating ? "Generating..." : "Generate Ads"}
             </button>
@@ -561,39 +561,39 @@ export default function BulkGeneratePage() {
       {step === "preview" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-800">
+            <h2 className="text-lg font-semibold text-[#E5E1E4]">
               Preview ({variations.length} variations)
             </h2>
             <div className="flex gap-2">
               {/* Still / Video toggle */}
-              <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+              <div className="flex rounded-lg border border-white/10 overflow-hidden">
                 <button
                   onClick={() => setPreviewMode("still")}
-                  className={`px-3 py-1.5 text-sm font-medium ${previewMode === "still" ? "bg-gray-900 text-white" : "bg-white text-gray-600"}`}
+                  className={`px-3 py-1.5 text-sm font-medium ${previewMode === "still" ? "bg-[#FF9500] text-[#2d1600]" : "bg-[#201f21] text-[#dbc2ad]"}`}
                 >
                   Still
                 </button>
                 <button
                   onClick={() => setPreviewMode("video")}
-                  className={`px-3 py-1.5 text-sm font-medium ${previewMode === "video" ? "bg-gray-900 text-white" : "bg-white text-gray-600"}`}
+                  className={`px-3 py-1.5 text-sm font-medium ${previewMode === "video" ? "bg-[#FF9500] text-[#2d1600]" : "bg-[#201f21] text-[#dbc2ad]"}`}
                 >
                   Video
                 </button>
               </div>
-              <button onClick={selectAllVariations} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg">
+              <button onClick={selectAllVariations} className="px-3 py-1.5 text-sm border border-white/10 rounded-lg">
                 {selectedVariationIds.length === variations.length ? "Deselect all" : "Select all"}
               </button>
               <button
                 onClick={handleBulkApprove}
                 disabled={selectedVariationIds.length === 0}
-                className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg disabled:opacity-50"
+                className="px-3 py-1.5 text-sm bg-[#4ade80]/20 text-[#4ade80] rounded-lg disabled:opacity-50"
               >
                 Approve ({selectedVariationIds.length})
               </button>
               <button
                 onClick={handleExportZip}
                 disabled={selectedVariationIds.length === 0 || exporting}
-                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg disabled:opacity-50"
+                className="px-3 py-1.5 text-sm bg-[#FF9500] text-[#2d1600] rounded-lg disabled:opacity-50"
               >
                 {exporting
                   ? `Exporting ${exportProgress.current}/${exportProgress.total}...`
@@ -601,7 +601,7 @@ export default function BulkGeneratePage() {
               </button>
               <button
                 onClick={() => setStep("configure")}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg"
+                className="px-3 py-1.5 text-sm border border-white/10 rounded-lg"
               >
                 Back
               </button>
@@ -653,7 +653,7 @@ export default function BulkGeneratePage() {
           onClick={() => setExpandedVariation(null)}
         >
           <div
-            className="bg-white rounded-2xl overflow-hidden max-w-2xl w-full"
+            className="bg-[#201f21] rounded-2xl overflow-hidden max-w-2xl w-full"
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ maxHeight: "70vh", overflow: "auto", display: "flex", justifyContent: "center", padding: 24 }}>
@@ -667,8 +667,8 @@ export default function BulkGeneratePage() {
                         onClick={() => setVideoStyle(vs.value)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                           videoStyle === vs.value
-                            ? "bg-gray-900 text-white border-gray-900"
-                            : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                            ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
+                            : "bg-[#201f21] text-[#dbc2ad] border-white/10 hover:border-white/20"
                         }`}
                         title={vs.description}
                       >
@@ -703,16 +703,16 @@ export default function BulkGeneratePage() {
                 </div>
               )}
             </div>
-            <div className="p-4 border-t border-gray-200 space-y-2">
-              <p className="text-sm font-medium text-gray-900">{expandedVariation.headline}</p>
-              <p className="text-sm text-gray-600">{expandedVariation.body}</p>
-              <p className="text-xs text-gray-500">CTA: {expandedVariation.cta}</p>
+            <div className="p-4 border-t border-white/10 space-y-2">
+              <p className="text-sm font-medium text-[#E5E1E4]">{expandedVariation.headline}</p>
+              <p className="text-sm text-[#dbc2ad]">{expandedVariation.body}</p>
+              <p className="text-xs text-[#E5E1E4]/50">CTA: {expandedVariation.cta}</p>
               {expandedVariation.pain_point_text && (
-                <p className="text-xs text-blue-600">Pain point: {expandedVariation.pain_point_text}</p>
+                <p className="text-xs text-[#FF9500]">Pain point: {expandedVariation.pain_point_text}</p>
               )}
               <button
                 onClick={() => setExpandedVariation(null)}
-                className="mt-2 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm"
+                className="mt-2 px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm"
               >
                 Close
               </button>
