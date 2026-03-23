@@ -24,7 +24,7 @@ const VideoPreview = dynamic(
 
 const VIDEO_STYLE_OPTIONS_PROMISE = import("@/components/ad-templates/remotion/VideoPreview").then((m) => m.VIDEO_STYLE_OPTIONS);
 
-type VideoStyle = "swiss-bold" | "swiss-stack" | "swiss-type" | "swiss-grid" | "swiss-minimal" | "swiss-carousel" | "swiss-story" | "default" | "pas" | "kinetic";
+type VideoStyle = "swiss-bold" | "swiss-stack" | "swiss-type" | "swiss-grid" | "swiss-minimal" | "swiss-carousel" | "swiss-story" | "default" | "pas" | "kinetic" | "hand-drawn";
 
 type Step = "product" | "template" | "pain_points" | "configure" | "preview";
 
