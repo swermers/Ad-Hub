@@ -27,16 +27,16 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
       {/* Product Type Analysis */}
       {brief.product_type_analysis && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Product Analysis</h3>
+          <h3 className="text-sm font-semibold text-[#E5E1E4] mb-2">Product Analysis</h3>
           <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
-            <div><span className="text-gray-500">Category:</span> <span className="capitalize text-gray-900">{brief.product_type_analysis.category}</span></div>
-            <div><span className="text-gray-500">Business Model:</span> <span className="text-gray-900">{brief.product_type_analysis.business_model}</span></div>
+            <div><span className="text-gray-500">Category:</span> <span className="capitalize text-[#E5E1E4]">{brief.product_type_analysis.category}</span></div>
+            <div><span className="text-gray-500">Business Model:</span> <span className="text-[#E5E1E4]">{brief.product_type_analysis.business_model}</span></div>
             {brief.product_type_analysis.key_features_or_offerings && (
               <div>
                 <span className="text-gray-500">Key Features:</span>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {brief.product_type_analysis.key_features_or_offerings.map((f: string, i: number) => (
-                    <span key={i} className="px-2 py-1 bg-white border border-gray-200 rounded text-xs text-gray-700">{f}</span>
+                    <span key={i} className="px-2 py-1 bg-[#201f21] border border-gray-200 rounded text-xs text-gray-700">{f}</span>
                   ))}
                 </div>
               </div>
@@ -48,10 +48,10 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
       {/* Brand Voice */}
       {brief.brand_voice && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Brand Voice</h3>
+          <h3 className="text-sm font-semibold text-[#E5E1E4] mb-2">Brand Voice</h3>
           <div className="bg-gray-50 rounded-lg p-4 space-y-3 text-sm">
-            <div><span className="text-gray-500">Tone:</span> <span className="text-gray-900">{brief.brand_voice.tone}</span></div>
-            <div><span className="text-gray-500">Personality:</span> <span className="text-gray-900">{brief.brand_voice.personality}</span></div>
+            <div><span className="text-gray-500">Tone:</span> <span className="text-[#E5E1E4]">{brief.brand_voice.tone}</span></div>
+            <div><span className="text-gray-500">Personality:</span> <span className="text-[#E5E1E4]">{brief.brand_voice.personality}</span></div>
             {brief.brand_voice.vocabulary && (
               <div>
                 <span className="text-gray-500">Key Vocabulary:</span>
@@ -91,7 +91,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
       {/* Visual Identity */}
       {brief.visual_identity && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Visual Identity</h3>
+          <h3 className="text-sm font-semibold text-[#E5E1E4] mb-2">Visual Identity</h3>
           <div className="bg-gray-50 rounded-lg p-4 space-y-3 text-sm">
             {brief.visual_identity.primary_colors && (
               <div className="flex items-center gap-3">
@@ -104,7 +104,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
                 ))}
               </div>
             )}
-            <div><span className="text-gray-500">Style:</span> <span className="text-gray-900">{brief.visual_identity.style}</span></div>
+            <div><span className="text-gray-500">Style:</span> <span className="text-[#E5E1E4]">{brief.visual_identity.style}</span></div>
             {brief.visual_identity.imagery_recommendations && (
               <div>
                 <span className="text-gray-500">Imagery:</span>
@@ -122,11 +122,11 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
       {/* Audience Personas */}
       {brief.audience_personas && brief.audience_personas.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Audience Personas</h3>
+          <h3 className="text-sm font-semibold text-[#E5E1E4] mb-2">Audience Personas</h3>
           <div className="grid gap-3">
             {brief.audience_personas.map((p: any, i: number) => (
               <div key={i} className="bg-gray-50 rounded-lg p-4 text-sm">
-                <p className="font-medium text-gray-900 mb-1">{p.name}</p>
+                <p className="font-medium text-[#E5E1E4] mb-1">{p.name}</p>
                 <p className="text-gray-600 text-xs mb-2">{p.description}</p>
                 <div className="grid grid-cols-2 gap-3">
                   {p.pain_points && (
@@ -159,16 +159,16 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
       {/* Messaging Pillars */}
       {brief.messaging_pillars && brief.messaging_pillars.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Messaging Pillars</h3>
+          <h3 className="text-sm font-semibold text-[#E5E1E4] mb-2">Messaging Pillars</h3>
           <div className="space-y-3">
             {brief.messaging_pillars.map((p: any, i: number) => (
               <div key={i} className="bg-gray-50 rounded-lg p-4 text-sm">
-                <p className="font-medium text-gray-900">{p.pillar}</p>
+                <p className="font-medium text-[#E5E1E4]">{p.pillar}</p>
                 <p className="text-gray-600 text-xs mt-0.5 mb-2">{p.description}</p>
                 {p.key_messages && (
                   <div className="flex flex-wrap gap-1.5">
                     {p.key_messages.map((m: string, j: number) => (
-                      <span key={j} className="px-2 py-1 bg-white border border-gray-200 rounded text-xs text-gray-700">{m}</span>
+                      <span key={j} className="px-2 py-1 bg-[#201f21] border border-gray-200 rounded text-xs text-gray-700">{m}</span>
                     ))}
                   </div>
                 )}
@@ -181,7 +181,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
       {/* Competitive Positioning */}
       {brief.competitive_positioning && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Competitive Positioning</h3>
+          <h3 className="text-sm font-semibold text-[#E5E1E4] mb-2">Competitive Positioning</h3>
           <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-4">{brief.competitive_positioning}</p>
         </div>
       )}
@@ -189,7 +189,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
       {/* Content Themes */}
       {brief.content_themes && brief.content_themes.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Content Themes</h3>
+          <h3 className="text-sm font-semibold text-[#E5E1E4] mb-2">Content Themes</h3>
           <div className="flex flex-wrap gap-2">
             {brief.content_themes.map((t: string, i: number) => (
               <span key={i} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">{t}</span>
@@ -201,7 +201,7 @@ function BrandBriefDisplay({ data }: { data: Record<string, any> }) {
       {/* Ad Recommendations */}
       {brief.ad_recommendations && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Ad Recommendations</h3>
+          <h3 className="text-sm font-semibold text-[#E5E1E4] mb-2">Ad Recommendations</h3>
           <div className="grid grid-cols-3 gap-3">
             {brief.ad_recommendations.best_formats && (
               <div className="bg-gray-50 rounded-lg p-3">
@@ -491,19 +491,19 @@ export default function ProductDetailPage() {
     <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
+          <h1 className="text-2xl font-bold text-[#E5E1E4]">{product.name}</h1>
           <p className="text-gray-500 mt-1">{product.description}</p>
         </div>
         <div className="flex gap-2">
           <Link
             href={`/bulk-generate?product_id=${product.id}`}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+            className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:bg-blue-700"
           >
             Bulk Ads
           </Link>
           <Link
             href={`/generate?product_id=${product.id}`}
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+            className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:bg-gray-800"
           >
             Generate Content
           </Link>
@@ -511,9 +511,9 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Product Info */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <div className="bg-[#201f21] rounded-lg border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-[#E5E1E4]">
             Product Details
           </h2>
           {!editing ? (
@@ -543,13 +543,13 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="text-gray-500">Website:</span>{" "}
-            <span className="text-gray-900">
+            <span className="text-[#E5E1E4]">
               {product.website_url || "Not set"}
             </span>
           </div>
           <div>
             <span className="text-gray-500">Status:</span>{" "}
-            <span className="text-gray-900">{product.status}</span>
+            <span className="text-[#E5E1E4]">{product.status}</span>
           </div>
           <div className="col-span-2">
             <span className="text-gray-500 block mb-2">Product Type:</span>
@@ -560,8 +560,8 @@ export default function ProductDetailPage() {
                   onClick={() => handleProductTypeChange(t.value)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                     product.product_type === t.value
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      ? "bg-[#FF9500] text-[#2d1600] border-blue-600"
+                      : "bg-[#201f21] text-gray-700 border-gray-300 hover:bg-gray-50"
                   }`}
                 >
                   {t.label}
@@ -575,12 +575,12 @@ export default function ProductDetailPage() {
               <textarea
                 value={editForm.target_audience}
                 onChange={(e) => setEditForm({ ...editForm, target_audience: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-[#E5E1E4] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows={2}
                 placeholder="Who is this product for?"
               />
             ) : (
-              <span className="text-gray-900">{product.target_audience || "Not set"}</span>
+              <span className="text-[#E5E1E4]">{product.target_audience || "Not set"}</span>
             )}
           </div>
           <div className="col-span-2">
@@ -589,12 +589,12 @@ export default function ProductDetailPage() {
               <textarea
                 value={editForm.pain_points}
                 onChange={(e) => setEditForm({ ...editForm, pain_points: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-[#E5E1E4] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows={2}
                 placeholder="What problems does this solve?"
               />
             ) : (
-              <span className="text-gray-900">{product.pain_points || "Not set"}</span>
+              <span className="text-[#E5E1E4]">{product.pain_points || "Not set"}</span>
             )}
           </div>
           <div className="col-span-2">
@@ -603,21 +603,21 @@ export default function ProductDetailPage() {
               <textarea
                 value={editForm.differentiators}
                 onChange={(e) => setEditForm({ ...editForm, differentiators: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-[#E5E1E4] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows={2}
                 placeholder="What makes this different from alternatives?"
               />
             ) : (
-              <span className="text-gray-900">{product.differentiators || "Not set"}</span>
+              <span className="text-[#E5E1E4]">{product.differentiators || "Not set"}</span>
             )}
           </div>
         </div>
       </div>
 
       {/* Screenshots Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <div className="bg-[#201f21] rounded-lg border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-[#E5E1E4]">
             Screenshots & Visual Context
           </h2>
           <div>
@@ -632,7 +632,7 @@ export default function ProductDetailPage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               {uploading ? "Uploading..." : "Upload Screenshots"}
             </button>
@@ -668,9 +668,9 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Reference Images Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <div className="bg-[#201f21] rounded-lg border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-[#E5E1E4]">
             Reference Images
           </h2>
           <div>
@@ -685,7 +685,7 @@ export default function ProductDetailPage() {
             <button
               onClick={() => refImageInputRef.current?.click()}
               disabled={uploadingRef}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               {uploadingRef ? "Uploading..." : "Upload References"}
             </button>
@@ -725,8 +725,8 @@ export default function ProductDetailPage() {
 
       {/* Brand Colors */}
       {brandColors.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-[#201f21] rounded-lg border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-[#E5E1E4] mb-4">
             Extracted Brand Colors
           </h2>
           <p className="text-sm text-gray-500 mb-3">
@@ -747,15 +747,15 @@ export default function ProductDetailPage() {
       )}
 
       {/* Crawl Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <div className="bg-[#201f21] rounded-lg border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-[#E5E1E4]">
             Website Crawl
           </h2>
           <button
             onClick={handleCrawl}
             disabled={crawling || !product.website_url}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
           >
             {crawling ? "Crawling..." : "Crawl Website"}
           </button>
@@ -791,7 +791,7 @@ export default function ProductDetailPage() {
                 className="flex items-center justify-between p-3 border border-gray-100 rounded-lg"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-[#E5E1E4] truncate">
                     {page.title || page.url}
                   </p>
                   <p className="text-xs text-gray-500 truncate">{page.url}</p>
@@ -806,13 +806,13 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Brand Brief Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-[#201f21] rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Brand Brief</h2>
+          <h2 className="text-lg font-semibold text-[#E5E1E4]">Brand Brief</h2>
           <button
             onClick={handleGenerateBrief}
             disabled={generatingBrief}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
           >
             {generatingBrief ? "Generating..." : "Generate Brief"}
           </button>

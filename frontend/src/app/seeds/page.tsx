@@ -243,8 +243,8 @@ export default function SeedBankPage() {
             onClick={() => setStatusFilter(s)}
             className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
               statusFilter === s
-                ? "bg-gray-900 text-white border-gray-900"
-                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                ? "bg-[#FF9500] text-[#2d1600] border-gray-900"
+                : "bg-white text-gray-600 border-gray-300 hover:bg-white/5"
             }`}
           >
             {s ? STATUS_BADGES[s]?.label || s : "All"}
@@ -273,7 +273,7 @@ export default function SeedBankPage() {
             >
               {/* Card header */}
               <div
-                className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-white/5 transition-colors"
                 onClick={() => setExpandedId(isExpanded ? null : seed.id)}
               >
                 {/* Priority indicator */}
@@ -404,7 +404,7 @@ export default function SeedBankPage() {
                     {seed.status === "parked" && (
                       <button
                         onClick={() => handleStatusChange(seed.id, "developing")}
-                        className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        className="px-3 py-1.5 text-xs font-medium bg-[#FF9500] text-[#2d1600] rounded-lg hover:opacity-90"
                       >
                         Start Developing
                       </button>
@@ -412,7 +412,7 @@ export default function SeedBankPage() {
                     {seed.status === "developing" && (
                       <button
                         onClick={() => handleStatusChange(seed.id, "used")}
-                        className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        className="px-3 py-1.5 text-xs font-medium bg-[#4ade80]/20 text-[#4ade80] rounded-lg hover:opacity-90"
                       >
                         Mark Used
                       </button>
@@ -420,7 +420,7 @@ export default function SeedBankPage() {
                     {seed.status !== "archived" && (
                       <button
                         onClick={() => handleStatusChange(seed.id, "archived")}
-                        className="px-3 py-1.5 text-xs font-medium bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                        className="px-3 py-1.5 text-xs font-medium bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-white/5"
                       >
                         Archive
                       </button>
@@ -437,7 +437,7 @@ export default function SeedBankPage() {
                       onClick={() => {
                         navigator.clipboard.writeText(seed.seed);
                       }}
-                      className="px-3 py-1.5 text-xs font-medium bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      className="px-3 py-1.5 text-xs font-medium bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-white/5"
                     >
                       Copy
                     </button>
