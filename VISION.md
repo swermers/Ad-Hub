@@ -164,3 +164,83 @@ it from an automation tool into a marketing partner that never sleeps.
 **The human's role becomes:** taste, direction, and final approval.
 **The bot's role becomes:** strategic marketing partner that researches, creates, deploys,
 monitors, learns, and iterates — 24/7.
+
+### Tier 6 — Brand Asset Library (Cloud Storage Sync)
+
+Visual brand consistency is harder than copy consistency. Colors and fonts can be constrained,
+but ensuring imagery *feels* on-brand is subjective. For LAS-style clients that want warm,
+alpine, international-school imagery — not generic stock photos — the system needs a living
+connection to their approved assets.
+
+**Supported Connections:**
+- [ ] **Google Drive** — sync a shared "Marketing Assets" folder
+- [ ] **Dropbox** — sync a shared folder
+- [ ] **OneDrive / SharePoint** — for enterprise/school IT setups
+- [ ] **Notion media library** — for teams already using Notion as a hub
+- [ ] **Direct upload** — fallback for clients without cloud storage
+
+**Auto-Indexing & Tagging:**
+- [ ] On sync, auto-tag all images using vision AI (campus, students, alps, events,
+      headshots, logos, faculty, facilities, etc.)
+- [ ] Client can organize folders by context: "Admissions" / "Campus Life" / "Alumni" /
+      "Events Spring 2026"
+- [ ] Tags + folder context combine for semantic search when the bot needs imagery
+- [ ] New photos added to the folder auto-sync — photographer dumps event photos on Friday,
+      bot has them available Monday
+- [ ] Deleted or moved images auto-remove from the bot's index
+
+**Image Selection Priority (Tiered):**
+1. **Client's synced library** — tagged, indexed, always preferred
+2. **Client's uploaded reference images** — already in the system from onboarding
+3. **Stock b-roll (Pexels/Unsplash)** — flagged as "stock" in the review queue
+4. **AI-generated imagery** — flagged as "AI-generated" in the review queue
+
+The human always sees which tier the image came from and can swap it before approving.
+
+**Why This Matters:**
+- **Freshness** — most brands' social accounts feel stale because they reuse the same
+  10 photos. With a synced drive, the bot always has fresh, authentic imagery
+- **Zero friction** — no one has to manually upload, crop, or assign. Photographer drops
+  photos in Drive, bot handles the rest
+- **Authenticity** — content feels current and real because it literally is. Real campus
+  photos from last week beat stock photos every time
+- **Retention lever** — clients who connect their Drive and keep it stocked get dramatically
+  better content, which increases engagement, which increases retention
+
+### Tier 7 — Bot Memory, State & Backup Infrastructure
+
+Each bot instance needs persistent memory to be effective. This isn't just about data
+backup — it's about the bot retaining context, learning, and continuity across sessions.
+
+**Per-Client Bot State (Stored in Database):**
+- [ ] **Brand voice profile** — distilled from samples, evolves over time
+- [ ] **Content performance history** — what worked, what didn't, pattern analysis
+- [ ] **Audience insights** — learned preferences, engagement patterns, best posting times
+- [ ] **Active campaign state** — what's running, what's scheduled, what's in review
+- [ ] **Conversation history** — Telegram/dashboard interactions, approval patterns,
+      client preferences ("they always reject carousel posts", "they prefer shorter hooks")
+- [ ] **Research cache** — competitor intel, trend data, scraped insights with timestamps
+- [ ] **Asset index** — synced image library metadata, tags, usage history
+
+**Architecture:**
+- All bot state lives in the **database** (PostgreSQL), not in the bot process itself
+- Bot instances are **stateless workers** — they read state from DB, do work, write state back
+- This means if a bot process crashes or restarts, it picks up exactly where it left off
+- No data lives only in memory — everything meaningful gets persisted
+
+**Backup & Redundancy:**
+- [ ] Automated daily database backups (point-in-time recovery)
+- [ ] Cross-region backup replication for disaster recovery
+- [ ] Client data export — customers can request a full export of their bot's learned
+      state (brand profile, insights, performance history)
+- [ ] Versioned brand voice profiles — if a client's voice drifts, roll back to a
+      previous version
+
+**What This Means Practically:**
+- The bot **never forgets** — every interaction, every performance result, every learned
+  pattern is persisted
+- Clients can **pause and resume** — take a month off, come back, bot remembers everything
+- If infrastructure fails, recovery is automatic — no client loses their bot's accumulated
+  intelligence
+- The bot's "memory" is really just well-structured data in the database, queryable and
+  auditable
