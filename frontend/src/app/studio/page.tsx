@@ -560,7 +560,7 @@ export default function StudioPage() {
       {step === "Review" && (
         <div className="space-y-6">
           {/* Weekly theme */}
-          {brief?.weekly_theme && (
+          {!!brief?.weekly_theme && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
               <p className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">
                 Weekly Theme
