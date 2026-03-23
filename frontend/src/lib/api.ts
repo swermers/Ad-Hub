@@ -515,6 +515,107 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  // Intelligence — Tier 5
+  getIntelligenceDashboard: (productId: string) =>
+    request<IntelligenceDashboard>(`/api/products/${productId}/intelligence/dashboard`),
+  getIntelligenceConfig: (productId: string) =>
+    request<IntelligenceConfigData>(`/api/products/${productId}/intelligence/config`),
+  updateIntelligenceConfig: (productId: string, data: Partial<IntelligenceConfigUpdate>) =>
+    request<{ status: string }>(`/api/products/${productId}/intelligence/config`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  // Competitors
+  listCompetitors: (productId: string) =>
+    request<CompetitorData[]>(`/api/products/${productId}/intelligence/competitors`),
+  createCompetitor: (productId: string, data: CompetitorCreate) =>
+    request<CompetitorData>(`/api/products/${productId}/intelligence/competitors`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateCompetitor: (productId: string, competitorId: string, data: Partial<CompetitorCreate>) =>
+    request<{ status: string }>(`/api/products/${productId}/intelligence/competitors/${competitorId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  deleteCompetitor: (productId: string, competitorId: string) =>
+    request<{ status: string }>(`/api/products/${productId}/intelligence/competitors/${competitorId}`, {
+      method: "DELETE",
+    }),
+  scanCompetitors: (productId: string) =>
+    request<{ task_id: string }>(`/api/products/${productId}/intelligence/competitors/scan`, { method: "POST" }),
+  compareCompetitors: (productId: string) =>
+    request<{ task_id: string }>(`/api/products/${productId}/intelligence/competitors/compare`, { method: "POST" }),
+
+  // Trends
+  listTrends: (productId: string, params?: { category?: string; momentum?: string; status?: string }) => {
+    const search = new URLSearchParams();
+    if (params?.category) search.set("category", params.category);
+    if (params?.momentum) search.set("momentum", params.momentum);
+    if (params?.status) search.set("status", params.status);
+    const qs = search.toString();
+    return request<TrendSignalData[]>(`/api/products/${productId}/intelligence/trends${qs ? `?${qs}` : ""}`);
+  },
+  scanTrends: (productId: string) =>
+    request<{ task_id: string }>(`/api/products/${productId}/intelligence/trends/scan`, { method: "POST" }),
+  getTrendSummary: (productId: string) =>
+    request<TrendSummary>(`/api/products/${productId}/intelligence/trends/summary`),
+  updateTrendStatus: (productId: string, trendId: string, status: string) =>
+    request<{ status: string }>(`/api/products/${productId}/intelligence/trends/${trendId}`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    }),
+
+  // Hooks
+  listHookPatterns: (productId: string, patternType?: string) => {
+    const qs = patternType ? `?pattern_type=${patternType}` : "";
+    return request<HookPatternData[]>(`/api/products/${productId}/intelligence/hooks${qs}`);
+  },
+  analyzeHooks: (productId: string, platform?: string) => {
+    const qs = platform ? `?platform=${platform}` : "";
+    return request<{ task_id: string }>(`/api/products/${productId}/intelligence/hooks/analyze${qs}`, { method: "POST" });
+  },
+  suggestHooks: (productId: string, topic: string) =>
+    request<{ hooks: HookSuggestion[] }>(`/api/products/${productId}/intelligence/hooks/suggest`, {
+      method: "POST",
+      body: JSON.stringify({ topic }),
+    }),
+
+  // Evidence
+  listEvidence: (productId: string, evidenceType?: string) => {
+    const qs = evidenceType ? `?evidence_type=${evidenceType}` : "";
+    return request<EvidenceItemData[]>(`/api/products/${productId}/intelligence/evidence${qs}`);
+  },
+  gatherEvidence: (productId: string) =>
+    request<{ task_id: string }>(`/api/products/${productId}/intelligence/evidence/gather`, { method: "POST" }),
+  getEvidenceSummary: (productId: string) =>
+    request<EvidenceSummary>(`/api/products/${productId}/intelligence/evidence/summary`),
+  searchEvidence: (productId: string, claim: string) =>
+    request<{ results: EvidenceItemData[] }>(`/api/products/${productId}/intelligence/evidence/search`, {
+      method: "POST",
+      body: JSON.stringify({ claim }),
+    }),
+  verifyEvidence: (productId: string, evidenceId: string, verified: boolean) =>
+    request<{ status: string }>(`/api/products/${productId}/intelligence/evidence/${evidenceId}/verify`, {
+      method: "PUT",
+      body: JSON.stringify({ verified }),
+    }),
+
+  // Briefs
+  listBriefs: (productId: string) =>
+    request<IntelligenceBriefSummary[]>(`/api/products/${productId}/intelligence/briefs`),
+  getBrief: (productId: string, briefId: string) =>
+    request<IntelligenceBriefData>(`/api/products/${productId}/intelligence/briefs/${briefId}`),
+  generateBrief: (productId: string) =>
+    request<{ task_id: string }>(`/api/products/${productId}/intelligence/briefs/generate`, { method: "POST" }),
+
+  // Full cycle
+  runIntelligenceCycle: (productId: string) =>
+    request<{ task_id: string }>(`/api/products/${productId}/intelligence/run-cycle`, { method: "POST" }),
+  getIntelligenceTaskStatus: (productId: string, taskId: string) =>
+    request<{ status: string; result?: unknown; error?: string }>(`/api/products/${productId}/intelligence/task/${taskId}`),
 };
 
 // Types
@@ -1231,4 +1332,175 @@ export interface RejectionFeedbackCreate {
   content_id?: string;
   reason: string;
   details?: string;
+}
+
+// Intelligence — Tier 5
+
+export interface IntelligenceDashboard {
+  config: {
+    competitor_monitoring_enabled: boolean;
+    trend_detection_enabled: boolean;
+    hook_analysis_enabled: boolean;
+    evidence_gathering_enabled: boolean;
+  };
+  competitors: { active: number };
+  trends: { this_week: number; rising: number };
+  hooks: { total_patterns: number };
+  evidence: { total: number; verified: number };
+  latest_brief: {
+    id: string | null;
+    title: string | null;
+    created_at: string | null;
+    read: boolean;
+  };
+}
+
+export interface IntelligenceConfigData {
+  product_id: string;
+  competitor_monitoring_enabled: boolean;
+  trend_detection_enabled: boolean;
+  hook_analysis_enabled: boolean;
+  evidence_gathering_enabled: boolean;
+  weekly_brief_enabled: boolean;
+  competitor_scan_interval_hours: number;
+  trend_scan_interval_hours: number;
+  hook_analysis_interval_hours: number;
+  evidence_refresh_interval_hours: number;
+  niche_keywords: string[];
+  subreddits: string[];
+  x_accounts_to_watch: string[];
+  industry_vertical: string | null;
+  last_competitor_scan_at: string | null;
+  last_trend_scan_at: string | null;
+  last_hook_analysis_at: string | null;
+  last_evidence_refresh_at: string | null;
+  last_brief_generated_at: string | null;
+}
+
+export interface IntelligenceConfigUpdate {
+  competitor_monitoring_enabled?: boolean;
+  trend_detection_enabled?: boolean;
+  hook_analysis_enabled?: boolean;
+  evidence_gathering_enabled?: boolean;
+  weekly_brief_enabled?: boolean;
+  competitor_scan_interval_hours?: number;
+  trend_scan_interval_hours?: number;
+  hook_analysis_interval_hours?: number;
+  evidence_refresh_interval_hours?: number;
+  niche_keywords?: string[];
+  subreddits?: string[];
+  x_accounts_to_watch?: string[];
+  industry_vertical?: string;
+}
+
+export interface CompetitorData {
+  id: string;
+  name: string;
+  website_url: string | null;
+  social_urls: Record<string, string> | null;
+  meta_ad_library_url: string | null;
+  description: string | null;
+  last_crawled_at: string | null;
+  ad_count: number;
+  longest_running_ad: Record<string, string> | null;
+  is_active: boolean;
+  latest_snapshot: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface CompetitorCreate {
+  name: string;
+  website_url?: string;
+  social_urls?: Record<string, string>;
+  meta_ad_library_url?: string;
+  description?: string;
+}
+
+export interface TrendSignalData {
+  id: string;
+  title: string;
+  summary: string;
+  source_type: string;
+  source_snippet: string | null;
+  category: string;
+  relevance_score: number;
+  momentum: string;
+  volume: number;
+  status: string;
+  suggested_angle: string | null;
+  detected_at: string;
+}
+
+export interface TrendSummary {
+  total: number;
+  rising: number;
+  top_categories: Record<string, number>;
+  top_trends: {
+    id: string;
+    title: string;
+    category: string;
+    momentum: string;
+    relevance_score: number;
+    suggested_angle: string | null;
+  }[];
+}
+
+export interface HookPatternData {
+  id: string;
+  pattern_name: string;
+  pattern_type: string;
+  description: string;
+  example: string;
+  template: string | null;
+  source_platform: string;
+  engagement_score: number;
+  times_used: number;
+  avg_performance: number | null;
+}
+
+export interface HookSuggestion {
+  hook: string;
+  pattern_used: string;
+  platform: string;
+  why_it_works: string;
+}
+
+export interface EvidenceItemData {
+  id: string;
+  claim: string;
+  evidence_text: string;
+  evidence_type: string;
+  source_name: string | null;
+  source_url: string | null;
+  credibility_score: number;
+  freshness: string;
+  times_used: number;
+  verified: boolean;
+  created_at: string;
+}
+
+export interface EvidenceSummary {
+  total: number;
+  by_type: Record<string, number>;
+  verified: number;
+  top_evidence: EvidenceItemData[];
+}
+
+export interface IntelligenceBriefSummary {
+  id: string;
+  title: string;
+  period: string;
+  summary: string;
+  status: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface IntelligenceBriefData extends IntelligenceBriefSummary {
+  whats_working: { insight: string; data_point: string; recommendation: string }[];
+  competitor_moves: { competitor: string; action: string; implication: string }[];
+  trend_alerts: { trend: string; relevance: string; suggested_action: string }[];
+  evidence_found: { claim: string; evidence: string; source: string }[];
+  creative_recommendations: { format: string; reason: string; expected_impact: string }[];
+  next_actions: { action: string; priority: string; rationale: string }[];
 }

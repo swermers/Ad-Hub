@@ -14,6 +14,7 @@ const navItems = [
   { href: "/generate", label: "Generate", icon: "bolt" },
   { href: "/bulk-generate", label: "Bulk Ads", icon: "layers" },
   { href: "/optimizer", label: "Optimizer", icon: "speed" },
+  { href: "/intelligence", label: "Intelligence", icon: "psychology" },
   { href: "/schedule", label: "Schedule", icon: "calendar_month" },
   { href: "/analytics", label: "Analytics", icon: "bar_chart" },
   { href: "/settings", label: "Settings", icon: "settings" },
