@@ -9,6 +9,9 @@ import {
   type ContentPiece,
   type PlatformConnection,
 } from "@/lib/api";
+import { PlatformPreview } from "@/components/PlatformPreview";
+import { VideoPreview } from "@/components/ad-templates/remotion/VideoPreview";
+import type { VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
 
 const STEPS = ["Input", "Brief", "Generate", "Review"] as const;
 type Step = (typeof STEPS)[number];
@@ -81,6 +84,7 @@ export default function StudioPage() {
 
   // Review view mode
   const [reviewView, setReviewView] = useState<"grid" | "list">("grid");
+  const [cardTab, setCardTab] = useState<Record<string, "content" | "preview" | "video">>({});
 
   // Publish
   const [connections, setConnections] = useState<PlatformConnection[]>([]);
@@ -849,6 +853,51 @@ export default function StudioPage() {
                   {/* Expanded content */}
                   {isExpanded && (
                     <div className="px-5 pb-5 border-t border-gray-100">
+                      {/* Tab bar */}
+                      <div className="flex gap-1 mt-3 mb-4 bg-gray-100 rounded-lg p-0.5 w-fit">
+                        {(["content", "preview", ...(meta.blocks || piece.content_type === "video_script" ? ["video"] : [])] as const).map((tab) => (
+                          <button
+                            key={tab}
+                            onClick={() => setCardTab((prev) => ({ ...prev, [piece.id]: tab as "content" | "preview" | "video" }))}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-colors ${
+                              (cardTab[piece.id] || "content") === tab
+                                ? "bg-white text-gray-900 shadow-sm"
+                                : "text-gray-500 hover:text-gray-700"
+                            }`}
+                          >
+                            {tab}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Platform Preview tab */}
+                      {(cardTab[piece.id] || "content") === "preview" && (
+                        <div className="flex justify-center py-4">
+                          <PlatformPreview
+                            platform={piece.content_type === "blog_draft" || piece.content_type === "newsletter" ? "substack" : piece.platform}
+                            title={piece.title}
+                            hook={piece.hook}
+                            body={piece.body}
+                            cta={piece.cta}
+                          />
+                        </div>
+                      )}
+
+                      {/* Video Preview tab */}
+                      {(cardTab[piece.id] || "content") === "video" && (
+                        <div className="flex justify-center py-4">
+                          <VideoPreview
+                            headline={piece.hook || piece.title || ""}
+                            body={piece.body.slice(0, 120)}
+                            cta={piece.cta || "Learn More"}
+                            videoStyle={(piece.template_type as VideoStyle) || "hand-drawn"}
+                            previewWidth={400}
+                          />
+                        </div>
+                      )}
+
+                      {/* Content tab (original content) */}
+                      {(cardTab[piece.id] || "content") === "content" && <>
                       {/* Hook */}
                       {piece.hook && (
                         <div className="mt-4 mb-3">
@@ -958,6 +1007,8 @@ export default function StudioPage() {
                           {meta.notes}
                         </p>
                       )}
+                      </>}
+                      {/* end content tab */}
 
                       {/* Actions */}
                       <div className="flex gap-2 mt-4 pt-3 border-t border-gray-100">
