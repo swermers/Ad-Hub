@@ -13,6 +13,7 @@ from app.routers import (
     agent,
     analytics,
     auth,
+    brand_profile,
     bulk_generator,
     bulk_upload,
     connections,
@@ -82,6 +83,7 @@ app.include_router(optimizer.router, prefix="/api/products", tags=["optimizer"])
 app.include_router(image_gen.router, prefix="/api/products", tags=["image-gen"])
 app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
 app.include_router(seeds.router, prefix="/api/seeds", tags=["seeds"])
+app.include_router(brand_profile.router, prefix="/api/products", tags=["brand-profile"])
 
 
 # Serve uploaded files (screenshots, references, generated images, etc.)

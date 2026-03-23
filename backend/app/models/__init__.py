@@ -1,3 +1,4 @@
+from app.models.brand_profile import BrandProfile, RejectionFeedback
 from app.models.bulk_ads import AdTemplate, AdVariation, OptimizationConfig, OptimizationLog, PainPoint
 from app.models.campaign import AgentLog, Campaign, CampaignAdVariation, SafetyGuardrail
 from app.models.content import ContentPiece
@@ -8,6 +9,8 @@ from app.models.seed_bank import Seed
 
 __all__ = [
     "Product",
+    "BrandProfile",
+    "RejectionFeedback",
     "CrawledPage",
     "UploadedDocument",
     "ContentPiece",

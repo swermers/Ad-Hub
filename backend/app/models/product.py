@@ -46,3 +46,6 @@ class Product(Base):
     connections: Mapped[list["PlatformConnection"]] = relationship(  # noqa: F821
         back_populates="product", cascade="all, delete-orphan"
     )
+    brand_profile: Mapped["BrandProfile | None"] = relationship(  # noqa: F821
+        back_populates="product", cascade="all, delete-orphan", uselist=False
+    )
