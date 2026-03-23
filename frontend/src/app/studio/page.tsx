@@ -86,6 +86,11 @@ export default function StudioPage() {
   const [reviewView, setReviewView] = useState<"grid" | "list">("grid");
   const [cardTab, setCardTab] = useState<Record<string, "content" | "preview" | "video">>({});
 
+  // B-roll suggestions
+  const [brollResults, setBrollResults] = useState<{ id: number; src: { medium: string }; alt: string; photographer: string }[]>([]);
+  const [brollLoading, setBrollLoading] = useState(false);
+  const [brollQuery, setBrollQuery] = useState("");
+
   // Publish
   const [connections, setConnections] = useState<PlatformConnection[]>([]);
   const [publishingPieceId, setPublishingPieceId] = useState<string | null>(null);
@@ -184,6 +189,20 @@ export default function StudioPage() {
                 .slice(0, 7);
               setPieces(recent);
               animateToStep("Review");
+
+              // Auto-fetch b-roll suggestions
+              const briefData = s.content_brief as Record<string, unknown> | null;
+              const query = String(briefData?.weekly_theme || briefData?.seed || "business marketing");
+              setBrollQuery(query);
+              setBrollLoading(true);
+              api.searchBroll(query, "photos", 8, "landscape")
+                .then((res) => {
+                  setBrollResults(
+                    (res.results as { id: number; src: { medium: string }; alt: string; photographer: string }[]) || []
+                  );
+                })
+                .catch(console.error)
+                .finally(() => setBrollLoading(false));
             }
           }
         } catch {
@@ -616,6 +635,68 @@ export default function StudioPage() {
               <p className="text-blue-900 font-medium">
                 {String(brief.weekly_theme)}
               </p>
+            </div>
+          )}
+
+          {/* B-Roll Suggestions */}
+          {(brollResults.length > 0 || brollLoading) && (
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Suggested B-Roll
+                  </p>
+                  {brollQuery && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Auto-searched: &ldquo;{brollQuery}&rdquo;
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={brollQuery}
+                    onChange={(e) => setBrollQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && brollQuery.trim()) {
+                        setBrollLoading(true);
+                        api.searchBroll(brollQuery, "photos", 8, "landscape")
+                          .then((res) => setBrollResults(
+                            (res.results as { id: number; src: { medium: string }; alt: string; photographer: string }[]) || []
+                          ))
+                          .catch(console.error)
+                          .finally(() => setBrollLoading(false));
+                      }
+                    }}
+                    placeholder="Search b-roll..."
+                    className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 w-48"
+                  />
+                </div>
+              </div>
+              {brollLoading ? (
+                <div className="grid grid-cols-4 gap-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="aspect-video bg-gray-100 rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {brollResults.map((photo) => (
+                    <div key={photo.id} className="group relative aspect-video rounded-lg overflow-hidden cursor-pointer">
+                      <img
+                        src={photo.src.medium}
+                        alt={photo.alt}
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end">
+                        <p className="text-white text-[10px] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity truncate">
+                          {photo.photographer}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
