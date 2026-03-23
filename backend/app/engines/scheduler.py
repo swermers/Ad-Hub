@@ -55,6 +55,15 @@ def start_scheduler():
         replace_existing=True,
     )
 
+    # Autonomous loop: run every 4 hours
+    scheduler.add_job(
+        _run_autonomous_loops,
+        "interval",
+        minutes=240,
+        id="autonomous_loops",
+        replace_existing=True,
+    )
+
     scheduler.start()
     logger.info("Scheduler started")
 
@@ -161,3 +170,13 @@ def _run_auto_optimizer():
                 logger.error("Optimization failed for product %s: %s", config.product_id, e)
     finally:
         db.close()
+
+
+def _run_autonomous_loops():
+    """Run autonomous content/ad/feedback loops for all enabled products."""
+    from app.engines.autonomous_loop import run_all_autonomous_loops
+
+    try:
+        run_all_autonomous_loops()
+    except Exception as e:
+        logger.error("Autonomous loops failed: %s", e)

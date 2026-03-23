@@ -480,6 +480,41 @@ export const api = {
     });
     return request<BrollSearchResult>(`/api/agent/broll/search?${params.toString()}`);
   },
+
+  // Brand Profile
+  getBrandProfile: (productId: string) =>
+    request<BrandProfileData>(`/api/products/${productId}/brand-profile`),
+  updateBrandProfile: (productId: string, data: BrandProfileUpdate) =>
+    request<BrandProfileData>(`/api/products/${productId}/brand-profile`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  uploadLogo: async (productId: string, file: File): Promise<{ path: string }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/products/${productId}/brand-profile/logo`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) throw new Error("Upload failed");
+    return res.json();
+  },
+  listRejectionFeedback: (productId: string, limit: number = 50) =>
+    request<RejectionFeedbackItem[]>(`/api/products/${productId}/rejection-feedback?limit=${limit}`),
+  createRejectionFeedback: (productId: string, data: RejectionFeedbackCreate) =>
+    request<RejectionFeedbackItem>(`/api/products/${productId}/rejection-feedback`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
 
 // Types
@@ -1116,4 +1151,84 @@ export interface BrollSearchResult {
   media_type: string;
   total_results: number;
   results: (BrollPhoto | BrollVideo)[];
+}
+
+// Brand Profile types
+
+export interface BrandProfileData {
+  id: string;
+  product_id: string;
+  writing_samples: string | null;
+  tone_descriptors: string | null;
+  always_use_words: string | null;
+  never_use_words: string | null;
+  sentence_style: string | null;
+  logo_url: string | null;
+  logo_usage_rules: string | null;
+  primary_colors: string | null;
+  secondary_colors: string | null;
+  accent_colors: string | null;
+  approved_fonts: string | null;
+  photography_style: string | null;
+  approved_topics: string | null;
+  off_limit_topics: string | null;
+  claims_allowed: string | null;
+  claims_need_review: string | null;
+  hashtag_strategy: string | null;
+  emoji_usage: string | null;
+  approved_emojis: string | null;
+  cta_style: string | null;
+  regulatory_notes: string | null;
+  linkedin_rules: string | null;
+  instagram_rules: string | null;
+  x_rules: string | null;
+  meta_ads_rules: string | null;
+  paused_topics: string | null;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BrandProfileUpdate {
+  writing_samples?: string[];
+  tone_descriptors?: string[];
+  always_use_words?: string[];
+  never_use_words?: string[];
+  sentence_style?: string;
+  logo_url?: string;
+  logo_usage_rules?: string;
+  primary_colors?: string[];
+  secondary_colors?: string[];
+  accent_colors?: string[];
+  approved_fonts?: string[];
+  photography_style?: string;
+  approved_topics?: string[];
+  off_limit_topics?: string[];
+  claims_allowed?: string[];
+  claims_need_review?: string[];
+  hashtag_strategy?: string;
+  emoji_usage?: string;
+  approved_emojis?: string[];
+  cta_style?: string;
+  regulatory_notes?: string;
+  linkedin_rules?: string;
+  instagram_rules?: string;
+  x_rules?: string;
+  meta_ads_rules?: string;
+  paused_topics?: string[];
+}
+
+export interface RejectionFeedbackItem {
+  id: string;
+  product_id: string;
+  content_id: string | null;
+  reason: string;
+  details: string | null;
+  created_at: string;
+}
+
+export interface RejectionFeedbackCreate {
+  content_id?: string;
+  reason: string;
+  details?: string;
 }

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import ContentPiece
+from app.permissions import get_current_user, scope_product_query
 
 router = APIRouter()
 
@@ -55,8 +56,10 @@ def list_content(
     skip: int = 0,
     limit: int = 50,
     db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
     query = db.query(ContentPiece)
+    query = scope_product_query(query, ContentPiece, user, db)
     if product_id:
         query = query.filter(ContentPiece.product_id == product_id)
     if status:

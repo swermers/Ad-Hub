@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import AdVariation, ContentPiece, OptimizationConfig, OptimizationLog, Product
 from app.models.campaign import AgentLog, Campaign, SafetyGuardrail
+from app.permissions import deny_agent, get_current_user, require_human, scope_query
 
 router = APIRouter()
 
@@ -164,14 +165,19 @@ async def transcribe_audio(file: UploadFile = File(...)):
 
 
 @router.get("/status")
-def system_status(db: Session = Depends(get_db)):
+def system_status(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     """System health + active campaigns + pending actions.
 
     The agent calls this on startup and periodically to understand current state.
     """
 
-    products = db.query(Product).filter(Product.status == "active").all()
-    campaigns = db.query(Campaign).filter(Campaign.status.in_(["active", "paused"])).all()
+    product_q = scope_query(db.query(Product), Product, user)
+    products = product_q.filter(Product.status == "active").all()
+    workspace_product_ids = [p.id for p in products]
+    campaigns = db.query(Campaign).filter(
+        Campaign.status.in_(["active", "paused"]),
+        Campaign.product_id.in_(workspace_product_ids),
+    ).all()
     pending_approvals = (
         db.query(AgentLog)
         .filter(AgentLog.approval_required == True, AgentLog.approved == None)  # noqa: E711, E712
@@ -231,6 +237,7 @@ def _run_transcript_pipeline(
     """Run the voice memo → content pipeline in a background thread."""
     from app.database import SessionLocal
     from app.engines.content_pipeline import generate_weekly_content_sync
+    from app.models.brand_profile import BrandProfile
 
     _task_status[task_id] = {"status": "running", "pieces_generated": 0, "content_brief": None, "error": None}
 
@@ -241,11 +248,15 @@ def _run_transcript_pipeline(
             _task_status[task_id] = {"status": "failed", "pieces_generated": 0, "error": "Product not found"}
             return
 
+        # Load brand profile for constraint enforcement
+        brand_profile = db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first()
+
         pieces = generate_weekly_content_sync(
             product=product,
             transcript=transcript,
             weekly_mix=weekly_mix,
             instructions=instructions,
+            brand_profile=brand_profile,
         )
 
         # Save as ContentPiece records
@@ -354,6 +365,7 @@ def _run_creative_bundle(
     """Generate a complete creative package: copy + optional image."""
     from app.database import SessionLocal
     from app.engines.generation import generate_content_batch_sync
+    from app.models.brand_profile import BrandProfile
 
     _task_status[task_id] = {"status": "running", "pieces_generated": 0, "error": None}
 
@@ -363,6 +375,9 @@ def _run_creative_bundle(
         if not product:
             _task_status[task_id] = {"status": "failed", "pieces_generated": 0, "error": "Product not found"}
             return
+
+        # Load brand profile for constraint enforcement
+        brand_profile = db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first()
 
         # Generate ad copy variations
         instructions = f"Pain Point: {pain_point_text}"
@@ -378,6 +393,7 @@ def _run_creative_bundle(
             count=3,  # 3 variations per platform
             funnel_stage=funnel_stage,
             instructions=instructions,
+            brand_profile=brand_profile,
         )
 
         # Save as ContentPiece records
@@ -734,7 +750,7 @@ def list_guardrails(product_id: str | None = None, db: Session = Depends(get_db)
     ]
 
 
-@router.post("/guardrails")
+@router.post("/guardrails", dependencies=[Depends(deny_agent)])
 def create_guardrail(data: GuardrailRequest, db: Session = Depends(get_db)):
     guardrail = SafetyGuardrail(
         product_id=data.product_id,
@@ -761,7 +777,7 @@ def create_guardrail(data: GuardrailRequest, db: Session = Depends(get_db)):
     return {"id": guardrail.id, "rule_type": guardrail.rule_type, "enabled": guardrail.enabled}
 
 
-@router.put("/guardrails/{guardrail_id}")
+@router.put("/guardrails/{guardrail_id}", dependencies=[Depends(deny_agent)])
 def update_guardrail(guardrail_id: str, data: dict, db: Session = Depends(get_db)):
     guardrail = db.query(SafetyGuardrail).filter(SafetyGuardrail.id == guardrail_id).first()
     if not guardrail:
@@ -776,7 +792,7 @@ def update_guardrail(guardrail_id: str, data: dict, db: Session = Depends(get_db
     return {"id": guardrail.id, "updated": True}
 
 
-@router.delete("/guardrails/{guardrail_id}")
+@router.delete("/guardrails/{guardrail_id}", dependencies=[Depends(deny_agent)])
 def delete_guardrail(guardrail_id: str, db: Session = Depends(get_db)):
     guardrail = db.query(SafetyGuardrail).filter(SafetyGuardrail.id == guardrail_id).first()
     if not guardrail:
@@ -789,7 +805,7 @@ def delete_guardrail(guardrail_id: str, db: Session = Depends(get_db)):
 # ─── Kill Switch ──────────────────────────────────────────────────────────────
 
 
-@router.post("/kill-switch")
+@router.post("/kill-switch", dependencies=[Depends(require_human)])
 def kill_switch(db: Session = Depends(get_db)):
     """EMERGENCY: Pause all active campaigns immediately.
 
@@ -841,7 +857,7 @@ def pending_approvals(db: Session = Depends(get_db)):
     ]
 
 
-@router.post("/approve/{log_id}")
+@router.post("/approve/{log_id}", dependencies=[Depends(require_human)])
 def approve_action(log_id: str, data: ApprovalRequest, db: Session = Depends(get_db)):
     """Approve or reject a pending agent action."""
 

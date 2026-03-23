@@ -164,8 +164,11 @@ def _default_brief(transcript: str) -> dict:
 
 # ─── Step 2: Generate Full Content Package ───────────────────────────────────
 
-def _build_generation_system_prompt(product, content_brief: dict, rag_context: str, brand_brief: str) -> str:
+def _build_generation_system_prompt(product, content_brief: dict, rag_context: str, brand_brief: str, brand_profile=None) -> str:
     """Build the system prompt with voice rules, brand context, and content brief."""
+    from app.engines.generation import _build_brand_constraints, _get_platform_rules  # noqa: F811
+
+    brand_constraints = _build_brand_constraints(brand_profile)
 
     template = content_brief.get("template_fit", "A")
     template_instructions = {
@@ -203,6 +206,9 @@ Target Audience: {product.target_audience or "General audience"}
 Brand Voice: {product.brand_voice or "Warm, observational, grounded. Peer, not coach."}
 
 {f"Brand Brief: {brand_brief}" if brand_brief else ""}
+
+{brand_constraints}
+
 {f"Product Knowledge: {rag_context}" if rag_context else ""}
 
 CONTENT BRIEF (from Idea Sharpener):
@@ -299,6 +305,7 @@ async def generate_weekly_content(
     content_brief: dict | None = None,
     weekly_mix: list[dict] | None = None,
     instructions: str | None = None,
+    brand_profile=None,
 ) -> list[dict]:
     """Generate a full week of content from a transcript and brief.
 
@@ -320,7 +327,7 @@ async def generate_weekly_content(
 
     brand_brief = _get_brand_brief(product)
 
-    system_prompt = _build_generation_system_prompt(product, content_brief, rag_context, brand_brief)
+    system_prompt = _build_generation_system_prompt(product, content_brief, rag_context, brand_brief, brand_profile)
     user_prompt = _build_generation_user_prompt(mix, instructions)
 
     result = await call_claude(user_prompt, system=system_prompt, max_tokens=8192)
@@ -333,6 +340,7 @@ def generate_weekly_content_sync(
     content_brief: dict | None = None,
     weekly_mix: list[dict] | None = None,
     instructions: str | None = None,
+    brand_profile=None,
 ) -> list[dict]:
     """Sync version for background threads."""
 
@@ -349,7 +357,7 @@ def generate_weekly_content_sync(
 
     brand_brief = _get_brand_brief(product)
 
-    system_prompt = _build_generation_system_prompt(product, content_brief, rag_context, brand_brief)
+    system_prompt = _build_generation_system_prompt(product, content_brief, rag_context, brand_brief, brand_profile)
     user_prompt = _build_generation_user_prompt(mix, instructions)
 
     result = call_claude_sync(user_prompt, system=system_prompt, max_tokens=8192)

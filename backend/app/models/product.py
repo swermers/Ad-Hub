@@ -11,6 +11,7 @@ class Product(Base):
     __tablename__ = "products"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    workspace_id: Mapped[str | None] = mapped_column(String(36))  # FK to workspaces; NULL = legacy
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     website_url: Mapped[str | None] = mapped_column(String(2048))
     description: Mapped[str] = mapped_column(Text, default="")
@@ -45,4 +46,7 @@ class Product(Base):
     )
     connections: Mapped[list["PlatformConnection"]] = relationship(  # noqa: F821
         back_populates="product", cascade="all, delete-orphan"
+    )
+    brand_profile: Mapped["BrandProfile | None"] = relationship(  # noqa: F821
+        back_populates="product", cascade="all, delete-orphan", uselist=False
     )

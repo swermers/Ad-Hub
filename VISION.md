@@ -418,11 +418,12 @@ locale-specific variants from the start.
 - [ ] Notification system (in-app + Telegram)
 
 ### Tier 4 — Two-Seat Architecture
-- [ ] Brand voice ingestion + distillation system
-- [ ] Bot permission layer (scoped API access, no config mutations)
-- [ ] Autonomous loop wiring (Sharpener → Generator → Sharpener → Schedule → Monitor → Iterate)
-- [ ] Per-customer bot instance isolation
-- [ ] Subscription/billing infrastructure
+- [x] Brand Profile system (database model, onboarding UI, generation pipeline integration)
+- [x] Bot permission layer (User model, AgentAPIKey, role-based endpoint protection)
+- [x] Autonomous loop wiring (content loop, ad loop, feedback loop — scheduler-driven)
+- [x] Per-customer bot instance isolation (Workspace model, workspace-scoped queries, data boundaries)
+- [x] Subscription/billing infrastructure (Stripe integration, tier limits, usage tracking)
+- [ ] Demo mode (sandbox environment for prospects, no API keys required)
 
 ### Tier 5 — Marketing Intelligence Layer (Bot as Strategic Partner)
 
