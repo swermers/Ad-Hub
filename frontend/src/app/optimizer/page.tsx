@@ -113,8 +113,8 @@ export default function OptimizerPage() {
   };
 
   const actionColors: Record<string, string> = {
-    paused: "text-red-600 bg-[#ffb4ab]/10",
-    promoted: "text-green-600 bg-green-50",
+    paused: "text-[#ffb4ab] bg-[#ffb4ab]/10",
+    promoted: "text-[#4ade80] bg-[#4ade80]/10",
     kept: "text-[#dbc2ad] bg-white/5",
     auto_iterate: "text-purple-600 bg-purple-50",
   };
@@ -154,12 +154,12 @@ export default function OptimizerPage() {
           {/* Summary cards */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="p-4 bg-[#ffb4ab]/10 rounded-xl">
-              <p className="text-2xl font-bold text-red-700">{totalPaused}</p>
-              <p className="text-sm text-red-600">Ads Paused</p>
+              <p className="text-2xl font-bold text-[#ffb4ab]">{totalPaused}</p>
+              <p className="text-sm text-[#ffb4ab]">Ads Paused</p>
             </div>
-            <div className="p-4 bg-green-50 rounded-xl">
-              <p className="text-2xl font-bold text-green-700">{totalPromoted}</p>
-              <p className="text-sm text-green-600">Winners Promoted</p>
+            <div className="p-4 bg-[#4ade80]/10 rounded-xl">
+              <p className="text-2xl font-bold text-[#4ade80]">{totalPromoted}</p>
+              <p className="text-sm text-[#4ade80]">Winners Promoted</p>
             </div>
             <div className="p-4 bg-[#FF9500]/10 rounded-xl">
               <p className="text-2xl font-bold text-[#FF9500]">${totalSpendSaved.toFixed(2)}</p>
@@ -422,7 +422,7 @@ export default function OptimizerPage() {
 
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <h3 className="text-sm font-semibold text-green-700 mb-2">Winning Patterns</h3>
+                      <h3 className="text-sm font-semibold text-[#4ade80] mb-2">Winning Patterns</h3>
                       <ul className="space-y-1">
                         {analysis.winning_patterns.map((p, i) => (
                           <li key={i} className="text-sm text-[#dbc2ad] flex items-start gap-2">
@@ -432,11 +432,11 @@ export default function OptimizerPage() {
                       </ul>
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-red-700 mb-2">Losing Patterns</h3>
+                      <h3 className="text-sm font-semibold text-[#ffb4ab] mb-2">Losing Patterns</h3>
                       <ul className="space-y-1">
                         {analysis.losing_patterns.map((p, i) => (
                           <li key={i} className="text-sm text-[#dbc2ad] flex items-start gap-2">
-                            <span className="text-red-500 mt-0.5">-</span> {p}
+                            <span className="text-[#ffb4ab] mt-0.5">-</span> {p}
                           </li>
                         ))}
                       </ul>
