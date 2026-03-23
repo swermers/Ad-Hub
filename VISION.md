@@ -420,7 +420,7 @@ locale-specific variants from the start.
 ### Tier 4 — Two-Seat Architecture
 - [x] Brand Profile system (database model, onboarding UI, generation pipeline integration)
 - [x] Bot permission layer (User model, AgentAPIKey, role-based endpoint protection)
-- [ ] Autonomous loop wiring (Sharpener → Generator → Sharpener → Schedule → Monitor → Iterate)
+- [x] Autonomous loop wiring (content loop, ad loop, feedback loop — scheduler-driven)
 - [ ] Per-customer bot instance isolation
 - [ ] Subscription/billing infrastructure
 - [ ] Demo mode (sandbox environment for prospects, no API keys required)

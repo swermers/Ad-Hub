@@ -52,6 +52,7 @@ def create_tables():
         AdVariation,
         AgentAPIKey,
         AgentLog,
+        AutonomousLoopConfig,
         BrandProfile,
         Campaign,
         CampaignAdVariation,
