@@ -101,6 +101,7 @@ def _run_bulk_generation(
     funnel_stage: str,
 ):
     from app.database import SessionLocal
+    from app.engines.billing import UsageLimitExceeded, check_generation_limit, increment_usage
     from app.engines.generation import generate_ad_variations_sync
     from app.models.brand_profile import BrandProfile
 
@@ -126,6 +127,19 @@ def _run_bulk_generation(
                 "error": "Product or template not found",
             }
             return
+
+        # Check usage limits before generating
+        if product.workspace_id:
+            try:
+                check_generation_limit(db, product.workspace_id)
+            except UsageLimitExceeded as e:
+                _task_status[task_id] = {
+                    "status": "failed",
+                    "variations_generated": 0,
+                    "batch_id": batch_id,
+                    "error": str(e),
+                }
+                return
 
         # Load brand profile for constraint enforcement
         brand_profile = db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first()
@@ -160,6 +174,11 @@ def _run_bulk_generation(
             db.add(ad_var)
 
         db.commit()
+
+        # Track usage
+        if product.workspace_id:
+            increment_usage(db, product.workspace_id, "ad_generations", len(variations))
+
         _task_status[task_id] = {
             "status": "completed",
             "variations_generated": len(variations),

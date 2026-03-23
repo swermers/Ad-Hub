@@ -1,4 +1,5 @@
 from app.models.autonomous_loop import AutonomousLoopConfig
+from app.models.billing import Subscription, UsageRecord
 from app.models.brand_profile import BrandProfile, RejectionFeedback
 from app.models.workspace import Workspace
 from app.models.bulk_ads import AdTemplate, AdVariation, OptimizationConfig, OptimizationLog, PainPoint
@@ -34,4 +35,6 @@ __all__ = [
     "User",
     "AgentAPIKey",
     "Workspace",
+    "Subscription",
+    "UsageRecord",
 ]

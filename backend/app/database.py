@@ -69,6 +69,8 @@ def create_tables():
         ScheduledPost,
         Seed,
         UploadedDocument,
+        Subscription,
+        UsageRecord,
         User,
         Workspace,
     )

@@ -7,7 +7,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 
 # Routes that don't require auth
-PUBLIC_PATHS = {"/api/auth/login", "/api/health"}
+PUBLIC_PATHS = {"/api/auth/login", "/api/health", "/api/billing/webhook"}
 
 
 class AuthMiddleware(BaseHTTPMiddleware):

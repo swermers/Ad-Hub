@@ -11,6 +11,8 @@ from app.database import get_db
 from app.models import Product
 from app.permissions import deny_agent, get_current_user, scope_query
 
+from app.engines.billing import UsageLimitExceeded, check_product_limit
+
 router = APIRouter()
 
 SCREENSHOT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "screenshots")
@@ -75,8 +77,18 @@ def list_products(skip: int = 0, limit: int = 50, db: Session = Depends(get_db),
 
 
 @router.post("", response_model=ProductResponse, status_code=201, dependencies=[Depends(deny_agent)])
-def create_product(data: ProductCreate, db: Session = Depends(get_db)):
+def create_product(data: ProductCreate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    ws_id = user.get("workspace_id")
+
+    # Check product limit
+    if ws_id:
+        try:
+            check_product_limit(db, ws_id)
+        except UsageLimitExceeded as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
     product = Product(**data.model_dump())
+    product.workspace_id = ws_id
     db.add(product)
     db.commit()
     db.refresh(product)

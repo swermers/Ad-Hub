@@ -42,6 +42,7 @@ def _run_generation(
 ):
     """Run content generation in background thread (sync — no asyncio.run)."""
     from app.database import SessionLocal
+    from app.engines.billing import UsageLimitExceeded, check_generation_limit, increment_usage
     from app.engines.generation import generate_content_batch_sync
     from app.models.brand_profile import BrandProfile
 
@@ -61,6 +62,18 @@ def _run_generation(
                 "error": "Product not found",
             }
             return
+
+        # Check usage limits before generating
+        if product.workspace_id:
+            try:
+                check_generation_limit(db, product.workspace_id)
+            except UsageLimitExceeded as e:
+                _task_status[task_id] = {
+                    "status": "failed",
+                    "pieces_generated": 0,
+                    "error": str(e),
+                }
+                return
 
         # Load brand profile for constraint enforcement
         brand_profile = db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first()
@@ -93,6 +106,11 @@ def _run_generation(
             db.add(piece)
 
         db.commit()
+
+        # Track usage
+        if product.workspace_id:
+            increment_usage(db, product.workspace_id, "content_generations", len(pieces))
+
         _task_status[task_id] = {
             "status": "completed",
             "pieces_generated": len(pieces),

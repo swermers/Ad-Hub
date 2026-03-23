@@ -422,7 +422,7 @@ locale-specific variants from the start.
 - [x] Bot permission layer (User model, AgentAPIKey, role-based endpoint protection)
 - [x] Autonomous loop wiring (content loop, ad loop, feedback loop — scheduler-driven)
 - [x] Per-customer bot instance isolation (Workspace model, workspace-scoped queries, data boundaries)
-- [ ] Subscription/billing infrastructure
+- [x] Subscription/billing infrastructure (Stripe integration, tier limits, usage tracking)
 - [ ] Demo mode (sandbox environment for prospects, no API keys required)
 
 ### Tier 5 — Marketing Intelligence Layer (Bot as Strategic Partner)
