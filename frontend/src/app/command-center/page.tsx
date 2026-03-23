@@ -1,330 +1,399 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { api, CommandCenter } from "@/lib/api";
+import { useState } from "react";
+import { motion } from "framer-motion";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.08, duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+  }),
+};
+const stagger = { visible: { transition: { staggerChildren: 0.06 } } };
+
+const barHeights = [65, 45, 80, 55, 90, 70, 95, 60];
+const barDelays = ["0s", "0.1s", "0.2s", "0.3s", "0.4s", "0.5s", "0.6s", "0.7s"];
+
+const aiInsights = [
+  {
+    color: "#FF9500",
+    icon: "trending_up",
+    title: "Revenue Anomaly Detected",
+    desc: "APAC region showing 340% spike in conversion velocity. Recommend immediate budget reallocation.",
+    time: "2 min ago",
+  },
+  {
+    color: "#a78bfa",
+    icon: "psychology",
+    title: "Audience Fatigue Signal",
+    desc: "Creative set Delta-7 approaching diminishing returns threshold. Refresh recommended within 48hrs.",
+    time: "14 min ago",
+  },
+  {
+    color: "#34d399",
+    icon: "bolt",
+    title: "Opportunity Window Open",
+    desc: "Competitor pullback detected in EMEA social channels. CPC down 23% — ideal for scale.",
+    time: "31 min ago",
+  },
+];
+
+const teamAvatars = [
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuCbNzpxzeZ2KjsuEnH45MancHSVjFNK9MKBjchD8Q4MVo3vh0F-OQ7Y116nor0FJKjhF2nzvLVefITmJuxUk3XNuLnReGE4hGKXKkklKX-XIKcGqNb5_TskYnXpJJ-Z9Odc3Dtvzzt3Vji7-zUEnt68ADK4koXS71yFChTBlJp5Dq0VyBWFtWmK40XAWFRKllzQp_NO9RsQ9v-RRgyk_hfsUoZvOuLVG1j9J4Grk4x_1haxkw0RGnXVlPLs5V88y53-cc-uWWD3Lw5J",
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuBSpSijP6D9IRd__96UER5gEjwijypc8UKOWz2FrrS-4XmeD-8UCg5E0kB5OeBaoUmPUa_K5sng-p_1DQnp8bnJS5KtCfIEZ1blspkMqPyf54P7oEed_n6IBL5NQDu16KwXcCdUSpAfCiS548E6M41AvyEJ8I3yirJl0_k-7xbNDA_qOiSJVSN42HTfeA_xcXzS89QliCvuLSSibKiR5iyMpYVjxFV0jzqk0RGye5iSYm9Lbetmz0GlWB2cDS8AvUcHyq53cE1a33Xh",
+];
+
+const campaignMetrics = [
+  {
+    icon: "ads_click",
+    label: "Direct Traffic",
+    value: "142.8k",
+    change: "+2.4%",
+    positive: true,
+    progress: 72,
+  },
+  {
+    icon: "share",
+    label: "Social Velocity",
+    value: "89.4k",
+    change: "+18.1%",
+    positive: true,
+    progress: 58,
+  },
+  {
+    icon: "mail",
+    label: "Email Engagement",
+    value: "12.1k",
+    change: "-0.4%",
+    positive: false,
+    progress: 34,
+  },
+  {
+    icon: "travel_explore",
+    label: "Organic Discovery",
+    value: "64.2k",
+    change: "+5.9%",
+    positive: true,
+    progress: 48,
+  },
+];
 
 export default function CommandCenterPage() {
-  const [data, setData] = useState<CommandCenter | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [aiLoading, setAiLoading] = useState(false);
-
-  const fetchData = useCallback(async (includeAi = false) => {
-    try {
-      if (includeAi) setAiLoading(true);
-      else setLoading(true);
-      const result = await api.getCommandCenter(includeAi);
-      setData(result);
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false);
-      setAiLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF9500]" />
-      </div>
-    );
-  }
-
-  if (!data) {
-    return <p className="text-[#E5E1E4]/50">Failed to load command center data.</p>;
-  }
-
-  const { summary, products, top_winners, worst_losers, ai_recommendations } = data;
+  const [hoveredBar, setHoveredBar] = useState<number | null>(null);
 
   return (
-    <div className="space-y-8 max-w-6xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <motion.div initial="hidden" animate="visible" variants={stagger} className="space-y-10">
+      {/* ============ HEADER ============ */}
+      <motion.div variants={fadeUp} custom={0} className="flex flex-col md:flex-row items-start justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#E5E1E4]">Command Center</h1>
-          <p className="text-[#E5E1E4]/50 text-sm mt-1">
-            Full snapshot of your ad performance across all products
+          <p className="text-[#FF9500] uppercase tracking-[0.2em] text-[11px] font-black mb-3">
+            Command Center
+          </p>
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tighter text-[#E5E1E4] leading-[1.05]">
+            Global Performance{" "}
+            <span className="text-[#E5E1E4]/30">Intelligence.</span>
+          </h1>
+        </div>
+        <div className="text-right flex flex-col items-end gap-2 pt-2">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34d399] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#34d399]" />
+            </span>
+            <span className="text-[#34d399] text-sm font-medium">
+              Live Precision Tracking
+            </span>
+          </div>
+          <p className="text-[#E5E1E4]/30 text-xs font-mono">
+            SRV-NODE-0x7F &middot; 120fps &middot; &lt;1ms latency
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => fetchData(false)}
-            className="px-4 py-2 text-sm font-medium bg-[#201f21] border border-white/10 rounded-lg hover:bg-white/5"
-          >
-            Refresh
-          </button>
-          <button
-            onClick={() => fetchData(true)}
-            disabled={aiLoading}
-            className="px-4 py-2 text-sm font-medium bg-[#FF9500] text-[#2d1600] rounded-lg hover:opacity-90 disabled:opacity-50"
-          >
-            {aiLoading ? "Analyzing..." : "Get AI Recommendations"}
-          </button>
-        </div>
-      </div>
+      </motion.div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <SummaryCard label="Products" value={summary.total_products} />
-        <SummaryCard label="Active Ads" value={summary.total_active_ads} color="green" />
-        <SummaryCard label="Paused" value={summary.total_paused_ads} color="red" />
-        <SummaryCard label="Winners" value={summary.total_winners} color="blue" />
-        <SummaryCard label="Total Spend" value={`$${summary.total_spend.toFixed(2)}`} />
-      </div>
-
-      {/* AI Recommendations */}
-      {ai_recommendations && (
-        <div className="bg-gradient-to-r from-[#FF9500]/10 to-indigo-50 border border-[#FF9500]/20 rounded-xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-[#FF9500]">AI Strategy Brief</h2>
-          <p className="text-[#FF9500]">{ai_recommendations.executive_summary}</p>
-
-          <div className="grid md:grid-cols-3 gap-4">
-            <div>
-              <h3 className="text-sm font-semibold text-[#FF9500] mb-2">Immediate Actions</h3>
-              <ul className="space-y-1">
-                {ai_recommendations.immediate_actions.map((a, i) => (
-                  <li key={i} className="text-sm text-[#FF9500] flex gap-2">
-                    <span className="text-[#FF9500] shrink-0">&#x2022;</span>
-                    {a}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-[#FF9500] mb-2">Budget Recs</h3>
-              <ul className="space-y-1">
-                {ai_recommendations.budget_recommendations.map((r, i) => (
-                  <li key={i} className="text-sm text-[#FF9500] flex gap-2">
-                    <span className="text-[#FF9500] shrink-0">&#x2022;</span>
-                    {r}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-[#FF9500] mb-2">Next Tests</h3>
-              <ul className="space-y-1">
-                {ai_recommendations.next_tests.map((t, i) => (
-                  <li key={i} className="text-sm text-[#FF9500] flex gap-2">
-                    <span className="text-[#FF9500] shrink-0">&#x2022;</span>
-                    {t}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Product Breakdown */}
-      <div>
-        <h2 className="text-lg font-semibold text-[#E5E1E4] mb-4">Products</h2>
-        <div className="space-y-4">
-          {products.map((p) => (
-            <div
-              key={p.id}
-              className="bg-[#201f21] border border-white/10 rounded-xl p-5"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-semibold text-[#E5E1E4]">{p.name}</h3>
-                  <span className="text-xs bg-white/10 text-[#dbc2ad] px-2 py-0.5 rounded-full">
-                    {p.product_type}
-                  </span>
-                </div>
-                <div className="text-right text-sm text-[#E5E1E4]/50">
-                  {p.total_variations} variations &middot; {p.pain_points_count} pain points
-                </div>
-              </div>
-
-              {/* Status bar */}
-              <div className="flex gap-3 mb-3">
-                <StatusPill label="Active" count={p.active_ads} color="green" />
-                <StatusPill label="Paused" count={p.paused_ads} color="red" />
-                <StatusPill label="Winners" count={p.winners} color="blue" />
-                <StatusPill label="Draft" count={p.status_breakdown.draft || 0} color="gray" />
-              </div>
-
-              {p.total_spend > 0 && (
-                <p className="text-sm text-[#dbc2ad] mb-2">
-                  Spend: <span className="font-medium">${p.total_spend.toFixed(2)}</span>
+      {/* ============ BENTO GRID ============ */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
+        {/* --- Hero ROI Card --- */}
+        <motion.div variants={fadeUp} custom={1} className="md:col-span-8 glass-prism rounded-2xl md:rounded-3xl p-6 md:p-8 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#FF9500]/5 to-transparent pointer-events-none" />
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-[#E5E1E4]/50 text-sm font-medium uppercase tracking-wider">
+                  Annual Net ROI
                 </p>
-              )}
+                <p className="text-xs text-[#E5E1E4]/30 mt-1">
+                  Fiscal Year 2026 &middot; All Channels
+                </p>
+              </div>
+              <div className="flex items-center gap-2 bg-[#34d399]/10 border border-[#34d399]/20 rounded-full px-3 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#34d399]" />
+                <span className="text-[#34d399] text-xs font-medium">Verified</span>
+              </div>
+            </div>
 
-              {/* Top winner */}
-              {p.top_winner && (
-                <div className="bg-[#4ade80]/10 border border-[#4ade80]/20 rounded-lg px-3 py-2 text-sm mb-2">
-                  <span className="font-medium text-[#4ade80]">Top Winner:</span>{" "}
-                  <span className="text-[#4ade80]">&ldquo;{p.top_winner.headline}&rdquo;</span>
-                  <span className="text-[#4ade80] ml-2">
-                    CTR {p.top_winner.ctr.toFixed(2)}% &middot; {p.top_winner.impressions.toLocaleString()} impressions
+            <div className="flex items-end justify-between">
+              <div>
+                <motion.p initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4, duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="text-6xl md:text-9xl font-black text-[#FF9500] leading-none tracking-tighter">
+                  +842%
+                </motion.p>
+                <p className="text-[#34d399] text-sm font-medium mt-3">
+                  ▲ 12.4% vs prev. period
+                </p>
+              </div>
+
+              {/* Animated Bar Chart */}
+              <div className="flex items-end gap-2 h-32">
+                {barHeights.map((h, i) => (
+                  <div
+                    key={i}
+                    className="relative group cursor-pointer"
+                    onMouseEnter={() => setHoveredBar(i)}
+                    onMouseLeave={() => setHoveredBar(null)}
+                  >
+                    <div
+                      className="w-5 rounded-t-md transition-all duration-700 ease-out"
+                      style={{
+                        height: `${hoveredBar === i ? Math.min(h + 15, 100) : h}%`,
+                        background:
+                          hoveredBar === i
+                            ? "linear-gradient(to top, #FF9500, #ffbd7f)"
+                            : "linear-gradient(to top, rgba(255,149,0,0.4), rgba(255,189,127,0.2))",
+                        transitionDelay: barDelays[i],
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* --- Conversion Donut --- */}
+        <motion.div variants={fadeUp} custom={2} className="md:col-span-4 glass-prism rounded-2xl md:rounded-3xl p-6 md:p-8 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#FF9500]/5 to-transparent pointer-events-none" />
+          <div className="relative z-10">
+            <p className="text-[#E5E1E4]/50 text-sm font-medium uppercase tracking-wider mb-1">
+              Conversion Rate
+            </p>
+            <p className="text-xs text-[#E5E1E4]/30 mb-4">
+              Blended &middot; All Funnels
+            </p>
+
+            <div className="relative flex items-center justify-center">
+              <svg className="w-full h-48 -rotate-90" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="45"
+                  fill="transparent"
+                  stroke="rgba(255,255,255,0.05)"
+                  strokeWidth="8"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="45"
+                  fill="transparent"
+                  stroke="url(#solarGradient)"
+                  strokeWidth="8"
+                  strokeDasharray="210 282"
+                  strokeLinecap="round"
+                />
+                <defs>
+                  <linearGradient id="solarGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style={{ stopColor: "#ff9500", stopOpacity: 1 }} />
+                    <stop offset="100%" style={{ stopColor: "#ffbd7f", stopOpacity: 1 }} />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
+                <span className="text-4xl font-black text-[#E5E1E4]">24.8%</span>
+                <span className="text-xs text-[#E5E1E4]/40 mt-1">of total traffic</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-xs text-[#E5E1E4]/40">
+                Benchmark <span className="text-[#E5E1E4]/60 font-medium">18%</span>
+              </div>
+              <button className="haptic-btn text-xs font-medium text-[#FF9500] hover:text-[#ffbd7f] transition-colors flex items-center gap-1">
+                Analyze Segment
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* --- Global Map --- */}
+        <motion.div variants={fadeUp} custom={3} className="md:col-span-12 lg:col-span-7 glass-prism rounded-2xl md:rounded-3xl overflow-hidden relative min-h-[300px] md:min-h-[360px]">
+          {/* Map background */}
+          <div className="absolute inset-0">
+            <img
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6tkJN8qK3-bgCH40o1oCGwR50P9JZrFwnVkGpxJ9pvBmlY4RacYrPeOC-qOkAjY738aJVOc6B8GBMUBLAjzos5qN-erzmu9ZP2hznvi1XaPT99Gl-P2mWv6N_kI-czAyivyfSL-3bIj7rEaM51MNxsQIxEZqzgdYIUUJrC1c75t7uxCsVlljY8N8li2q-JJ49dXKQHIECSSOScIR9bGvzD0YrMv9J4g0tnKnxM2rQ40oDcAVEZvO7uSpYjNlCs-6u7TyK92ZEGw0f"
+              alt="World map"
+              className="w-full h-full object-cover opacity-40 grayscale"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#131315] via-[#131315]/70 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#131315]/80 to-transparent" />
+          </div>
+
+          <div className="relative z-10 p-8 flex flex-col justify-between h-full">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="material-symbols-outlined text-[#FF9500] text-xl">
+                  public
+                </span>
+                <h3 className="text-[#E5E1E4] font-bold text-lg">Expansion Pulse</h3>
+              </div>
+              <div className="flex items-center gap-3 mt-3">
+                <span className="text-[10px] font-mono text-[#E5E1E4]/40 bg-white/5 border border-white/10 rounded px-2 py-0.5">
+                  LATENCY: 12ms
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] font-mono text-[#34d399] bg-[#34d399]/10 border border-[#34d399]/20 rounded px-2 py-0.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#34d399] animate-pulse" />
+                  LIVE
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-end gap-8">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[#E5E1E4]/30 mb-1">EMEA</p>
+                <p className="text-2xl font-black text-[#E5E1E4]">14.2M</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[#E5E1E4]/30 mb-1">APAC</p>
+                <p className="text-2xl font-black text-[#FF9500]">32.8M</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[#E5E1E4]/30 mb-1">AMER</p>
+                <p className="text-2xl font-black text-[#E5E1E4]">28.1M</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* --- AI Insights --- */}
+        <motion.div variants={fadeUp} custom={4} className="md:col-span-12 lg:col-span-5 glass-prism rounded-2xl md:rounded-3xl p-6 md:p-8 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#a78bfa]/5 to-transparent pointer-events-none" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-[#a78bfa] text-xl">
+                neurology
+              </span>
+              <h3 className="text-[#E5E1E4] font-bold text-lg">AI Insights</h3>
+              <span className="ml-auto text-[10px] font-mono text-[#E5E1E4]/30 bg-white/5 border border-white/10 rounded px-2 py-0.5">
+                3 NEW
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {aiInsights.map((insight, i) => (
+                <div
+                  key={i}
+                  className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 hover:bg-white/[0.06] transition-all duration-300"
+                  style={{ borderLeftWidth: "4px", borderLeftColor: insight.color }}
+                >
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="material-symbols-outlined text-lg mt-0.5"
+                      style={{ color: insight.color }}
+                    >
+                      {insight.icon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#E5E1E4] mb-1">
+                        {insight.title}
+                      </p>
+                      <p className="text-xs text-[#E5E1E4]/50 leading-relaxed">
+                        {insight.desc}
+                      </p>
+                      <p className="text-[10px] text-[#E5E1E4]/25 mt-2">{insight.time}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between mt-6">
+              <div className="flex -space-x-2">
+                {teamAvatars.map((src, i) => (
+                  <img
+                    key={i}
+                    src={src}
+                    alt="Team member"
+                    className="w-7 h-7 rounded-full border-2 border-[#131315] object-cover"
+                  />
+                ))}
+                <div className="w-7 h-7 rounded-full border-2 border-[#131315] bg-[#353437] flex items-center justify-center text-[10px] text-[#E5E1E4]/50 font-medium">
+                  +8
+                </div>
+              </div>
+              <button className="haptic-btn text-xs font-medium text-[#a78bfa] hover:text-[#c4b5fd] transition-colors flex items-center gap-1">
+                View All Intelligence
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ============ SECONDARY PERFORMANCE GRID ============ */}
+      <motion.div variants={fadeUp} custom={5}>
+        <div className="flex items-center gap-3 mb-6">
+          <span className="material-symbols-outlined text-[#FF9500] text-xl">
+            hub
+          </span>
+          <h2 className="text-xl font-bold text-[#E5E1E4]">Active Campaign Cluster</h2>
+          <span className="text-xs text-[#E5E1E4]/30 font-mono ml-auto">
+            Last 24h &middot; Auto-refresh
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+          {campaignMetrics.map((metric, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 + i * 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              whileHover={{ y: -4 }}
+              className="glass-card-subtle rounded-2xl p-5 md:p-6 group cursor-pointer"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#FF9500]/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[#FF9500] text-xl">
+                    {metric.icon}
                   </span>
                 </div>
-              )}
+                <p className="text-sm text-[#E5E1E4]/50 font-medium">{metric.label}</p>
+              </div>
 
-              {/* Recent actions */}
-              {p.recent_actions.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-xs text-[#E5E1E4]/50 mb-1">Recent optimizer actions:</p>
-                  <div className="space-y-1">
-                    {p.recent_actions.slice(0, 3).map((a, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs">
-                        <span
-                          className={`px-1.5 py-0.5 rounded font-medium ${
-                            a.action === "paused"
-                              ? "bg-[#ffb4ab]/10 text-[#ffb4ab]"
-                              : a.action === "promoted"
-                                ? "bg-[#4ade80]/10 text-[#4ade80]"
-                                : "bg-white/10 text-[#dbc2ad]"
-                          }`}
-                        >
-                          {a.action}
-                        </span>
-                        <span className="text-[#E5E1E4]/50 truncate">{a.reason}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+              <p className="text-3xl font-black text-[#E5E1E4] mb-1">{metric.value}</p>
+              <p
+                className={`text-sm font-medium ${
+                  metric.positive ? "text-[#34d399]" : "text-[#ffb4ab]"
+                }`}
+              >
+                {metric.change}
+              </p>
+
+              <div className="mt-4 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{
+                    width: `${metric.progress}%`,
+                    background: metric.positive
+                      ? "linear-gradient(to right, #FF9500, #ffbd7f)"
+                      : "linear-gradient(to right, #ffb4ab, #ff8a80)",
+                  }}
+                />
+              </div>
+            </motion.div>
           ))}
-
-          {products.length === 0 && (
-            <p className="text-[#E5E1E4]/50 text-sm">
-              No products yet. Add a product and generate some bulk ads to see data here.
-            </p>
-          )}
         </div>
-      </div>
-
-      {/* Winners & Losers */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Winners */}
-        <div>
-          <h2 className="text-lg font-semibold text-[#E5E1E4] mb-3">Top Winners</h2>
-          {top_winners.length > 0 ? (
-            <div className="space-y-2">
-              {top_winners.map((w, i) => (
-                <div
-                  key={w.variation_id}
-                  className="bg-[#201f21] border border-[#4ade80]/20 rounded-lg px-4 py-3 flex items-center justify-between"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[#E5E1E4] truncate">
-                      {i + 1}. {w.headline}
-                    </p>
-                    <p className="text-xs text-[#E5E1E4]/50">
-                      {w.impressions.toLocaleString()} impressions &middot; ${w.spend.toFixed(2)} spend
-                    </p>
-                  </div>
-                  <div className="text-right ml-4 shrink-0">
-                    <p className="text-sm font-bold text-[#4ade80]">{w.ctr.toFixed(2)}% CTR</p>
-                    <p className="text-xs text-[#E5E1E4]/50">${w.cpm.toFixed(2)} CPM</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-[#E5E1E4]/50">No winners yet. Run some ads and the optimizer will find them.</p>
-          )}
-        </div>
-
-        {/* Losers */}
-        <div>
-          <h2 className="text-lg font-semibold text-[#E5E1E4] mb-3">Worst Performers</h2>
-          {worst_losers.length > 0 ? (
-            <div className="space-y-2">
-              {worst_losers.map((l, i) => (
-                <div
-                  key={l.variation_id}
-                  className="bg-[#201f21] border border-[#ffb4ab]/20 rounded-lg px-4 py-3 flex items-center justify-between"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[#E5E1E4] truncate">
-                      {i + 1}. {l.headline}
-                    </p>
-                    <p className="text-xs text-[#E5E1E4]/50">
-                      {l.impressions.toLocaleString()} impressions &middot; ${l.spend.toFixed(2)} spend
-                    </p>
-                  </div>
-                  <div className="text-right ml-4 shrink-0">
-                    <p className="text-sm font-bold text-[#ffb4ab]">${l.cpm.toFixed(2)} CPM</p>
-                    <p className="text-xs text-[#E5E1E4]/50">{l.ctr.toFixed(2)}% CTR</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-[#E5E1E4]/50">No losers paused yet. The optimizer will flag underperformers.</p>
-          )}
-        </div>
-      </div>
-
-      {/* Content Performance */}
-      {summary.content_performance.posts_tracked > 0 && (
-        <div className="bg-[#201f21] border border-white/10 rounded-xl p-5">
-          <h2 className="text-lg font-semibold text-[#E5E1E4] mb-3">
-            Content Performance (Last {summary.content_performance.period_days} Days)
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Stat label="Impressions" value={summary.content_performance.total_impressions.toLocaleString()} />
-            <Stat label="Clicks" value={summary.content_performance.total_clicks.toLocaleString()} />
-            <Stat label="Avg CTR" value={`${summary.content_performance.avg_ctr.toFixed(2)}%`} />
-            <Stat label="Spend" value={`$${summary.content_performance.total_spend.toFixed(2)}`} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string | number;
-  color?: "green" | "red" | "blue";
-}) {
-  const colorClasses = {
-    green: "text-[#4ade80]",
-    red: "text-[#ffb4ab]",
-    blue: "text-[#FF9500]",
-  };
-  return (
-    <div className="bg-[#201f21] border border-white/10 rounded-xl p-4">
-      <p className="text-sm text-[#E5E1E4]/50">{label}</p>
-      <p className={`text-2xl font-bold ${color ? colorClasses[color] : "text-[#E5E1E4]"}`}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function StatusPill({ label, count, color }: { label: string; count: number; color: string }) {
-  const colorMap: Record<string, string> = {
-    green: "bg-[#4ade80]/10 text-[#4ade80]",
-    red: "bg-[#ffb4ab]/10 text-[#ffb4ab]",
-    blue: "bg-[#FF9500]/10 text-[#FF9500]",
-    gray: "bg-white/10 text-[#dbc2ad]",
-  };
-  return (
-    <span className={`text-xs px-2 py-1 rounded-full font-medium ${colorMap[color] || colorMap.gray}`}>
-      {label}: {count}
-    </span>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-[#E5E1E4]/50">{label}</p>
-      <p className="text-lg font-semibold text-[#E5E1E4]">{value}</p>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
