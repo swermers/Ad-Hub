@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Product
+from app.permissions import deny_agent, get_current_user, scope_query
+
+from app.engines.billing import UsageLimitExceeded, check_product_limit
 
 router = APIRouter()
 
@@ -66,15 +69,26 @@ class PaginatedProducts(BaseModel):
 
 
 @router.get("", response_model=PaginatedProducts)
-def list_products(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    total = db.query(Product).count()
-    items = db.query(Product).order_by(Product.created_at.desc()).offset(skip).limit(limit).all()
+def list_products(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    query = scope_query(db.query(Product), Product, user)
+    total = query.count()
+    items = query.order_by(Product.created_at.desc()).offset(skip).limit(limit).all()
     return PaginatedProducts(items=items, total=total)
 
 
-@router.post("", response_model=ProductResponse, status_code=201)
-def create_product(data: ProductCreate, db: Session = Depends(get_db)):
+@router.post("", response_model=ProductResponse, status_code=201, dependencies=[Depends(deny_agent)])
+def create_product(data: ProductCreate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    ws_id = user.get("workspace_id")
+
+    # Check product limit
+    if ws_id:
+        try:
+            check_product_limit(db, ws_id)
+        except UsageLimitExceeded as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
     product = Product(**data.model_dump())
+    product.workspace_id = ws_id
     db.add(product)
     db.commit()
     db.refresh(product)
@@ -82,14 +96,15 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
-def get_product(product_id: str, db: Session = Depends(get_db)):
-    product = db.query(Product).filter(Product.id == product_id).first()
+def get_product(product_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    query = scope_query(db.query(Product), Product, user)
+    product = query.filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
 
 
-@router.put("/{product_id}", response_model=ProductResponse)
+@router.put("/{product_id}", response_model=ProductResponse, dependencies=[Depends(deny_agent)])
 def update_product(product_id: str, data: ProductUpdate, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
@@ -105,7 +120,7 @@ def update_product(product_id: str, data: ProductUpdate, db: Session = Depends(g
     return product
 
 
-@router.delete("/{product_id}", status_code=204)
+@router.delete("/{product_id}", status_code=204, dependencies=[Depends(deny_agent)])
 def delete_product(product_id: str, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:

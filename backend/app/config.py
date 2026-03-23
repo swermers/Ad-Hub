@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     meta_app_secret: str = ""
     meta_access_token: str = ""
 
+    # Stripe (Billing)
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_starter_price_id: str = ""
+    stripe_pro_price_id: str = ""
+    stripe_agency_price_id: str = ""
+    app_url: str = "http://localhost:3000"  # For Stripe redirect URLs
+
     # Auth
     auth_password: str = ""
     auth_secret: str = "change-me-in-production"

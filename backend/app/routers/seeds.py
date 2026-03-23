@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.seed_bank import Seed
+from app.permissions import get_current_user, scope_product_query
 
 router = APIRouter()
 
@@ -106,9 +107,11 @@ def list_seeds(
     product_id: str | None = None,
     status: str | None = None,
     db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
     """List seeds, optionally filtered by product and status."""
     q = db.query(Seed)
+    q = scope_product_query(q, Seed, user, db)
     if product_id:
         q = q.filter(Seed.product_id == product_id)
     if status:

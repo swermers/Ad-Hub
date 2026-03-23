@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -65,6 +66,7 @@ function TopNav() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <AuthGuard>

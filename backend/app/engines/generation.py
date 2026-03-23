@@ -3,6 +3,117 @@ import json
 from app.engines.vectorstore import get_vectorstore
 from app.services.claude_client import call_claude
 
+
+def _build_brand_constraints(brand_profile) -> str:
+    """Build hard brand constraints from a BrandProfile object for injection into prompts."""
+    if not brand_profile:
+        return ""
+
+    sections = []
+
+    # Voice & Tone constraints
+    voice_parts = []
+    tone = _parse_json_field(brand_profile.tone_descriptors)
+    if tone:
+        voice_parts.append(f"Tone: {', '.join(tone)}")
+    always = _parse_json_field(brand_profile.always_use_words)
+    if always:
+        voice_parts.append(f"ALWAYS use these words/phrases: {', '.join(always)}")
+    never = _parse_json_field(brand_profile.never_use_words)
+    if never:
+        voice_parts.append(f"NEVER use these words/phrases: {', '.join(never)}")
+    if brand_profile.sentence_style:
+        style_map = {
+            "short_punchy": "Use short, punchy sentences. No fluff.",
+            "long_flowing": "Use longer, flowing sentences with a conversational rhythm.",
+            "mixed": "Mix short punchy sentences with longer explanatory ones.",
+        }
+        voice_parts.append(style_map.get(brand_profile.sentence_style, ""))
+    if voice_parts:
+        sections.append("BRAND VOICE CONSTRAINTS (MANDATORY):\n" + "\n".join(f"- {p}" for p in voice_parts))
+
+    # Writing samples for voice matching
+    samples = _parse_json_field(brand_profile.writing_samples)
+    if samples:
+        sample_text = "\n---\n".join(samples[:5])
+        sections.append(f"VOICE REFERENCE SAMPLES (match this writing style):\n{sample_text}")
+
+    # Visual constraints
+    visual_parts = []
+    primary = _parse_json_field(brand_profile.primary_colors)
+    secondary = _parse_json_field(brand_profile.secondary_colors)
+    accent = _parse_json_field(brand_profile.accent_colors)
+    if primary or secondary or accent:
+        all_colors = {"primary": primary, "secondary": secondary, "accent": accent}
+        visual_parts.append(f"Brand colors: {json.dumps({k: v for k, v in all_colors.items() if v})}")
+    fonts = _parse_json_field(brand_profile.approved_fonts)
+    if fonts:
+        visual_parts.append(f"Approved fonts: {', '.join(fonts)}")
+    if brand_profile.photography_style:
+        visual_parts.append(f"Photography style: {brand_profile.photography_style}")
+    if visual_parts:
+        sections.append("VISUAL IDENTITY CONSTRAINTS:\n" + "\n".join(f"- {p}" for p in visual_parts))
+
+    # Content rules
+    rules_parts = []
+    off_limits = _parse_json_field(brand_profile.off_limit_topics)
+    if off_limits:
+        rules_parts.append(f"OFF-LIMIT TOPICS (never mention): {', '.join(off_limits)}")
+    claims_review = _parse_json_field(brand_profile.claims_need_review)
+    if claims_review:
+        rules_parts.append(f"Claims requiring legal review (avoid unless explicitly approved): {', '.join(claims_review)}")
+    if brand_profile.hashtag_strategy:
+        rules_parts.append(f"Hashtag strategy: {brand_profile.hashtag_strategy}")
+    if brand_profile.emoji_usage:
+        emoji_map = {"yes": "Emojis are encouraged", "limited": "Use emojis sparingly", "no": "Do NOT use emojis"}
+        rules_parts.append(emoji_map.get(brand_profile.emoji_usage, ""))
+    if brand_profile.cta_style:
+        rules_parts.append(f"CTA style: {brand_profile.cta_style}")
+    if brand_profile.regulatory_notes:
+        rules_parts.append(f"REGULATORY CONSTRAINTS: {brand_profile.regulatory_notes}")
+    if rules_parts:
+        sections.append("CONTENT RULES (MANDATORY):\n" + "\n".join(f"- {p}" for p in rules_parts))
+
+    # Paused topics
+    paused = _parse_json_field(brand_profile.paused_topics)
+    if paused:
+        sections.append(f"PAUSED TOPICS (do NOT generate content about these): {', '.join(paused)}")
+
+    if not sections:
+        return ""
+
+    return "\n\n".join(sections)
+
+
+def _get_platform_rules(brand_profile, platform: str) -> str:
+    """Get platform-specific rules from brand profile."""
+    if not brand_profile:
+        return ""
+    rules_map = {
+        "linkedin": brand_profile.linkedin_rules,
+        "instagram": brand_profile.instagram_rules,
+        "twitter": brand_profile.x_rules,
+        "x": brand_profile.x_rules,
+        "meta": brand_profile.meta_ads_rules,
+        "facebook": brand_profile.meta_ads_rules,
+    }
+    rules = rules_map.get(platform, "")
+    if rules:
+        return f"\nPLATFORM-SPECIFIC RULES for {platform}:\n{rules}"
+    return ""
+
+
+def _parse_json_field(value) -> list:
+    """Safely parse a JSON string field into a list."""
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, list) else []
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
 CONTENT_TYPE_PROMPTS = {
     "social_post": {
         "twitter": "Write a Twitter/X post (max 280 characters). Make it punchy with a strong hook. Include 1-2 relevant hashtags.",
@@ -44,6 +155,7 @@ async def generate_content_batch(
     count: int = 5,
     funnel_stage: str = "awareness",
     instructions: str | None = None,
+    brand_profile=None,
 ) -> list[dict]:
     """Generate a batch of content pieces using RAG + Claude."""
 
@@ -62,6 +174,9 @@ async def generate_content_batch(
         except json.JSONDecodeError:
             brand_brief = product.brand_brief
 
+    # Build brand constraints from structured profile
+    brand_constraints = _build_brand_constraints(brand_profile)
+
     system_prompt = f"""You are an expert marketing content creator. You create high-quality, engaging content that drives results.
 
 Product: {product.name}
@@ -72,12 +187,15 @@ Differentiators: {product.differentiators or "Not specified"}
 
 {f"Brand Brief: {brand_brief}" if brand_brief else ""}
 
+{brand_constraints}
+
 Funnel Stage: {funnel_stage}
 {FUNNEL_STAGE_CONTEXT.get(funnel_stage, "")}
 
 {f"Product Knowledge Context: {rag_context}" if rag_context else ""}
 
-IMPORTANT: Only use factual information from the provided context. Do not invent features or claims."""
+IMPORTANT: Only use factual information from the provided context. Do not invent features or claims.
+{f"IMPORTANT: Follow ALL brand voice constraints and content rules above. They are mandatory, not suggestions." if brand_constraints else ""}"""
 
     all_pieces = []
 
@@ -89,7 +207,10 @@ IMPORTANT: Only use factual information from the provided context. Do not invent
                 type_prompts.get("general", f"Write {content_type} content for {platform}."),
             )
 
+            platform_rules = _get_platform_rules(brand_profile, platform)
+
             user_prompt = f"""{type_instruction}
+{platform_rules}
 
 Generate {count} unique variations. Each should take a different angle or hook.
 
@@ -165,6 +286,7 @@ def generate_content_batch_sync(
     count: int = 5,
     funnel_stage: str = "awareness",
     instructions: str | None = None,
+    brand_profile=None,
 ) -> list[dict]:
     """Sync version of generate_content_batch for background threads."""
     from app.services.claude_client import call_claude_sync
@@ -182,6 +304,9 @@ def generate_content_batch_sync(
         except json.JSONDecodeError:
             brand_brief = product.brand_brief
 
+    # Build brand constraints from structured profile
+    brand_constraints = _build_brand_constraints(brand_profile)
+
     system_prompt = f"""You are an expert marketing content creator. You create high-quality, engaging content that drives results.
 
 Product: {product.name}
@@ -192,12 +317,15 @@ Differentiators: {product.differentiators or "Not specified"}
 
 {f"Brand Brief: {brand_brief}" if brand_brief else ""}
 
+{brand_constraints}
+
 Funnel Stage: {funnel_stage}
 {FUNNEL_STAGE_CONTEXT.get(funnel_stage, "")}
 
 {f"Product Knowledge Context: {rag_context}" if rag_context else ""}
 
-IMPORTANT: Only use factual information from the provided context. Do not invent features or claims."""
+IMPORTANT: Only use factual information from the provided context. Do not invent features or claims.
+{f"IMPORTANT: Follow ALL brand voice constraints and content rules above. They are mandatory, not suggestions." if brand_constraints else ""}"""
 
     all_pieces = []
 
@@ -209,7 +337,10 @@ IMPORTANT: Only use factual information from the provided context. Do not invent
                 type_prompts.get("general", f"Write {content_type} content for {platform}."),
             )
 
+            platform_rules = _get_platform_rules(brand_profile, platform)
+
             user_prompt = f"""{type_instruction}
+{platform_rules}
 
 Generate {count} unique variations. Each should take a different angle or hook.
 
@@ -343,7 +474,7 @@ def research_pain_points_sync(product, count: int = 20) -> list[dict]:
     return _parse_pain_points(result)
 
 
-def _build_ad_system_prompt(product, template, funnel_stage: str, rag_context: str) -> str:
+def _build_ad_system_prompt(product, template, funnel_stage: str, rag_context: str, brand_profile=None) -> str:
     """Build the system prompt for ad variation generation (shared by async/sync)."""
     brand_brief = ""
     if product.brand_brief:
@@ -352,6 +483,9 @@ def _build_ad_system_prompt(product, template, funnel_stage: str, rag_context: s
             brand_brief = json.dumps(brief, indent=2)
         except json.JSONDecodeError:
             brand_brief = product.brand_brief
+
+    # Build brand constraints from structured profile
+    brand_constraints = _build_brand_constraints(brand_profile)
 
     template_instructions = {
         "before_after": "Create a Before/After style ad. The headline should describe the 'before' pain state. The body should describe the 'after' desired outcome with the product.",
@@ -408,6 +542,8 @@ Differentiators: {product.differentiators or "Not specified"}
 
 {f"Brand Brief: {brand_brief}" if brand_brief else ""}
 
+{brand_constraints}
+
 Funnel Stage: {funnel_stage}
 {FUNNEL_STAGE_CONTEXT.get(funnel_stage, "")}
 
@@ -421,7 +557,8 @@ CONSTRAINTS:
 - Body: max 125 characters
 - CTA: max 30 characters (e.g., "Try Free", "Learn More", "Get Started")
 
-Write copy that speaks directly to the pain point. Be specific, not generic."""
+Write copy that speaks directly to the pain point. Be specific, not generic.
+{f"IMPORTANT: Follow ALL brand voice constraints and content rules above. They are mandatory, not suggestions." if brand_constraints else ""}"""
 
 
 def _build_ad_user_prompt(pain_text: str, outcome_text: str, variations_per: int) -> str:
@@ -478,6 +615,7 @@ async def generate_ad_variations(
     pain_points: list,
     variations_per: int = 5,
     funnel_stage: str = "awareness",
+    brand_profile=None,
 ) -> list[dict]:
     """Generate ad copy variations (async - for route handlers)."""
     vs = get_vectorstore()
@@ -485,7 +623,7 @@ async def generate_ad_variations(
     rag_results = vs.query(product.id, search_query, n_results=3)
     rag_context = "\n\n".join([r["text"] for r in rag_results]) if rag_results else ""
 
-    system_prompt = _build_ad_system_prompt(product, template, funnel_stage, rag_context)
+    system_prompt = _build_ad_system_prompt(product, template, funnel_stage, rag_context, brand_profile)
 
     results = []
     for pp in pain_points:
@@ -506,6 +644,7 @@ def generate_ad_variations_sync(
     pain_points: list,
     variations_per: int = 5,
     funnel_stage: str = "awareness",
+    brand_profile=None,
 ) -> list[dict]:
     """Generate ad copy variations (sync - for background threads)."""
     from app.services.claude_client import call_claude_sync
@@ -515,7 +654,7 @@ def generate_ad_variations_sync(
     rag_results = vs.query(product.id, search_query, n_results=3)
     rag_context = "\n\n".join([r["text"] for r in rag_results]) if rag_results else ""
 
-    system_prompt = _build_ad_system_prompt(product, template, funnel_stage, rag_context)
+    system_prompt = _build_ad_system_prompt(product, template, funnel_stage, rag_context, brand_profile)
 
     results = []
     for pp in pain_points:

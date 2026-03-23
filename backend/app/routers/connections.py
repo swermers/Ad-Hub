@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import PlatformConnection
+from app.permissions import deny_agent, get_current_user, scope_product_query
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(deny_agent)])
 
 
 class ConnectionCreate(BaseModel):
@@ -44,8 +45,10 @@ class ConnectionTestResult(BaseModel):
 def list_connections(
     product_id: str | None = None,
     db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
     query = db.query(PlatformConnection)
+    query = scope_product_query(query, PlatformConnection, user, db)
     if product_id:
         query = query.filter(PlatformConnection.product_id == product_id)
     return query.order_by(PlatformConnection.created_at.desc()).all()
