@@ -9,6 +9,9 @@ import {
   type ContentPiece,
   type PlatformConnection,
 } from "@/lib/api";
+import { PlatformPreview } from "@/components/PlatformPreview";
+import { VideoPreview } from "@/components/ad-templates/remotion/VideoPreview";
+import type { VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
 
 const STEPS = ["Input", "Brief", "Generate", "Review"] as const;
 type Step = (typeof STEPS)[number];
@@ -34,6 +37,13 @@ const TYPE_BADGES: Record<string, { bg: string; text: string }> = {
   ad_copy: { bg: "bg-orange-100", text: "text-orange-700" },
 };
 
+interface BrollItem {
+  id: number;
+  src: { medium: string };
+  alt: string;
+  photographer: string;
+}
+
 const PLATFORM_LABELS: Record<string, string> = {
   twitter: "X / Twitter",
   linkedin: "LinkedIn",
@@ -47,6 +57,16 @@ export default function StudioPage() {
   const [productId, setProductId] = useState("");
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<Step>("Input");
+  const [animating, setAnimating] = useState(false);
+
+  const animateToStep = (next: Step) => {
+    if (next === step) return;
+    setAnimating(true);
+    setTimeout(() => {
+      setStep(next);
+      setTimeout(() => setAnimating(false), 30);
+    }, 200);
+  };
 
   // Input
   const [transcript, setTranscript] = useState("");
@@ -59,13 +79,24 @@ export default function StudioPage() {
   const [brief, setBrief] = useState<Record<string, unknown> | null>(null);
 
   // Generation
-  const [taskId, setTaskId] = useState<string | null>(null);
   const [taskStatus, setTaskStatus] = useState<TranscriptTaskStatus | null>(null);
   const [generating, setGenerating] = useState(false);
 
   // Review
   const [pieces, setPieces] = useState<ContentPiece[]>([]);
   const [expandedPiece, setExpandedPiece] = useState<string | null>(null);
+
+  // Review view mode
+  const [reviewView, setReviewView] = useState<"grid" | "list">("grid");
+  const [cardTab, setCardTab] = useState<Record<string, "content" | "preview" | "video">>({});
+
+  // B-roll suggestions
+  const [brollResults, setBrollResults] = useState<BrollItem[]>([]);
+  const [brollLoading, setBrollLoading] = useState(false);
+  const [brollQuery, setBrollQuery] = useState("");
+
+  // Copy feedback
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Publish
   const [connections, setConnections] = useState<PlatformConnection[]>([]);
@@ -127,7 +158,7 @@ export default function StudioPage() {
   const handleGenerate = async () => {
     if (!productId || !transcript.trim()) return;
     setGenerating(true);
-    setStep("Generate");
+    animateToStep("Generate");
 
     try {
       const result = await api.contentFromTranscript({
@@ -135,7 +166,6 @@ export default function StudioPage() {
         product_id: productId,
         instructions: instructions || undefined,
       });
-      setTaskId(result.task_id);
       setTaskStatus(result);
 
       // Poll for completion
@@ -164,7 +194,21 @@ export default function StudioPage() {
                 })
                 .slice(0, 7);
               setPieces(recent);
-              setStep("Review");
+              animateToStep("Review");
+
+              // Auto-fetch b-roll suggestions
+              const briefData = s.content_brief as Record<string, unknown> | null;
+              const query = String(briefData?.weekly_theme || briefData?.seed || "business marketing");
+              setBrollQuery(query);
+              setBrollLoading(true);
+              api.searchBroll(query, "photos", 8, "landscape")
+                .then((res) => {
+                  setBrollResults(
+                    (res.results as BrollItem[]) || []
+                  );
+                })
+                .catch(console.error)
+                .finally(() => setBrollLoading(false));
             }
           }
         } catch {
@@ -175,7 +219,7 @@ export default function StudioPage() {
     } catch (err) {
       alert(err instanceof Error ? err.message : "Generation failed");
       setGenerating(false);
-      setStep("Input");
+      animateToStep("Input");
     }
   };
 
@@ -228,8 +272,21 @@ export default function StudioPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="max-w-5xl space-y-6 animate-pulse">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gray-200" />
+          <div className="space-y-2">
+            <div className="h-5 w-40 bg-gray-200 rounded" />
+            <div className="h-3 w-56 bg-gray-100 rounded" />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-10 w-24 bg-gray-100 rounded-xl" />
+          ))}
+        </div>
+        <div className="h-48 bg-gray-100 rounded-xl" />
+        <div className="h-32 bg-gray-50 rounded-xl" />
       </div>
     );
   }
@@ -237,42 +294,42 @@ export default function StudioPage() {
   return (
     <div className="max-w-5xl">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Content Studio</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Voice memo to a full week of content. Paste your transcript, review the seed, generate everything.
-        </p>
+      <div className="mb-10">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Content Studio</h1>
+            <p className="text-gray-500 text-sm">
+              Voice memo &rarr; full week of content
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Step Indicator */}
-      <div className="flex items-center gap-1 mb-8">
+      <div className="flex items-center mb-10">
         {STEPS.map((s, i) => {
           const isCurrent = s === step;
           const isPast = STEPS.indexOf(step) > i;
           return (
-            <div key={s} className="flex items-center gap-1">
-              {i > 0 && (
-                <div
-                  className={`w-8 h-px ${
-                    isPast ? "bg-blue-600" : "bg-gray-200"
-                  }`}
-                />
-              )}
+            <div key={s} className="flex items-center flex-1 last:flex-none">
               <button
-                onClick={() => {
-                  if (isPast) setStep(s);
-                }}
+                onClick={() => { if (isPast) animateToStep(s); }}
                 disabled={!isPast && !isCurrent}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                className={`relative flex items-center gap-2.5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                   isCurrent
-                    ? "bg-blue-600 text-white"
+                    ? "bg-gray-900 text-white shadow-lg shadow-gray-900/20 scale-[1.02]"
                     : isPast
                     ? "bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer"
-                    : "bg-gray-100 text-gray-400"
+                    : "bg-gray-50 text-gray-400"
                 }`}
               >
                 <span
-                  className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                  className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${
                     isCurrent
                       ? "bg-white/20"
                       : isPast
@@ -281,7 +338,7 @@ export default function StudioPage() {
                   }`}
                 >
                   {isPast ? (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   ) : (
@@ -290,10 +347,26 @@ export default function StudioPage() {
                 </span>
                 {s}
               </button>
+              {i < STEPS.length - 1 && (
+                <div className="flex-1 mx-2 h-0.5 rounded-full overflow-hidden bg-gray-200">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ease-out ${
+                      isPast ? "w-full bg-blue-500" : "w-0 bg-blue-500"
+                    }`}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
+
+      {/* ── Step Content with animation ────────────────────────────────── */}
+      <div
+        className={`transition-all duration-300 ease-out motion-reduce:transition-none ${
+          animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+        }`}
+      >
 
       {/* ── Step 1: Input ─────────────────────────────────────────────── */}
       {step === "Input" && (
@@ -422,10 +495,17 @@ export default function StudioPage() {
           {/* Generate button */}
           <button
             onClick={handleGenerate}
-            disabled={!productId || !transcript.trim()}
-            className="w-full px-6 py-3 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+            disabled={!productId || !transcript.trim() || generating}
+            className="w-full px-6 py-3 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 active:scale-[0.98] disabled:opacity-50 transition-all duration-200"
           >
-            Find the Seed and Generate Week
+            {generating ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Generating...
+              </span>
+            ) : (
+              "Generate Content Week"
+            )}
           </button>
         </div>
       )}
@@ -510,7 +590,7 @@ export default function StudioPage() {
 
           <div className="flex gap-3">
             <button
-              onClick={() => setStep("Input")}
+              onClick={() => animateToStep("Input")}
               className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               Back to Edit
@@ -527,16 +607,25 @@ export default function StudioPage() {
 
       {/* ── Step 3: Generating ────────────────────────────────────────── */}
       {step === "Generate" && (
-        <div className="flex flex-col items-center justify-center py-16 space-y-4">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
-          <p className="text-sm font-medium text-gray-900">
-            {taskStatus?.status === "running"
-              ? "Generating your content week..."
-              : "Starting pipeline..."}
-          </p>
-          <p className="text-xs text-gray-500">
-            Finding the seed, drafting newsletter, sharpening posts, building thread
-          </p>
+        <div className="flex flex-col items-center justify-center py-20 space-y-5">
+          <div className="relative">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center animate-pulse">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+            <div className="absolute -inset-2 rounded-3xl border-2 border-blue-200 animate-ping opacity-30" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-gray-900">
+              {taskStatus?.status === "running"
+                ? "Generating your content week..."
+                : "Starting pipeline..."}
+            </p>
+            <p className="text-xs text-gray-500 mt-1.5 max-w-xs mx-auto">
+              Finding the seed, drafting newsletter, sharpening posts, building thread
+            </p>
+          </div>
           {taskStatus && taskStatus.pieces_generated > 0 && (
             <p className="text-xs text-blue-600">
               {taskStatus.pieces_generated} pieces generated so far
@@ -546,7 +635,7 @@ export default function StudioPage() {
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4 max-w-md">
               <p className="text-sm text-red-700">{taskStatus.error}</p>
               <button
-                onClick={() => setStep("Input")}
+                onClick={() => animateToStep("Input")}
                 className="mt-2 px-3 py-1 text-sm bg-white border border-red-300 rounded-lg hover:bg-red-50"
               >
                 Try Again
@@ -571,11 +660,97 @@ export default function StudioPage() {
             </div>
           )}
 
+          {/* B-Roll Suggestions */}
+          {(brollResults.length > 0 || brollLoading) && (
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Suggested B-Roll
+                  </p>
+                  {brollQuery && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Auto-searched: &ldquo;{brollQuery}&rdquo;
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={brollQuery}
+                    onChange={(e) => setBrollQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && brollQuery.trim()) {
+                        setBrollLoading(true);
+                        api.searchBroll(brollQuery, "photos", 8, "landscape")
+                          .then((res) => setBrollResults(
+                            (res.results as BrollItem[]) || []
+                          ))
+                          .catch(console.error)
+                          .finally(() => setBrollLoading(false));
+                      }
+                    }}
+                    placeholder="Search b-roll..."
+                    aria-label="Search b-roll images"
+                    className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow duration-150"
+                  />
+                </div>
+              </div>
+              {brollLoading ? (
+                <div className="grid grid-cols-4 gap-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="aspect-video bg-gray-100 rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {brollResults.map((photo) => (
+                    <div key={photo.id} className="group relative aspect-video rounded-lg overflow-hidden cursor-pointer">
+                      <img
+                        src={photo.src.medium}
+                        alt={photo.alt || `B-roll by ${photo.photographer}`}
+                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-end">
+                        <p className="text-white text-[11px] px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 truncate w-full bg-gradient-to-t from-black/60 to-transparent">
+                          {photo.photographer}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Summary bar */}
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              {pieces.length} pieces generated
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-gray-500">
+                {pieces.length} pieces generated
+              </p>
+              {/* View toggle */}
+              <div className="flex bg-gray-100 rounded-lg p-0.5">
+                <button
+                  onClick={() => setReviewView("grid")}
+                  aria-label="Week grid view"
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                    reviewView === "grid" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                </button>
+                <button
+                  onClick={() => setReviewView("list")}
+                  aria-label="List view"
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                    reviewView === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
+              </div>
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -583,7 +758,7 @@ export default function StudioPage() {
                     if (p.status === "draft") handleStatusChange(p.id, "approved");
                   });
                 }}
-                className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 active:scale-95 transition-all duration-150"
               >
                 Approve All
               </button>
@@ -596,12 +771,12 @@ export default function StudioPage() {
                   approved.forEach((p) => handlePublish(p.id, activeConn.id));
                 }}
                 disabled={!pieces.some((p) => p.status === "approved") || connections.length === 0}
-                className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
+                className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 disabled:opacity-40 transition-all duration-150"
               >
                 Publish All Approved
               </button>
               <button
-                onClick={() => setStep("Input")}
+                onClick={() => animateToStep("Input")}
                 className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 Start Over
@@ -609,8 +784,109 @@ export default function StudioPage() {
             </div>
           </div>
 
-          {/* Content cards */}
-          <div className="space-y-3">
+          {/* ── Week Grid View ──────────────────────────────────────────── */}
+          {reviewView === "grid" && (
+            <div className="grid grid-cols-7 gap-2">
+              {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => {
+                const dayPieces = pieces.filter((p) => {
+                  const m = getPieceMeta(p);
+                  return (m.day || "") === day;
+                });
+                const bgColors: Record<string, string> = {
+                  Monday: "bg-blue-50 border-blue-200",
+                  Tuesday: "bg-violet-50 border-violet-200",
+                  Wednesday: "bg-amber-50 border-amber-200",
+                  Thursday: "bg-emerald-50 border-emerald-200",
+                  Friday: "bg-rose-50 border-rose-200",
+                  Saturday: "bg-cyan-50 border-cyan-200",
+                  Sunday: "bg-gray-50 border-gray-200",
+                };
+                const headerColors: Record<string, string> = {
+                  Monday: "text-blue-700",
+                  Tuesday: "text-violet-700",
+                  Wednesday: "text-amber-700",
+                  Thursday: "text-emerald-700",
+                  Friday: "text-rose-700",
+                  Saturday: "text-cyan-700",
+                  Sunday: "text-gray-500",
+                };
+                return (
+                  <div key={day} className={`rounded-xl border p-2 min-h-[140px] ${bgColors[day] || "bg-gray-50 border-gray-200"}`}>
+                    <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${headerColors[day] || "text-gray-500"}`}>
+                      {day.slice(0, 3)}
+                    </p>
+                    <div className="space-y-1.5">
+                      {dayPieces.map((piece) => {
+                        const typeBadge = TYPE_BADGES[piece.content_type] || TYPE_BADGES.social_post;
+                        return (
+                          <button
+                            key={piece.id}
+                            onClick={() => {
+                              setExpandedPiece(piece.id);
+                              setReviewView("list");
+                            }}
+                            className="w-full text-left bg-white rounded-lg p-2 shadow-sm hover:shadow transition-shadow border border-white/80"
+                          >
+                            <span className={`inline-block px-1.5 py-0.5 text-[11px] font-medium rounded ${typeBadge.bg} ${typeBadge.text} mb-1`}>
+                              {piece.content_type.replace("_", " ")}
+                            </span>
+                            <p className="text-xs text-gray-800 font-medium truncate">
+                              {piece.title || piece.hook || piece.body.slice(0, 40)}
+                            </p>
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                piece.status === "approved" ? "bg-green-500" : piece.status === "rejected" ? "bg-red-500" : "bg-yellow-500"
+                              }`} />
+                              <span className="text-[11px] text-gray-400">{piece.status}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {dayPieces.length === 0 && (
+                        <p className="text-[11px] text-gray-400 italic">
+                          {day === "Saturday" || day === "Sunday" ? "Rest day" : "Open slot"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Unassigned pieces */}
+              {pieces.filter((p) => {
+                const m = getPieceMeta(p);
+                return !["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].includes(m.day || "");
+              }).length > 0 && (
+                <div className="col-span-7 mt-2">
+                  <p className="text-xs text-gray-400 mb-2">Unassigned</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {pieces.filter((p) => {
+                      const m = getPieceMeta(p);
+                      return !["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].includes(m.day || "");
+                    }).map((piece) => {
+                      const typeBadge = TYPE_BADGES[piece.content_type] || TYPE_BADGES.social_post;
+                      return (
+                        <button
+                          key={piece.id}
+                          onClick={() => { setExpandedPiece(piece.id); setReviewView("list"); }}
+                          className="text-left bg-white rounded-lg p-2 shadow-sm hover:shadow transition-shadow border border-gray-200"
+                        >
+                          <span className={`inline-block px-1.5 py-0.5 text-[10px] font-medium rounded ${typeBadge.bg} ${typeBadge.text} mb-1`}>
+                            {piece.content_type.replace("_", " ")}
+                          </span>
+                          <p className="text-xs text-gray-800 font-medium truncate">
+                            {piece.title || piece.hook || piece.body.slice(0, 40)}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── List View (existing cards) ─────────────────────────────── */}
+          {reviewView === "list" && <div className="space-y-3">
             {pieces.map((piece) => {
               const meta = getPieceMeta(piece);
               const isExpanded = expandedPiece === piece.id;
@@ -665,7 +941,7 @@ export default function StudioPage() {
                         {piece.status}
                       </span>
                       <svg
-                        className={`w-4 h-4 text-gray-400 transition-transform ${
+                        className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
                           isExpanded ? "rotate-180" : ""
                         }`}
                         fill="none"
@@ -685,6 +961,51 @@ export default function StudioPage() {
                   {/* Expanded content */}
                   {isExpanded && (
                     <div className="px-5 pb-5 border-t border-gray-100">
+                      {/* Tab bar */}
+                      <div className="flex gap-1 mt-3 mb-4 bg-gray-100 rounded-lg p-0.5 w-fit">
+                        {(["content", "preview", ...(meta.blocks || piece.content_type === "video_script" ? ["video"] : [])] as const).map((tab) => (
+                          <button
+                            key={tab}
+                            onClick={() => setCardTab((prev) => ({ ...prev, [piece.id]: tab as "content" | "preview" | "video" }))}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-colors ${
+                              (cardTab[piece.id] || "content") === tab
+                                ? "bg-white text-gray-900 shadow-sm"
+                                : "text-gray-500 hover:text-gray-700"
+                            }`}
+                          >
+                            {tab}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Platform Preview tab */}
+                      {(cardTab[piece.id] || "content") === "preview" && (
+                        <div className="flex justify-center py-4">
+                          <PlatformPreview
+                            platform={piece.content_type === "blog_draft" || piece.content_type === "newsletter" ? "substack" : piece.platform}
+                            title={piece.title}
+                            hook={piece.hook}
+                            body={piece.body}
+                            cta={piece.cta}
+                          />
+                        </div>
+                      )}
+
+                      {/* Video Preview tab */}
+                      {(cardTab[piece.id] || "content") === "video" && (
+                        <div className="flex justify-center py-4">
+                          <VideoPreview
+                            headline={piece.hook || piece.title || ""}
+                            body={piece.body.slice(0, 120)}
+                            cta={piece.cta || "Learn More"}
+                            videoStyle={(piece.template_type as VideoStyle) || "hand-drawn"}
+                            previewWidth={400}
+                          />
+                        </div>
+                      )}
+
+                      {/* Content tab (original content) */}
+                      {(cardTab[piece.id] || "content") === "content" && <>
                       {/* Hook */}
                       {piece.hook && (
                         <div className="mt-4 mb-3">
@@ -794,6 +1115,8 @@ export default function StudioPage() {
                           {meta.notes}
                         </p>
                       )}
+                      </>}
+                      {/* end content tab */}
 
                       {/* Actions */}
                       <div className="flex gap-2 mt-4 pt-3 border-t border-gray-100">
@@ -821,13 +1144,13 @@ export default function StudioPage() {
                         </button>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(
-                              piece.body
-                            );
+                            navigator.clipboard.writeText(piece.body);
+                            setCopiedId(piece.id);
+                            setTimeout(() => setCopiedId(null), 2000);
                           }}
-                          className="px-3 py-1.5 text-xs font-medium bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 ml-auto"
+                          className="px-3 py-1.5 text-xs font-medium bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 active:scale-95 transition-all duration-150 ml-auto"
                         >
-                          Copy
+                          {copiedId === piece.id ? "Copied" : "Copy"}
                         </button>
 
                         {/* Publish dropdown */}
@@ -899,18 +1222,31 @@ export default function StudioPage() {
                 </div>
               );
             })}
-          </div>
+          </div>}
 
           {pieces.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500">
-                No content generated yet. Go back and paste a transcript to get
-                started.
+            <div className="text-center py-16">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-gray-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-900 mb-1">No content yet</p>
+              <p className="text-xs text-gray-500">
+                Paste a transcript and generate to see your content week here
               </p>
+              <button
+                onClick={() => animateToStep("Input")}
+                className="mt-4 px-4 py-2 text-xs font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                Get started
+              </button>
             </div>
           )}
         </div>
       )}
+
+      </div>{/* end animation wrapper */}
     </div>
   );
 }
