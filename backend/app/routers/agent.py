@@ -9,7 +9,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -98,6 +98,65 @@ class TaskStatusResponse(BaseModel):
     pieces_generated: int = 0
     content_brief: dict | None = None
     error: str | None = None
+
+
+# ─── Audio Transcription (Whisper) ────────────────────────────────────────────
+
+
+@router.post("/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)):
+    """Transcribe an audio file using OpenAI Whisper.
+
+    Accepts common audio formats: mp3, mp4, m4a, wav, webm, ogg, flac.
+    Returns the transcript text ready to feed into the content pipeline.
+    """
+    import openai
+
+    from app.config import settings
+
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+
+    allowed_types = {
+        "audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a", "audio/wav",
+        "audio/webm", "audio/ogg", "audio/flac", "audio/x-m4a",
+        "video/mp4", "video/webm",  # some voice memo apps save as video
+    }
+    # Also check by extension since content_type can be unreliable
+    allowed_extensions = {".mp3", ".mp4", ".m4a", ".wav", ".webm", ".ogg", ".flac"}
+
+    ext = ""
+    if file.filename:
+        ext = "." + file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+
+    if file.content_type not in allowed_types and ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported audio format: {file.content_type}. Use mp3, m4a, wav, webm, ogg, or flac.",
+        )
+
+    try:
+        client = openai.OpenAI(api_key=settings.openai_api_key)
+        audio_bytes = await file.read()
+
+        # Whisper needs a file-like object with a name
+        import io
+        audio_file = io.BytesIO(audio_bytes)
+        audio_file.name = file.filename or "audio.m4a"
+
+        transcription = client.audio.transcriptions.create(
+            model=settings.whisper_model,
+            file=audio_file,
+            response_format="text",
+        )
+
+        return {
+            "transcript": transcription,
+            "filename": file.filename,
+            "duration_hint": f"{len(audio_bytes) / 1024:.0f} KB",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 
 # ─── System Status ────────────────────────────────────────────────────────────

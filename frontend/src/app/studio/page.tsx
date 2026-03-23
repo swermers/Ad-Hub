@@ -50,6 +50,9 @@ export default function StudioPage() {
   // Input
   const [transcript, setTranscript] = useState("");
   const [instructions, setInstructions] = useState("");
+  const [transcribing, setTranscribing] = useState(false);
+  const [audioFilename, setAudioFilename] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   // Brief (from Idea Sharpener)
   const [brief, setBrief] = useState<Record<string, unknown> | null>(null);
@@ -73,6 +76,35 @@ export default function StudioPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  // ── Audio Upload ─────────────────────────────────────────────────────────
+
+  const handleAudioFile = async (file: File) => {
+    const allowedExtensions = ["mp3", "mp4", "m4a", "wav", "webm", "ogg", "flac"];
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    if (!allowedExtensions.includes(ext)) {
+      alert(`Unsupported format: .${ext}. Use mp3, m4a, wav, webm, ogg, or flac.`);
+      return;
+    }
+
+    setTranscribing(true);
+    setAudioFilename(file.name);
+    try {
+      const result = await api.transcribeAudio(file);
+      setTranscript(result.transcript);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Transcription failed");
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleAudioFile(file);
+  };
 
   // ── Generate ────────────────────────────────────────────────────────────
 
@@ -244,28 +276,93 @@ export default function StudioPage() {
             </select>
           </div>
 
-          {/* Transcript input */}
+          {/* Audio Upload Zone */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Voice Memo Transcript
+              Voice Memo
             </label>
-            <p className="text-xs text-gray-400 mb-2">
-              Paste the transcription of your voice memo. The Idea Sharpener will find the seed.
-            </p>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
+                dragOver
+                  ? "border-blue-400 bg-blue-50"
+                  : transcribing
+                  ? "border-blue-300 bg-blue-50"
+                  : audioFilename
+                  ? "border-green-300 bg-green-50"
+                  : "border-gray-300 hover:border-gray-400"
+              }`}
+            >
+              {transcribing ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                  <p className="text-sm font-medium text-blue-700">
+                    Transcribing {audioFilename}...
+                  </p>
+                  <p className="text-xs text-blue-500">This may take a moment for longer recordings</p>
+                </div>
+              ) : audioFilename && transcript ? (
+                <div className="flex flex-col items-center gap-1">
+                  <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p className="text-sm font-medium text-green-700">{audioFilename} transcribed</p>
+                  <button
+                    onClick={() => { setAudioFilename(null); setTranscript(""); }}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline mt-1"
+                  >
+                    Clear and start over
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  <p className="text-sm text-gray-600">
+                    Drop a voice memo here, or{" "}
+                    <label className="text-blue-600 hover:text-blue-700 cursor-pointer font-medium">
+                      browse
+                      <input
+                        type="file"
+                        accept=".mp3,.mp4,.m4a,.wav,.webm,.ogg,.flac"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleAudioFile(file);
+                        }}
+                      />
+                    </label>
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    mp3, m4a, wav, webm, ogg, flac (auto-transcribed via Whisper)
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Transcript text */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Transcript
+              </label>
+              {transcript && (
+                <span className="text-xs text-gray-400">
+                  {transcript.split(/\s+/).filter(Boolean).length} words
+                </span>
+              )}
+            </div>
             <textarea
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              rows={10}
-              placeholder="I've been noticing lately that when people talk about self-care, they always focus on the soft stuff — baths, candles, journaling. But the hardest form of self-care is actually saying no. Not the dramatic no, but the small ones..."
+              rows={8}
+              placeholder="Or paste your transcript here. The Idea Sharpener will find the seed..."
               className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            <div className="flex justify-between mt-1">
-              <span className="text-xs text-gray-400">
-                {transcript.length > 0
-                  ? `${transcript.split(/\s+/).filter(Boolean).length} words`
-                  : ""}
-              </span>
-            </div>
           </div>
 
           {/* Instructions */}

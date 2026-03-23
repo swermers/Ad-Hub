@@ -347,6 +347,30 @@ export const api = {
 
   // ─── Agent API ─────────────────────────────────────────────────────────────
 
+  // Audio Transcription (Whisper)
+  transcribeAudio: async (file: File): Promise<TranscribeResult> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/agent/transcribe`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(error.detail || "Transcription failed");
+    }
+    return res.json();
+  },
+
   // System Status
   getAgentStatus: () => request<AgentSystemStatus>("/api/agent/status"),
 
@@ -836,6 +860,12 @@ export interface WinnerAnalysis {
 }
 
 // ─── Agent API Types ─────────────────────────────────────────────────────────
+
+export interface TranscribeResult {
+  transcript: string;
+  filename: string;
+  duration_hint: string;
+}
 
 export interface AgentSystemStatus {
   status: string;
