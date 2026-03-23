@@ -29,7 +29,7 @@ export default function CommandCenterPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF9500]" />
       </div>
     );
   }
@@ -78,16 +78,16 @@ export default function CommandCenterPage() {
 
       {/* AI Recommendations */}
       {ai_recommendations && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-blue-900">AI Strategy Brief</h2>
-          <p className="text-blue-800">{ai_recommendations.executive_summary}</p>
+        <div className="bg-gradient-to-r from-[#FF9500]/10 to-indigo-50 border border-[#FF9500]/20 rounded-xl p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-[#FF9500]">AI Strategy Brief</h2>
+          <p className="text-[#FF9500]">{ai_recommendations.executive_summary}</p>
 
           <div className="grid md:grid-cols-3 gap-4">
             <div>
-              <h3 className="text-sm font-semibold text-blue-900 mb-2">Immediate Actions</h3>
+              <h3 className="text-sm font-semibold text-[#FF9500] mb-2">Immediate Actions</h3>
               <ul className="space-y-1">
                 {ai_recommendations.immediate_actions.map((a, i) => (
-                  <li key={i} className="text-sm text-blue-800 flex gap-2">
+                  <li key={i} className="text-sm text-[#FF9500] flex gap-2">
                     <span className="text-[#FF9500] shrink-0">&#x2022;</span>
                     {a}
                   </li>
@@ -95,10 +95,10 @@ export default function CommandCenterPage() {
               </ul>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-blue-900 mb-2">Budget Recs</h3>
+              <h3 className="text-sm font-semibold text-[#FF9500] mb-2">Budget Recs</h3>
               <ul className="space-y-1">
                 {ai_recommendations.budget_recommendations.map((r, i) => (
-                  <li key={i} className="text-sm text-blue-800 flex gap-2">
+                  <li key={i} className="text-sm text-[#FF9500] flex gap-2">
                     <span className="text-[#FF9500] shrink-0">&#x2022;</span>
                     {r}
                   </li>
@@ -106,10 +106,10 @@ export default function CommandCenterPage() {
               </ul>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-blue-900 mb-2">Next Tests</h3>
+              <h3 className="text-sm font-semibold text-[#FF9500] mb-2">Next Tests</h3>
               <ul className="space-y-1">
                 {ai_recommendations.next_tests.map((t, i) => (
-                  <li key={i} className="text-sm text-blue-800 flex gap-2">
+                  <li key={i} className="text-sm text-[#FF9500] flex gap-2">
                     <span className="text-[#FF9500] shrink-0">&#x2022;</span>
                     {t}
                   </li>
@@ -157,7 +157,7 @@ export default function CommandCenterPage() {
 
               {/* Top winner */}
               {p.top_winner && (
-                <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm mb-2">
+                <div className="bg-[#4ade80]/10 border border-[#4ade80]/20 rounded-lg px-3 py-2 text-sm mb-2">
                   <span className="font-medium text-[#4ade80]">Top Winner:</span>{" "}
                   <span className="text-[#4ade80]">&ldquo;{p.top_winner.headline}&rdquo;</span>
                   <span className="text-[#4ade80] ml-2">
@@ -211,7 +211,7 @@ export default function CommandCenterPage() {
               {top_winners.map((w, i) => (
                 <div
                   key={w.variation_id}
-                  className="bg-[#201f21] border border-green-200 rounded-lg px-4 py-3 flex items-center justify-between"
+                  className="bg-[#201f21] border border-[#4ade80]/20 rounded-lg px-4 py-3 flex items-center justify-between"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-[#E5E1E4] truncate">
@@ -241,7 +241,7 @@ export default function CommandCenterPage() {
               {worst_losers.map((l, i) => (
                 <div
                   key={l.variation_id}
-                  className="bg-[#201f21] border border-red-200 rounded-lg px-4 py-3 flex items-center justify-between"
+                  className="bg-[#201f21] border border-[#ffb4ab]/20 rounded-lg px-4 py-3 flex items-center justify-between"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-[#E5E1E4] truncate">
@@ -252,7 +252,7 @@ export default function CommandCenterPage() {
                     </p>
                   </div>
                   <div className="text-right ml-4 shrink-0">
-                    <p className="text-sm font-bold text-red-600">${l.cpm.toFixed(2)} CPM</p>
+                    <p className="text-sm font-bold text-[#ffb4ab]">${l.cpm.toFixed(2)} CPM</p>
                     <p className="text-xs text-[#E5E1E4]/50">{l.ctr.toFixed(2)}% CTR</p>
                   </div>
                 </div>
@@ -293,7 +293,7 @@ function SummaryCard({
 }) {
   const colorClasses = {
     green: "text-[#4ade80]",
-    red: "text-red-600",
+    red: "text-[#ffb4ab]",
     blue: "text-[#FF9500]",
   };
   return (

@@ -114,30 +114,30 @@ export default function SchedulePage() {
 
   const statusBadge = (status: string) => {
     const colors: Record<string, string> = {
-      scheduled: "bg-blue-100 text-blue-800",
-      posting: "bg-yellow-100 text-yellow-800",
-      posted: "bg-green-100 text-green-800",
-      failed: "bg-red-100 text-red-800",
+      scheduled: "bg-[#FF9500]/10 text-[#FF9500]",
+      posting: "bg-[#ffbd7f]/10 text-[#ffbd7f]",
+      posted: "bg-[#4ade80]/10 text-[#4ade80]",
+      failed: "bg-[#ffb4ab]/10 text-[#ffb4ab]",
     };
-    return colors[status] || "bg-gray-100 text-gray-800";
+    return colors[status] || "bg-[#201f21]/10 text-[#E5E1E4]";
   };
 
   if (loading) {
-    return <div className="text-gray-500">Loading schedule...</div>;
+    return <div className="text-[#E5E1E4]/50">Loading schedule...</div>;
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-[#E5E1E4]">Schedule</h1>
+          <p className="text-[#E5E1E4]/50 mt-1">
             Manage scheduled and published posts
           </p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+          className="bg-[#FF9500] text-[#2d1600] px-4 py-2 rounded-lg hover:opacity-90 text-sm font-medium"
         >
           {showForm ? "Cancel" : "Schedule Post"}
         </button>
@@ -146,17 +146,17 @@ export default function SchedulePage() {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-lg border border-gray-200 p-6 mb-6 space-y-4"
+          className="bg-[#201f21] rounded-lg border border-white/10 p-6 mb-6 space-y-4"
         >
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
               Product
             </label>
             <select
               value={selectedProduct}
               onChange={(e) => handleProductSelect(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
             >
               <option value="">Select product...</option>
               {products.map((p) => (
@@ -171,14 +171,14 @@ export default function SchedulePage() {
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                     Content (approved only)
                   </label>
                   <select
                     value={contentId}
                     onChange={(e) => setContentId(e.target.value)}
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
                   >
                     <option value="">Select content...</option>
                     {contentPieces.map((c) => (
@@ -189,14 +189,14 @@ export default function SchedulePage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                     Platform Connection
                   </label>
                   <select
                     value={connectionId}
                     onChange={(e) => setConnectionId(e.target.value)}
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
                   >
                     <option value="">Select connection...</option>
                     {connections.map((c) => (
@@ -208,7 +208,7 @@ export default function SchedulePage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
                   Schedule For
                 </label>
                 <input
@@ -216,14 +216,14 @@ export default function SchedulePage() {
                   value={scheduledAt}
                   onChange={(e) => setScheduledAt(e.target.value)}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
                 />
               </div>
               <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+                  className="bg-[#FF9500] text-[#2d1600] px-4 py-2 rounded-lg hover:opacity-90 text-sm font-medium disabled:opacity-50"
                 >
                   {saving ? "Scheduling..." : "Schedule"}
                 </button>
@@ -238,7 +238,7 @@ export default function SchedulePage() {
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+          className="border border-white/10 rounded-lg px-3 py-1.5 text-sm"
         >
           <option value="">All statuses</option>
           <option value="scheduled">Scheduled</option>
@@ -249,7 +249,7 @@ export default function SchedulePage() {
         <select
           value={filterPlatform}
           onChange={(e) => setFilterPlatform(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+          className="border border-white/10 rounded-lg px-3 py-1.5 text-sm"
         >
           <option value="">All platforms</option>
           <option value="twitter">Twitter</option>
@@ -259,33 +259,33 @@ export default function SchedulePage() {
       </div>
 
       {posts.length === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <p className="text-gray-500">No scheduled posts yet.</p>
-          <p className="text-sm text-gray-400 mt-1">
+        <div className="bg-[#201f21] rounded-lg border border-white/10 p-12 text-center">
+          <p className="text-[#E5E1E4]/50">No scheduled posts yet.</p>
+          <p className="text-sm text-[#E5E1E4]/40 mt-1">
             Schedule content to be published on your connected platforms.
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-[#201f21] rounded-lg border border-white/10 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-[#201f21]/5 border-b border-white/10">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Content</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Platform</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Scheduled For</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>
+                <th className="text-left px-4 py-3 font-medium text-[#dbc2ad]">Content</th>
+                <th className="text-left px-4 py-3 font-medium text-[#dbc2ad]">Platform</th>
+                <th className="text-left px-4 py-3 font-medium text-[#dbc2ad]">Scheduled For</th>
+                <th className="text-left px-4 py-3 font-medium text-[#dbc2ad]">Status</th>
+                <th className="text-right px-4 py-3 font-medium text-[#dbc2ad]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-white/5">
               {posts.map((post) => (
-                <tr key={post.id} className="hover:bg-gray-50">
+                <tr key={post.id} className="hover:bg-[#201f21]/5">
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-[#E5E1E4]">
                       {post.content_title || "Untitled"}
                     </p>
                     {post.content_body_preview && (
-                      <p className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">
+                      <p className="text-xs text-[#E5E1E4]/50 mt-0.5 truncate max-w-xs">
                         {post.content_body_preview}
                       </p>
                     )}
@@ -293,12 +293,12 @@ export default function SchedulePage() {
                   <td className="px-4 py-3">
                     <span className="capitalize">{post.platform || "—"}</span>
                     {post.platform_account_name && (
-                      <span className="text-gray-400 ml-1 text-xs">
+                      <span className="text-[#E5E1E4]/40 ml-1 text-xs">
                         ({post.platform_account_name})
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-[#dbc2ad]">
                     {new Date(post.scheduled_at).toLocaleString()}
                   </td>
                   <td className="px-4 py-3">
@@ -308,7 +308,7 @@ export default function SchedulePage() {
                       {post.status}
                     </span>
                     {post.error && (
-                      <p className="text-xs text-red-500 mt-1">{post.error}</p>
+                      <p className="text-xs text-[#ffb4ab] mt-1">{post.error}</p>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -317,20 +317,20 @@ export default function SchedulePage() {
                         <>
                           <button
                             onClick={() => handlePostNow(post.id)}
-                            className="text-xs px-2 py-1 border border-blue-200 text-blue-600 rounded hover:bg-blue-50"
+                            className="text-xs px-2 py-1 border border-[#FF9500]/20 text-[#FF9500] rounded hover:bg-[#FF9500]/10"
                           >
                             Post Now
                           </button>
                           <button
                             onClick={() => handleCancel(post.id)}
-                            className="text-xs px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50"
+                            className="text-xs px-2 py-1 border border-[#ffb4ab]/20 text-[#ffb4ab] rounded hover:bg-[#ffb4ab]/10"
                           >
                             Cancel
                           </button>
                         </>
                       )}
                       {post.posted_at && (
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-[#E5E1E4]/40">
                           Posted {new Date(post.posted_at).toLocaleDateString()}
                         </span>
                       )}

@@ -125,9 +125,9 @@ export default function ContentDetailPage() {
   );
   if (!piece) return (
     <div className="max-w-5xl">
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <p className="text-sm font-medium text-red-700">Content not found</p>
-        <button onClick={() => router.push("/content")} className="mt-2 text-xs text-red-500 hover:underline">
+      <div className="bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 rounded-lg p-6 text-center">
+        <p className="text-sm font-medium text-[#ffb4ab]">Content not found</p>
+        <button onClick={() => router.push("/content")} className="mt-2 text-xs text-[#ffb4ab] hover:underline">
           Back to Content Queue
         </button>
       </div>
@@ -242,9 +242,9 @@ export default function ContentDetailPage() {
     blog_draft: "Blog Draft",
   };
   const funnelColors: Record<string, string> = {
-    awareness: "bg-blue-50 text-blue-700 border-blue-200",
+    awareness: "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20",
     consideration: "bg-amber-50 text-amber-700 border-amber-200",
-    conversion: "bg-green-50 text-green-700 border-green-200",
+    conversion: "bg-[#4ade80]/10 text-[#4ade80] border-[#4ade80]/20",
   };
 
   const previewWidth = 400;
@@ -344,7 +344,7 @@ export default function ContentDetailPage() {
                     onClick={() => setVideoStyle(opt.value)}
                     className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
                       videoStyle === opt.value
-                        ? "bg-[#FF9500] text-[#2d1600] border-gray-900"
+                        ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
                         : "bg-[#201f21] text-[#E5E1E4]/50 border-white/10 hover:border-white/10"
                     }`}
                     title={opt.description}
@@ -361,7 +361,7 @@ export default function ContentDetailPage() {
                     onClick={() => setPreviewTemplate(opt.value)}
                     className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
                       previewTemplate === opt.value
-                        ? "bg-[#FF9500] text-[#2d1600] border-gray-900"
+                        ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
                         : "bg-[#201f21] text-[#E5E1E4]/50 border-white/10 hover:border-white/10"
                     }`}
                   >
@@ -388,7 +388,7 @@ export default function ContentDetailPage() {
                   onClick={() => setPreviewAspect(ratio)}
                   className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
                     previewAspect === ratio
-                      ? "bg-[#FF9500] text-[#2d1600] border-gray-900"
+                      ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
                       : "bg-[#201f21] text-[#E5E1E4]/50 border-white/10"
                   }`}
                 >
@@ -460,7 +460,7 @@ export default function ContentDetailPage() {
           {isVisualContent && !showVisual && (
             <button
               onClick={() => setShowVisual(true)}
-              className="text-xs text-blue-600 hover:underline mb-3 block"
+              className="text-xs text-[#FF9500] hover:underline mb-3 block"
             >
               Show visual preview
             </button>
@@ -500,7 +500,7 @@ export default function ContentDetailPage() {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                    className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
                   >
                     {saving ? "Saving..." : "Save Changes"}
                   </button>
@@ -533,9 +533,9 @@ export default function ContentDetailPage() {
 
       {/* Error banner */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 flex items-center justify-between">
-          <p className="text-sm text-red-700">{error}</p>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-xs">Dismiss</button>
+        <div className="bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 rounded-lg px-4 py-3 mb-4 flex items-center justify-between">
+          <p className="text-sm text-[#ffb4ab]">{error}</p>
+          <button onClick={() => setError(null)} className="text-[#ffb4ab]/70 hover:text-[#ffb4ab] text-xs">Dismiss</button>
         </div>
       )}
 
@@ -545,13 +545,13 @@ export default function ContentDetailPage() {
           <>
             <button
               onClick={() => handleStatusChange("approved")}
-              className="px-4 py-2 bg-[#4ade80]/20 text-[#4ade80] rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+              className="px-4 py-2 bg-[#4ade80]/20 text-[#4ade80] rounded-lg text-sm font-medium hover:bg-[#4ade80]/30 transition-colors"
             >
               Approve
             </button>
             <button
               onClick={() => handleStatusChange("rejected")}
-              className="px-4 py-2 bg-[#201f21] text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
+              className="px-4 py-2 bg-[#201f21] text-[#ffb4ab] border border-[#ffb4ab]/20 rounded-lg text-sm font-medium hover:bg-[#ffb4ab]/10 transition-colors"
             >
               Reject
             </button>
@@ -591,10 +591,10 @@ export default function ContentDetailPage() {
         <div className="flex-1" />
         {confirmDelete ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-red-600">Delete this content?</span>
+            <span className="text-xs text-[#ffb4ab]">Delete this content?</span>
             <button
               onClick={handleDelete}
-              className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700"
+              className="px-3 py-1.5 bg-[#ffb4ab]/20 text-white rounded text-xs font-medium hover:bg-[#ffb4ab]/30"
             >
               Confirm
             </button>
@@ -608,7 +608,7 @@ export default function ContentDetailPage() {
         ) : (
           <button
             onClick={handleDelete}
-            className="px-4 py-2 text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
+            className="px-4 py-2 text-[#ffb4ab] hover:text-[#ffb4ab] text-sm font-medium transition-colors"
           >
             Delete
           </button>
@@ -625,8 +625,8 @@ export default function ContentDetailPage() {
             </div>
           )}
           {imageGenStatus?.status === "failed" && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-              <p className="text-sm text-red-700">Image generation failed: {imageGenStatus.error}</p>
+            <div className="bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 rounded-lg px-4 py-3">
+              <p className="text-sm text-[#ffb4ab]">Image generation failed: {imageGenStatus.error}</p>
             </div>
           )}
           {piece.image_url && (
@@ -641,7 +641,7 @@ export default function ContentDetailPage() {
                 <a
                   href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${piece.image_url}`}
                   download
-                  className="text-xs text-blue-600 hover:underline"
+                  className="text-xs text-[#FF9500] hover:underline"
                 >
                   Download
                 </a>
@@ -673,12 +673,12 @@ export default function ContentDetailPage() {
 
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { bg: string; dot: string }> = {
-    draft: { bg: "bg-yellow-50 text-yellow-700 border-yellow-200", dot: "bg-yellow-400" },
-    approved: { bg: "bg-green-50 text-green-700 border-green-200", dot: "bg-green-400" },
-    posted: { bg: "bg-blue-50 text-blue-700 border-blue-200", dot: "bg-blue-400" },
-    rejected: { bg: "bg-red-50 text-red-700 border-red-200", dot: "bg-red-400" },
+    draft: { bg: "bg-[#ffbd7f]/10 text-[#ffbd7f] border-[#ffbd7f]/20", dot: "bg-[#ffbd7f]" },
+    approved: { bg: "bg-[#4ade80]/10 text-[#4ade80] border-[#4ade80]/20", dot: "bg-[#4ade80]" },
+    posted: { bg: "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20", dot: "bg-[#FF9500]" },
+    rejected: { bg: "bg-[#ffb4ab]/10 text-[#ffb4ab] border-[#ffb4ab]/20", dot: "bg-[#ffb4ab]" },
   };
-  const c = config[status] || { bg: "bg-white/5 text-[#dbc2ad] border-white/10", dot: "bg-gray-400" };
+  const c = config[status] || { bg: "bg-white/5 text-[#dbc2ad] border-white/10", dot: "bg-[#E5E1E4]/40" };
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${c.bg}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />

@@ -43,8 +43,8 @@ export default function NewProductPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Add Product</h1>
-      <p className="text-gray-500 mb-8">
+      <h1 className="text-2xl font-bold text-[#E5E1E4] mb-2">Add Product</h1>
+      <p className="text-[#E5E1E4]/50 mb-8">
         Enter your product details. You can crawl the website and generate a
         brand brief after creating.
       </p>
@@ -88,7 +88,7 @@ export default function NewProductPage() {
           placeholder="What makes this different from alternatives?"
         />
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#dbc2ad] mb-2">
             Product Type
           </label>
           <div className="flex gap-2">
@@ -104,8 +104,8 @@ export default function NewProductPage() {
                 onClick={() => setForm({ ...form, product_type: t.value })}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                   form.product_type === t.value
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    ? "bg-[#FF9500] text-[#2d1600] border-[#FF9500]"
+                    : "bg-[#201f21] text-[#dbc2ad] border-white/10 hover:bg-white/5"
                 }`}
               >
                 {t.label}
@@ -118,14 +118,14 @@ export default function NewProductPage() {
           <button
             type="submit"
             disabled={saving || !form.name}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="px-6 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
           >
             {saving ? "Creating..." : "Create Product"}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-6 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50"
+            className="px-6 py-2 bg-[#201f21] text-[#dbc2ad] rounded-lg text-sm font-medium border border-white/10 hover:bg-white/5"
           >
             Cancel
           </button>
@@ -150,8 +150,8 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        {label} {required && <span className="text-red-500">*</span>}
+      <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
+        {label} {required && <span className="text-[#ffb4ab]">*</span>}
       </label>
       <input
         type="text"
@@ -159,7 +159,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
       />
     </div>
   );
@@ -178,7 +178,7 @@ function TextArea({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
         {label}
       </label>
       <textarea
@@ -186,7 +186,7 @@ function TextArea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
       />
     </div>
   );

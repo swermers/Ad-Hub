@@ -245,7 +245,7 @@ export default function AnalyticsPage() {
                   <ul className="space-y-2">
                     {insights.insights.map((item, i) => (
                       <li key={i} className="text-sm text-[#dbc2ad] flex gap-2">
-                        <span className="text-blue-500 mt-0.5 shrink-0">&#8226;</span>
+                        <span className="text-[#FF9500] mt-0.5 shrink-0">&#8226;</span>
                         {item}
                       </li>
                     ))}

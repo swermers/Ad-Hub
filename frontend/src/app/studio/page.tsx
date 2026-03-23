@@ -474,7 +474,7 @@ export default function StudioPage() {
               onChange={(e) => setTranscript(e.target.value)}
               rows={8}
               placeholder="Or paste your transcript here. The Idea Sharpener will find the seed..."
-              className="w-full px-4 py-3 border border-white/10 rounded-lg text-sm leading-relaxed focus:ring-1 focus:ring-[#FF9500]/50 focus:border-[#FF9500]/50"
+              className="w-full px-4 py-3 bg-[#201f21] border border-white/10 rounded-lg text-sm text-[#E5E1E4] placeholder-[#E5E1E4]/30 leading-relaxed focus:ring-1 focus:ring-[#FF9500]/50 focus:border-[#FF9500]/50"
             />
           </div>
 
@@ -488,7 +488,7 @@ export default function StudioPage() {
               onChange={(e) => setInstructions(e.target.value)}
               rows={2}
               placeholder="Focus on the energy cost angle. Use the guard dog metaphor if it fits."
-              className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
+              className="w-full px-3 py-2 bg-[#201f21] border border-white/10 rounded-lg text-sm text-[#E5E1E4] placeholder-[#E5E1E4]/30"
             />
           </div>
 
@@ -533,7 +533,7 @@ export default function StudioPage() {
                   The Heat
                 </p>
                 {(brief.heat as string[]).map((h, i) => (
-                  <p key={i} className="text-[#dbc2ad] italic border-l-2 border-amber-400 pl-3 my-1">
+                  <p key={i} className="text-[#dbc2ad] italic border-l-2 border-[#ffbd7f]/50 pl-3 my-1">
                     &ldquo;{h}&rdquo;
                   </p>
                 ))}
@@ -568,8 +568,8 @@ export default function StudioPage() {
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded ${
                       String(brief.verdict).includes("Strong")
-                        ? "bg-green-50 text-green-700"
-                        : "bg-yellow-50 text-yellow-700"
+                        ? "bg-[#4ade80]/10 text-[#4ade80]"
+                        : "bg-[#ffbd7f]/10 text-[#ffbd7f]"
                     }`}
                   >
                     {String(brief.verdict)}
@@ -632,11 +632,11 @@ export default function StudioPage() {
             </p>
           )}
           {taskStatus?.status === "failed" && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4 max-w-md">
-              <p className="text-sm text-red-700">{taskStatus.error}</p>
+            <div className="bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 rounded-lg p-4 mt-4 max-w-md">
+              <p className="text-sm text-[#ffb4ab]">{taskStatus.error}</p>
               <button
                 onClick={() => animateToStep("Input")}
-                className="mt-2 px-3 py-1 text-sm bg-white border border-red-300 rounded-lg hover:bg-red-50"
+                className="mt-2 px-3 py-1 text-sm bg-white/10 border border-[#ffb4ab]/20 rounded-lg hover:bg-white/5"
               >
                 Try Again
               </button>
@@ -692,7 +692,7 @@ export default function StudioPage() {
                     }}
                     placeholder="Search b-roll..."
                     aria-label="Search b-roll images"
-                    className="text-xs border border-white/10 rounded-lg px-2.5 py-1.5 w-48 focus:ring-1 focus:ring-[#FF9500]/50 focus:border-[#FF9500]/50 outline-none transition-shadow duration-150"
+                    className="text-xs bg-[#201f21] text-[#E5E1E4] placeholder-[#E5E1E4]/30 border border-white/10 rounded-lg px-2.5 py-1.5 w-48 focus:ring-1 focus:ring-[#FF9500]/50 focus:border-[#FF9500]/50 outline-none transition-shadow duration-150"
                   />
                 </div>
               </div>
@@ -758,7 +758,7 @@ export default function StudioPage() {
                     if (p.status === "draft") handleStatusChange(p.id, "approved");
                   });
                 }}
-                className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 active:scale-95 transition-all duration-150"
+                className="px-3 py-1.5 text-xs font-medium bg-[#4ade80]/20 text-[#4ade80] rounded-lg hover:bg-[#4ade80]/30 active:scale-95 transition-all duration-150"
               >
                 Approve All
               </button>
@@ -825,7 +825,7 @@ export default function StudioPage() {
                               setExpandedPiece(piece.id);
                               setReviewView("list");
                             }}
-                            className="w-full text-left bg-white rounded-lg p-2 shadow-sm hover:shadow transition-shadow border border-white/80"
+                            className="w-full text-left bg-[#201f21] rounded-lg p-2 shadow-sm hover:shadow transition-shadow border border-white/10"
                           >
                             <span className={`inline-block px-1.5 py-0.5 text-[11px] font-medium rounded ${typeBadge.bg} ${typeBadge.text} mb-1`}>
                               {piece.content_type.replace("_", " ")}
@@ -835,7 +835,7 @@ export default function StudioPage() {
                             </p>
                             <div className="flex items-center gap-1 mt-1">
                               <span className={`w-1.5 h-1.5 rounded-full ${
-                                piece.status === "approved" ? "bg-green-500" : piece.status === "rejected" ? "bg-red-500" : "bg-yellow-500"
+                                piece.status === "approved" ? "bg-[#4ade80]" : piece.status === "rejected" ? "bg-[#ffb4ab]" : "bg-[#ffbd7f]"
                               }`} />
                               <span className="text-[11px] text-[#E5E1E4]/40">{piece.status}</span>
                             </div>
@@ -868,7 +868,7 @@ export default function StudioPage() {
                         <button
                           key={piece.id}
                           onClick={() => { setExpandedPiece(piece.id); setReviewView("list"); }}
-                          className="text-left bg-white rounded-lg p-2 shadow-sm hover:shadow transition-shadow border border-white/10"
+                          className="text-left bg-[#201f21] rounded-lg p-2 shadow-sm hover:shadow transition-shadow border border-white/10"
                         >
                           <span className={`inline-block px-1.5 py-0.5 text-[10px] font-medium rounded ${typeBadge.bg} ${typeBadge.text} mb-1`}>
                             {piece.content_type.replace("_", " ")}
@@ -891,7 +891,7 @@ export default function StudioPage() {
               const meta = getPieceMeta(piece);
               const isExpanded = expandedPiece === piece.id;
               const day = meta.day || "";
-              const dayColor = DAY_COLORS[day] || "border-l-gray-300";
+              const dayColor = DAY_COLORS[day] || "border-l-[#E5E1E4]/30";
               const typeBadge = TYPE_BADGES[piece.content_type] || TYPE_BADGES.social_post;
 
               return (
@@ -932,10 +932,10 @@ export default function StudioPage() {
                       <span
                         className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                           piece.status === "approved"
-                            ? "bg-green-100 text-green-700"
+                            ? "bg-[#4ade80]/10 text-[#4ade80]"
                             : piece.status === "rejected"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-yellow-100 text-yellow-800"
+                            ? "bg-[#ffb4ab]/10 text-[#ffb4ab]"
+                            : "bg-[#ffbd7f]/10 text-[#ffbd7f]"
                         }`}
                       >
                         {piece.status}
@@ -1072,7 +1072,7 @@ export default function StudioPage() {
                             {(meta.tweets as string[]).map((tweet, i) => (
                               <div
                                 key={i}
-                                className="bg-white/5 rounded-lg p-3 text-sm text-[#dbc2ad] border-l-2 border-violet-300"
+                                className="bg-white/5 rounded-lg p-3 text-sm text-[#dbc2ad] border-l-2 border-[#c5c5ff]/50"
                               >
                                 <span className="text-xs text-[#E5E1E4]/40 mr-2">
                                   {i + 1}/{meta.tweets.length}
@@ -1097,9 +1097,9 @@ export default function StudioPage() {
                             {(meta.blocks as string[]).map((block, i) => (
                               <div
                                 key={i}
-                                className="bg-white/5 rounded-lg p-3 text-sm text-[#dbc2ad] border-l-2 border-rose-300"
+                                className="bg-white/5 rounded-lg p-3 text-sm text-[#dbc2ad] border-l-2 border-[#ffb4ab]/50"
                               >
-                                <span className="text-xs text-rose-400 font-medium mr-2">
+                                <span className="text-xs text-[#ffb4ab] font-medium mr-2">
                                   Block {i + 1}
                                 </span>
                                 {block}
@@ -1123,14 +1123,14 @@ export default function StudioPage() {
                         <button
                           onClick={() => handleStatusChange(piece.id, "approved")}
                           disabled={piece.status === "approved"}
-                          className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40"
+                          className="px-3 py-1.5 text-xs font-medium bg-[#4ade80]/20 text-[#4ade80] rounded-lg hover:bg-[#4ade80]/30 disabled:opacity-40"
                         >
                           Approve
                         </button>
                         <button
                           onClick={() => handleStatusChange(piece.id, "rejected")}
                           disabled={piece.status === "rejected"}
-                          className="px-3 py-1.5 text-xs font-medium bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 disabled:opacity-40"
+                          className="px-3 py-1.5 text-xs font-medium bg-white/10 text-[#ffb4ab] border border-[#ffb4ab]/20 rounded-lg hover:bg-white/5 disabled:opacity-40"
                         >
                           Reject
                         </button>
@@ -1160,13 +1160,13 @@ export default function StudioPage() {
                               Publishing...
                             </span>
                           ) : publishStatus[piece.id] === "published" ? (
-                            <span className="px-3 py-1.5 text-xs font-medium text-green-600">
+                            <span className="px-3 py-1.5 text-xs font-medium text-[#4ade80]">
                               Published
                             </span>
                           ) : publishStatus[piece.id] === "failed" ? (
                             <button
                               onClick={() => setPublishingPieceId(piece.id)}
-                              className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50"
+                              className="px-3 py-1.5 text-xs font-medium text-[#ffb4ab] border border-[#ffb4ab]/20 rounded-lg hover:bg-white/5"
                             >
                               Retry
                             </button>
