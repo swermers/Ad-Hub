@@ -1,3 +1,5 @@
+import hashlib
+
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -35,9 +37,37 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         token = auth_header.removeprefix("Bearer ")
 
+        # Agent API key auth (prefix: "adhub_")
+        if token.startswith("adhub_"):
+            if not self._verify_agent_key(token):
+                return JSONResponse(status_code=401, content={"detail": "Invalid agent API key"})
+            return await call_next(request)
+
+        # Human token auth (signed JWT-like token)
         from app.routers.auth import verify_token
 
         if verify_token(token) is None:
             return JSONResponse(status_code=401, content={"detail": "Invalid or expired token"})
 
         return await call_next(request)
+
+    @staticmethod
+    def _verify_agent_key(key: str) -> bool:
+        """Quick check that an agent key exists and is active.
+
+        Full permission checking happens in the permissions module via Depends().
+        This just validates the key is real so we don't pass garbage downstream.
+        """
+        from app.database import SessionLocal
+        from app.models.user import AgentAPIKey
+
+        key_hash = hashlib.sha256(key.encode()).hexdigest()
+        db = SessionLocal()
+        try:
+            agent_key = db.query(AgentAPIKey).filter(
+                AgentAPIKey.key_hash == key_hash,
+                AgentAPIKey.is_active.is_(True),
+            ).first()
+            return agent_key is not None
+        finally:
+            db.close()

@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Product
 from app.models.brand_profile import BrandProfile, RejectionFeedback
+from app.permissions import deny_agent
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(deny_agent)])
 
 WRITING_SAMPLES_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "writing-samples"

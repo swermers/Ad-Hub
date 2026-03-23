@@ -6,6 +6,7 @@ from app.models.crawl import CrawledPage, UploadedDocument
 from app.models.distribution import PerformanceMetric, PlatformConnection, ScheduledPost
 from app.models.product import Product
 from app.models.seed_bank import Seed
+from app.models.user import AgentAPIKey, User
 
 __all__ = [
     "Product",
@@ -27,4 +28,6 @@ __all__ = [
     "SafetyGuardrail",
     "AgentLog",
     "Seed",
+    "User",
+    "AgentAPIKey",
 ]

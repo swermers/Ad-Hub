@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Product
+from app.permissions import deny_agent
 
 router = APIRouter()
 
@@ -72,7 +73,7 @@ def list_products(skip: int = 0, limit: int = 50, db: Session = Depends(get_db))
     return PaginatedProducts(items=items, total=total)
 
 
-@router.post("", response_model=ProductResponse, status_code=201)
+@router.post("", response_model=ProductResponse, status_code=201, dependencies=[Depends(deny_agent)])
 def create_product(data: ProductCreate, db: Session = Depends(get_db)):
     product = Product(**data.model_dump())
     db.add(product)
@@ -89,7 +90,7 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
     return product
 
 
-@router.put("/{product_id}", response_model=ProductResponse)
+@router.put("/{product_id}", response_model=ProductResponse, dependencies=[Depends(deny_agent)])
 def update_product(product_id: str, data: ProductUpdate, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
@@ -105,7 +106,7 @@ def update_product(product_id: str, data: ProductUpdate, db: Session = Depends(g
     return product
 
 
-@router.delete("/{product_id}", status_code=204)
+@router.delete("/{product_id}", status_code=204, dependencies=[Depends(deny_agent)])
 def delete_product(product_id: str, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:

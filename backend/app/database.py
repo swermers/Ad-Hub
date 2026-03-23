@@ -50,6 +50,7 @@ def create_tables():
     from app.models import (  # noqa: F401
         AdTemplate,
         AdVariation,
+        AgentAPIKey,
         AgentLog,
         BrandProfile,
         Campaign,
@@ -67,6 +68,7 @@ def create_tables():
         ScheduledPost,
         Seed,
         UploadedDocument,
+        User,
     )
 
     Base.metadata.create_all(bind=engine)
@@ -77,6 +79,14 @@ def create_tables():
     _add_column_if_missing("products", "brand_fonts", "TEXT")
     _add_column_if_missing("products", "reference_images", "TEXT")
     _add_column_if_missing("content_pieces", "image_url", "TEXT")
+
+    # Seed default admin user if none exist
+    from app.routers.auth import seed_default_admin
+    db = SessionLocal()
+    try:
+        seed_default_admin(db)
+    finally:
+        db.close()
 
 
 def _add_column_if_missing(table: str, column: str, col_type: str):

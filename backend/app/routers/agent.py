@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import AdVariation, ContentPiece, OptimizationConfig, OptimizationLog, Product
 from app.models.campaign import AgentLog, Campaign, SafetyGuardrail
+from app.permissions import deny_agent, require_human
 
 router = APIRouter()
 
@@ -744,7 +745,7 @@ def list_guardrails(product_id: str | None = None, db: Session = Depends(get_db)
     ]
 
 
-@router.post("/guardrails")
+@router.post("/guardrails", dependencies=[Depends(deny_agent)])
 def create_guardrail(data: GuardrailRequest, db: Session = Depends(get_db)):
     guardrail = SafetyGuardrail(
         product_id=data.product_id,
@@ -771,7 +772,7 @@ def create_guardrail(data: GuardrailRequest, db: Session = Depends(get_db)):
     return {"id": guardrail.id, "rule_type": guardrail.rule_type, "enabled": guardrail.enabled}
 
 
-@router.put("/guardrails/{guardrail_id}")
+@router.put("/guardrails/{guardrail_id}", dependencies=[Depends(deny_agent)])
 def update_guardrail(guardrail_id: str, data: dict, db: Session = Depends(get_db)):
     guardrail = db.query(SafetyGuardrail).filter(SafetyGuardrail.id == guardrail_id).first()
     if not guardrail:
@@ -786,7 +787,7 @@ def update_guardrail(guardrail_id: str, data: dict, db: Session = Depends(get_db
     return {"id": guardrail.id, "updated": True}
 
 
-@router.delete("/guardrails/{guardrail_id}")
+@router.delete("/guardrails/{guardrail_id}", dependencies=[Depends(deny_agent)])
 def delete_guardrail(guardrail_id: str, db: Session = Depends(get_db)):
     guardrail = db.query(SafetyGuardrail).filter(SafetyGuardrail.id == guardrail_id).first()
     if not guardrail:
@@ -799,7 +800,7 @@ def delete_guardrail(guardrail_id: str, db: Session = Depends(get_db)):
 # ─── Kill Switch ──────────────────────────────────────────────────────────────
 
 
-@router.post("/kill-switch")
+@router.post("/kill-switch", dependencies=[Depends(require_human)])
 def kill_switch(db: Session = Depends(get_db)):
     """EMERGENCY: Pause all active campaigns immediately.
 
@@ -851,7 +852,7 @@ def pending_approvals(db: Session = Depends(get_db)):
     ]
 
 
-@router.post("/approve/{log_id}")
+@router.post("/approve/{log_id}", dependencies=[Depends(require_human)])
 def approve_action(log_id: str, data: ApprovalRequest, db: Session = Depends(get_db)):
     """Approve or reject a pending agent action."""
 

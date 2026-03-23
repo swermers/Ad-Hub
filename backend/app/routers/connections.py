@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import PlatformConnection
+from app.permissions import deny_agent
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(deny_agent)])
 
 
 class ConnectionCreate(BaseModel):
