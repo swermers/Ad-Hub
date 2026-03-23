@@ -11,6 +11,7 @@ class Product(Base):
     __tablename__ = "products"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    workspace_id: Mapped[str | None] = mapped_column(String(36))  # FK to workspaces; NULL = legacy
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     website_url: Mapped[str | None] = mapped_column(String(2048))
     description: Mapped[str] = mapped_column(Text, default="")

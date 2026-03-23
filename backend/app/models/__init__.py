@@ -1,5 +1,6 @@
 from app.models.autonomous_loop import AutonomousLoopConfig
 from app.models.brand_profile import BrandProfile, RejectionFeedback
+from app.models.workspace import Workspace
 from app.models.bulk_ads import AdTemplate, AdVariation, OptimizationConfig, OptimizationLog, PainPoint
 from app.models.campaign import AgentLog, Campaign, CampaignAdVariation, SafetyGuardrail
 from app.models.content import ContentPiece
@@ -32,4 +33,5 @@ __all__ = [
     "Seed",
     "User",
     "AgentAPIKey",
+    "Workspace",
 ]

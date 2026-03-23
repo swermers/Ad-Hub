@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import ContentPiece, PlatformConnection, ScheduledPost
+from app.permissions import get_current_user, scope_product_query
 
 router = APIRouter()
 
@@ -74,8 +75,17 @@ def list_scheduled_posts(
     skip: int = 0,
     limit: int = 50,
     db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
     query = db.query(ScheduledPost)
+    # Scope via content piece's product_id
+    ws_id = user.get("workspace_id")
+    if ws_id:
+        from app.models import Product
+        workspace_product_ids = [
+            p.id for p in db.query(Product.id).filter(Product.workspace_id == ws_id).all()
+        ]
+        query = query.filter(ScheduledPost.content.has(ContentPiece.product_id.in_(workspace_product_ids)))
 
     if product_id:
         content_ids = (

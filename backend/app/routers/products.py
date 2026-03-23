@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Product
-from app.permissions import deny_agent
+from app.permissions import deny_agent, get_current_user, scope_query
 
 router = APIRouter()
 
@@ -67,9 +67,10 @@ class PaginatedProducts(BaseModel):
 
 
 @router.get("", response_model=PaginatedProducts)
-def list_products(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    total = db.query(Product).count()
-    items = db.query(Product).order_by(Product.created_at.desc()).offset(skip).limit(limit).all()
+def list_products(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    query = scope_query(db.query(Product), Product, user)
+    total = query.count()
+    items = query.order_by(Product.created_at.desc()).offset(skip).limit(limit).all()
     return PaginatedProducts(items=items, total=total)
 
 
@@ -83,8 +84,9 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
-def get_product(product_id: str, db: Session = Depends(get_db)):
-    product = db.query(Product).filter(Product.id == product_id).first()
+def get_product(product_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    query = scope_query(db.query(Product), Product, user)
+    product = query.filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product

@@ -421,7 +421,7 @@ locale-specific variants from the start.
 - [x] Brand Profile system (database model, onboarding UI, generation pipeline integration)
 - [x] Bot permission layer (User model, AgentAPIKey, role-based endpoint protection)
 - [x] Autonomous loop wiring (content loop, ad loop, feedback loop — scheduler-driven)
-- [ ] Per-customer bot instance isolation
+- [x] Per-customer bot instance isolation (Workspace model, workspace-scoped queries, data boundaries)
 - [ ] Subscription/billing infrastructure
 - [ ] Demo mode (sandbox environment for prospects, no API keys required)
 

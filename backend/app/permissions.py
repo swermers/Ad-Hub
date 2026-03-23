@@ -2,20 +2,25 @@
 Role-based permission system for the two-seat architecture.
 
 Roles:
-  admin  — Human seat. Full access to everything.
+  admin  — Human seat. Full access to everything in their workspace.
   viewer — Human seat (read-only). Can view but not mutate.
   agent  — Bot seat. Can generate, schedule, publish, monitor, optimize.
            CANNOT: change API keys, modify budgets, alter connections, edit brand profile,
            modify guardrails, manage users.
 
+Workspace isolation:
+  Every user and agent key belongs to a workspace. All queries are automatically
+  filtered to only return data within the caller's workspace.
+
 Usage in routers:
-    from app.permissions import require_admin, require_human, require_any
+    from app.permissions import require_admin, require_human, require_any, get_workspace_id
 
     @router.post("/connections", dependencies=[Depends(require_admin)])
     def create_connection(...): ...
 
-    @router.get("/analytics", dependencies=[Depends(require_any)])
-    def get_analytics(...): ...
+    @router.get("/products")
+    def list_products(workspace_id: str = Depends(get_workspace_id), db=Depends(get_db)):
+        return db.query(Product).filter(Product.workspace_id == workspace_id).all()
 """
 
 import hashlib
@@ -68,7 +73,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> dict:
     The middleware has already verified the token. This function decodes it
     to get the role and identity for permission checking.
 
-    Returns dict with: id, role, email|label, product_id (for agents)
+    Returns dict with: id, role, email|label, workspace_id, product_id (for agents)
     """
     auth_header = request.headers.get("Authorization", "")
 
@@ -104,14 +109,16 @@ def _resolve_human_token(token: str, db: Session) -> dict:
                 "role": user.role,
                 "email": user.email,
                 "display_name": user.display_name,
+                "workspace_id": user.workspace_id,
             }
 
-    # Legacy token (no user_id) — treat as admin for backwards compatibility
+    # Legacy token (no user_id) — treat as admin with no workspace filter
     return {
         "id": "legacy",
         "role": role,
         "email": None,
         "display_name": "Admin",
+        "workspace_id": None,  # Legacy: no workspace filter (sees all)
     }
 
 
@@ -143,9 +150,79 @@ def _resolve_agent_key(key: str, db: Session) -> dict:
         "id": agent_key.id,
         "role": ROLE_AGENT,
         "label": agent_key.label,
+        "workspace_id": agent_key.workspace_id,
         "product_id": agent_key.product_id,
         "scopes": scopes,
     }
+
+
+# ─── Workspace scoping ───────────────────────────────────────────────────────
+
+def get_workspace_id(user: dict = Depends(get_current_user)) -> str | None:
+    """Extract workspace_id from the current user for query filtering.
+
+    Returns the workspace_id or None (for legacy/superadmin users who see all data).
+    Routers use this to filter queries: Product.workspace_id == workspace_id
+    """
+    return user.get("workspace_id")
+
+
+def require_product_access(product_id: str, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Verify the current user has access to a specific product.
+
+    Checks that the product belongs to the user's workspace.
+    For agents with product_id scope, also checks product match.
+    """
+    from app.models import Product
+
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Workspace check (skip for legacy users with no workspace)
+    ws_id = user.get("workspace_id")
+    if ws_id and product.workspace_id and product.workspace_id != ws_id:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Agent product scope check
+    if user["role"] == ROLE_AGENT and user.get("product_id"):
+        if user["product_id"] != product_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Agent key is scoped to a different product.",
+            )
+
+    return product
+
+
+def scope_query(query, model, user: dict):
+    """Apply workspace scoping to a SQLAlchemy query.
+
+    Usage:
+        query = db.query(Product)
+        query = scope_query(query, Product, user)
+        products = query.all()
+    """
+    ws_id = user.get("workspace_id")
+    if ws_id and hasattr(model, "workspace_id"):
+        query = query.filter(model.workspace_id == ws_id)
+    return query
+
+
+def scope_product_query(query, model, user: dict, db: Session):
+    """Apply workspace scoping via product_id for models that don't have workspace_id directly.
+
+    For models like ContentPiece, Seed, etc. that have product_id but not workspace_id,
+    this filters to only products in the user's workspace.
+    """
+    ws_id = user.get("workspace_id")
+    if ws_id and hasattr(model, "product_id"):
+        from app.models import Product
+        workspace_product_ids = [
+            p.id for p in db.query(Product.id).filter(Product.workspace_id == ws_id).all()
+        ]
+        query = query.filter(model.product_id.in_(workspace_product_ids))
+    return query
 
 
 # ─── Permission dependencies (use with Depends()) ────────────────────────────

@@ -70,6 +70,7 @@ def create_tables():
         Seed,
         UploadedDocument,
         User,
+        Workspace,
     )
 
     Base.metadata.create_all(bind=engine)
@@ -80,14 +81,50 @@ def create_tables():
     _add_column_if_missing("products", "brand_fonts", "TEXT")
     _add_column_if_missing("products", "reference_images", "TEXT")
     _add_column_if_missing("content_pieces", "image_url", "TEXT")
+    _add_column_if_missing("products", "workspace_id", "VARCHAR(36)")
+    _add_column_if_missing("users", "workspace_id", "VARCHAR(36)")
+    _add_column_if_missing("agent_api_keys", "workspace_id", "VARCHAR(36)")
 
-    # Seed default admin user if none exist
+    # Seed default workspace and admin user if none exist
     from app.routers.auth import seed_default_admin
     db = SessionLocal()
     try:
+        _seed_default_workspace(db)
         seed_default_admin(db)
     finally:
         db.close()
+
+
+def _seed_default_workspace(db):
+    """Create a default workspace if none exist, and assign orphan products/users to it."""
+    from app.models.workspace import Workspace
+    from app.models.user import User
+    from app.models.product import Product
+
+    existing = db.query(Workspace).first()
+    if existing:
+        return  # Workspaces already exist
+
+    ws = Workspace(
+        name="Default Workspace",
+        slug="default",
+        owner_email="admin@adhub.local",
+        tier="pro",
+        max_products=10,
+        max_generations_per_month=1000,
+    )
+    db.add(ws)
+    db.flush()
+
+    # Assign orphan products and users to the default workspace
+    db.query(Product).filter(Product.workspace_id.is_(None)).update(
+        {"workspace_id": ws.id}, synchronize_session=False
+    )
+    db.query(User).filter(User.workspace_id.is_(None)).update(
+        {"workspace_id": ws.id}, synchronize_session=False
+    )
+    db.commit()
+    logger.info("Created default workspace %s and assigned orphan records", ws.id)
 
 
 def _add_column_if_missing(table: str, column: str, col_type: str):

@@ -13,6 +13,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    workspace_id: Mapped[str | None] = mapped_column(String(36))  # FK to workspaces; NULL = legacy/superadmin
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(255))
@@ -21,12 +22,13 @@ class User(Base):
 
 
 class AgentAPIKey(Base):
-    """Bot-seat API key. Scoped to a product, cannot mutate config."""
+    """Bot-seat API key. Scoped to a workspace (and optionally a product)."""
 
     __tablename__ = "agent_api_keys"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    product_id: Mapped[str | None] = mapped_column(String(36))  # NULL = global agent
+    workspace_id: Mapped[str | None] = mapped_column(String(36))  # FK to workspaces; NULL = legacy
+    product_id: Mapped[str | None] = mapped_column(String(36))  # NULL = all products in workspace
     key_hash: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     key_prefix: Mapped[str] = mapped_column(String(12), nullable=False)  # first 8 chars for display
     label: Mapped[str | None] = mapped_column(String(255))

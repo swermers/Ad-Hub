@@ -143,6 +143,7 @@ def create_agent_key(
 
     agent_key = AgentAPIKey(
         id=str(uuid.uuid4()),
+        workspace_id=user.get("workspace_id"),  # Inherit workspace from creating admin
         product_id=body.product_id,
         key_hash=key_hash,
         key_prefix=key_prefix,
@@ -171,10 +172,12 @@ def list_agent_keys(
     db: Session = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
-    """List all agent API keys (without the raw key)."""
+    """List agent API keys for this workspace (without the raw key)."""
     from app.models.user import AgentAPIKey
+    from app.permissions import scope_query
 
-    keys = db.query(AgentAPIKey).order_by(AgentAPIKey.created_at.desc()).all()
+    query = scope_query(db.query(AgentAPIKey), AgentAPIKey, user)
+    keys = query.order_by(AgentAPIKey.created_at.desc()).all()
     results = []
     for k in keys:
         scopes = []

@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import AdVariation, ContentPiece, OptimizationConfig, OptimizationLog, Product
 from app.models.campaign import AgentLog, Campaign, SafetyGuardrail
-from app.permissions import deny_agent, require_human
+from app.permissions import deny_agent, get_current_user, require_human, scope_query
 
 router = APIRouter()
 
@@ -165,14 +165,19 @@ async def transcribe_audio(file: UploadFile = File(...)):
 
 
 @router.get("/status")
-def system_status(db: Session = Depends(get_db)):
+def system_status(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     """System health + active campaigns + pending actions.
 
     The agent calls this on startup and periodically to understand current state.
     """
 
-    products = db.query(Product).filter(Product.status == "active").all()
-    campaigns = db.query(Campaign).filter(Campaign.status.in_(["active", "paused"])).all()
+    product_q = scope_query(db.query(Product), Product, user)
+    products = product_q.filter(Product.status == "active").all()
+    workspace_product_ids = [p.id for p in products]
+    campaigns = db.query(Campaign).filter(
+        Campaign.status.in_(["active", "paused"]),
+        Campaign.product_id.in_(workspace_product_ids),
+    ).all()
     pending_approvals = (
         db.query(AgentLog)
         .filter(AgentLog.approval_required == True, AgentLog.approved == None)  # noqa: E711, E712
