@@ -438,7 +438,7 @@ export default function StudioPage() {
               Idea Sharpener Result
             </h2>
 
-            {brief.seed && (
+            {!!brief.seed && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                   The Seed
@@ -460,7 +460,7 @@ export default function StudioPage() {
               </div>
             )}
 
-            {brief.audience_hook && (
+            {!!brief.audience_hook && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                   Audience Hook
@@ -470,7 +470,7 @@ export default function StudioPage() {
             )}
 
             <div className="flex gap-4">
-              {brief.template_fit && (
+              {!!brief.template_fit && (
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                     Template
@@ -480,7 +480,7 @@ export default function StudioPage() {
                   </span>
                 </div>
               )}
-              {brief.verdict && (
+              {!!brief.verdict && (
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                     Verdict
@@ -498,7 +498,7 @@ export default function StudioPage() {
               )}
             </div>
 
-            {brief.subject_line && (
+            {!!brief.subject_line && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                   Subject Line
