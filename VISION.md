@@ -431,16 +431,16 @@ The bot doesn't just execute — it **researches, learns, and advises**. This is
 it from an automation tool into a marketing partner that never sleeps.
 
 **Autonomous Research Loops:**
-- [ ] **Competitor monitoring** — crawl competitor sites, social feeds, Meta Ad Library.
+- [x] **Competitor monitoring** — crawl competitor sites, social feeds, Meta Ad Library.
       Track which angles they run, which ads have been live longest (longevity = winning),
       what hooks and CTAs they use
-- [ ] **Niche trend detection** — monitor Reddit, X, forums, review sites for emerging
+- [x] **Niche trend detection** — monitor Reddit, X, forums, review sites for emerging
       pain points, complaints, desires in the customer's vertical. Surface trends before
       they're saturated
-- [ ] **Hook & copy pattern analysis** — scrape top-performing posts in the niche
+- [x] **Hook & copy pattern analysis** — scrape top-performing posts in the niche
       (viral tweets, high-engagement LinkedIn posts), reverse-engineer structural patterns.
       Not copying — learning *why* they work (tension, specificity, open loops, etc.)
-- [ ] **Evidence gathering** — find stats, studies, customer reviews, G2/Trustpilot
+- [x] **Evidence gathering** — find stats, studies, customer reviews, G2/Trustpilot
       sentiment data to back up ad claims. "87% of teams report X" hits different than
       a generic claim
 - [ ] **Ad creative benchmarking** — analyze what visual styles, formats, aspect ratios,

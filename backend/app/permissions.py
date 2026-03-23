@@ -51,6 +51,7 @@ AGENT_ALLOWED_ACTIONS = {
     "campaign:write", # create campaigns (within guardrails)
     "pain_points",    # research pain points
     "seeds:read",     # read seed bank
+    "intelligence",   # read intelligence data (trends, hooks, evidence)
 }
 
 # What the agent is explicitly DENIED (even if authenticated)

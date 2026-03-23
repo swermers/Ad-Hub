@@ -64,6 +64,15 @@ def start_scheduler():
         replace_existing=True,
     )
 
+    # Intelligence research cycle: run every 6 hours
+    scheduler.add_job(
+        _run_intelligence_cycles,
+        "interval",
+        minutes=360,
+        id="intelligence_cycles",
+        replace_existing=True,
+    )
+
     scheduler.start()
     logger.info("Scheduler started")
 
@@ -180,3 +189,40 @@ def _run_autonomous_loops():
         run_all_autonomous_loops()
     except Exception as e:
         logger.error("Autonomous loops failed: %s", e)
+
+
+def _run_intelligence_cycles():
+    """Run marketing intelligence research for all products with intelligence enabled."""
+    from app.database import SessionLocal
+    from app.engines.intelligence_brief import run_full_intelligence_cycle
+    from app.models.intelligence import IntelligenceConfig
+
+    db = SessionLocal()
+    try:
+        configs = db.query(IntelligenceConfig).all()
+        for config in configs:
+            # Check if any intelligence feature is enabled
+            any_enabled = (
+                config.competitor_monitoring_enabled
+                or config.trend_detection_enabled
+                or config.hook_analysis_enabled
+                or config.evidence_gathering_enabled
+                or config.weekly_brief_enabled
+            )
+            if not any_enabled:
+                continue
+
+            try:
+                result = run_full_intelligence_cycle(db, config.product_id)
+                logger.info(
+                    "Intelligence cycle for product %s completed",
+                    config.product_id,
+                )
+            except Exception as e:
+                logger.error(
+                    "Intelligence cycle failed for product %s: %s",
+                    config.product_id,
+                    e,
+                )
+    finally:
+        db.close()

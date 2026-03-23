@@ -7,6 +7,15 @@ from app.models.campaign import AgentLog, Campaign, CampaignAdVariation, SafetyG
 from app.models.content import ContentPiece
 from app.models.crawl import CrawledPage, UploadedDocument
 from app.models.distribution import PerformanceMetric, PlatformConnection, ScheduledPost
+from app.models.intelligence import (
+    CompetitorProfile,
+    EvidenceItem,
+    HookPattern,
+    IntelligenceBrief,
+    IntelligenceConfig,
+    ResearchCache,
+    TrendSignal,
+)
 from app.models.product import Product
 from app.models.seed_bank import Seed
 from app.models.user import AgentAPIKey, User
@@ -37,4 +46,11 @@ __all__ = [
     "Workspace",
     "Subscription",
     "UsageRecord",
+    "CompetitorProfile",
+    "TrendSignal",
+    "HookPattern",
+    "EvidenceItem",
+    "IntelligenceBrief",
+    "ResearchCache",
+    "IntelligenceConfig",
 ]
