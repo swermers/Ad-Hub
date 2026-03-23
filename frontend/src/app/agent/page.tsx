@@ -597,7 +597,7 @@ export default function AgentPage() {
                     <button
                       onClick={() => handleToggleGuardrail(g.id, !g.enabled)}
                       className={`w-10 h-6 rounded-full relative transition-colors ${
-                        g.enabled ? "bg-green-500" : "bg-white/10"
+                        g.enabled ? "bg-[#4ade80]" : "bg-white/10"
                       }`}
                     >
                       <span

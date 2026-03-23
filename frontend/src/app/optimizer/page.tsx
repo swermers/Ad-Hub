@@ -426,7 +426,7 @@ export default function OptimizerPage() {
                       <ul className="space-y-1">
                         {analysis.winning_patterns.map((p, i) => (
                           <li key={i} className="text-sm text-[#dbc2ad] flex items-start gap-2">
-                            <span className="text-green-500 mt-0.5">+</span> {p}
+                            <span className="text-[#4ade80] mt-0.5">+</span> {p}
                           </li>
                         ))}
                       </ul>
