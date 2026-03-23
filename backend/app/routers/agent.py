@@ -231,6 +231,7 @@ def _run_transcript_pipeline(
     """Run the voice memo → content pipeline in a background thread."""
     from app.database import SessionLocal
     from app.engines.content_pipeline import generate_weekly_content_sync
+    from app.models.brand_profile import BrandProfile
 
     _task_status[task_id] = {"status": "running", "pieces_generated": 0, "content_brief": None, "error": None}
 
@@ -241,11 +242,15 @@ def _run_transcript_pipeline(
             _task_status[task_id] = {"status": "failed", "pieces_generated": 0, "error": "Product not found"}
             return
 
+        # Load brand profile for constraint enforcement
+        brand_profile = db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first()
+
         pieces = generate_weekly_content_sync(
             product=product,
             transcript=transcript,
             weekly_mix=weekly_mix,
             instructions=instructions,
+            brand_profile=brand_profile,
         )
 
         # Save as ContentPiece records
@@ -354,6 +359,7 @@ def _run_creative_bundle(
     """Generate a complete creative package: copy + optional image."""
     from app.database import SessionLocal
     from app.engines.generation import generate_content_batch_sync
+    from app.models.brand_profile import BrandProfile
 
     _task_status[task_id] = {"status": "running", "pieces_generated": 0, "error": None}
 
@@ -363,6 +369,9 @@ def _run_creative_bundle(
         if not product:
             _task_status[task_id] = {"status": "failed", "pieces_generated": 0, "error": "Product not found"}
             return
+
+        # Load brand profile for constraint enforcement
+        brand_profile = db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first()
 
         # Generate ad copy variations
         instructions = f"Pain Point: {pain_point_text}"
@@ -378,6 +387,7 @@ def _run_creative_bundle(
             count=3,  # 3 variations per platform
             funnel_stage=funnel_stage,
             instructions=instructions,
+            brand_profile=brand_profile,
         )
 
         # Save as ContentPiece records

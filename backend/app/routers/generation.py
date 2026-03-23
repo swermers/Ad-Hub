@@ -43,6 +43,7 @@ def _run_generation(
     """Run content generation in background thread (sync — no asyncio.run)."""
     from app.database import SessionLocal
     from app.engines.generation import generate_content_batch_sync
+    from app.models.brand_profile import BrandProfile
 
     _task_status[task_id] = {
         "status": "running",
@@ -61,6 +62,9 @@ def _run_generation(
             }
             return
 
+        # Load brand profile for constraint enforcement
+        brand_profile = db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first()
+
         pieces = generate_content_batch_sync(
             product=product,
             content_types=content_types,
@@ -68,6 +72,7 @@ def _run_generation(
             count=count,
             funnel_stage=funnel_stage,
             instructions=instructions,
+            brand_profile=brand_profile,
         )
 
         for piece_data in pieces:

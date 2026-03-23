@@ -102,6 +102,7 @@ def _run_bulk_generation(
 ):
     from app.database import SessionLocal
     from app.engines.generation import generate_ad_variations_sync
+    from app.models.brand_profile import BrandProfile
 
     batch_id = str(uuid.uuid4())
     _task_status[task_id] = {
@@ -126,12 +127,16 @@ def _run_bulk_generation(
             }
             return
 
+        # Load brand profile for constraint enforcement
+        brand_profile = db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first()
+
         variations = generate_ad_variations_sync(
             product=product,
             template=template,
             pain_points=pain_points,
             variations_per=variations_per,
             funnel_stage=funnel_stage,
+            brand_profile=brand_profile,
         )
 
         for v in variations:
