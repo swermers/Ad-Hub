@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   api,
   type Product,
@@ -47,6 +47,18 @@ export default function StudioPage() {
   const [productId, setProductId] = useState("");
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<Step>("Input");
+  const [animating, setAnimating] = useState(false);
+  const prevStepRef = useRef<Step>("Input");
+
+  const animateToStep = (next: Step) => {
+    if (next === step) return;
+    setAnimating(true);
+    setTimeout(() => {
+      prevStepRef.current = step;
+      setStep(next);
+      setTimeout(() => setAnimating(false), 30);
+    }, 200);
+  };
 
   // Input
   const [transcript, setTranscript] = useState("");
@@ -127,7 +139,7 @@ export default function StudioPage() {
   const handleGenerate = async () => {
     if (!productId || !transcript.trim()) return;
     setGenerating(true);
-    setStep("Generate");
+    animateToStep("Generate");
 
     try {
       const result = await api.contentFromTranscript({
@@ -164,7 +176,7 @@ export default function StudioPage() {
                 })
                 .slice(0, 7);
               setPieces(recent);
-              setStep("Review");
+              animateToStep("Review");
             }
           }
         } catch {
@@ -175,7 +187,7 @@ export default function StudioPage() {
     } catch (err) {
       alert(err instanceof Error ? err.message : "Generation failed");
       setGenerating(false);
-      setStep("Input");
+      animateToStep("Input");
     }
   };
 
@@ -228,8 +240,21 @@ export default function StudioPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="max-w-5xl space-y-6 animate-pulse">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gray-200" />
+          <div className="space-y-2">
+            <div className="h-5 w-40 bg-gray-200 rounded" />
+            <div className="h-3 w-56 bg-gray-100 rounded" />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-10 w-24 bg-gray-100 rounded-xl" />
+          ))}
+        </div>
+        <div className="h-48 bg-gray-100 rounded-xl" />
+        <div className="h-32 bg-gray-50 rounded-xl" />
       </div>
     );
   }
@@ -237,42 +262,42 @@ export default function StudioPage() {
   return (
     <div className="max-w-5xl">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Content Studio</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Voice memo to a full week of content. Paste your transcript, review the seed, generate everything.
-        </p>
+      <div className="mb-10">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Content Studio</h1>
+            <p className="text-gray-500 text-sm">
+              Voice memo &rarr; full week of content
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Step Indicator */}
-      <div className="flex items-center gap-1 mb-8">
+      <div className="flex items-center mb-10">
         {STEPS.map((s, i) => {
           const isCurrent = s === step;
           const isPast = STEPS.indexOf(step) > i;
           return (
-            <div key={s} className="flex items-center gap-1">
-              {i > 0 && (
-                <div
-                  className={`w-8 h-px ${
-                    isPast ? "bg-blue-600" : "bg-gray-200"
-                  }`}
-                />
-              )}
+            <div key={s} className="flex items-center flex-1 last:flex-none">
               <button
-                onClick={() => {
-                  if (isPast) setStep(s);
-                }}
+                onClick={() => { if (isPast) animateToStep(s); }}
                 disabled={!isPast && !isCurrent}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                className={`relative flex items-center gap-2.5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                   isCurrent
-                    ? "bg-blue-600 text-white"
+                    ? "bg-gray-900 text-white shadow-lg shadow-gray-900/20 scale-[1.02]"
                     : isPast
                     ? "bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer"
-                    : "bg-gray-100 text-gray-400"
+                    : "bg-gray-50 text-gray-400"
                 }`}
               >
                 <span
-                  className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                  className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${
                     isCurrent
                       ? "bg-white/20"
                       : isPast
@@ -281,7 +306,7 @@ export default function StudioPage() {
                   }`}
                 >
                   {isPast ? (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   ) : (
@@ -290,10 +315,26 @@ export default function StudioPage() {
                 </span>
                 {s}
               </button>
+              {i < STEPS.length - 1 && (
+                <div className="flex-1 mx-2 h-0.5 rounded-full overflow-hidden bg-gray-200">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ease-out ${
+                      isPast ? "w-full bg-blue-500" : "w-0 bg-blue-500"
+                    }`}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
+
+      {/* ── Step Content with animation ────────────────────────────────── */}
+      <div
+        className={`transition-all duration-300 ease-out ${
+          animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+        }`}
+      >
 
       {/* ── Step 1: Input ─────────────────────────────────────────────── */}
       {step === "Input" && (
@@ -510,7 +551,7 @@ export default function StudioPage() {
 
           <div className="flex gap-3">
             <button
-              onClick={() => setStep("Input")}
+              onClick={() => animateToStep("Input")}
               className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               Back to Edit
@@ -546,7 +587,7 @@ export default function StudioPage() {
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4 max-w-md">
               <p className="text-sm text-red-700">{taskStatus.error}</p>
               <button
-                onClick={() => setStep("Input")}
+                onClick={() => animateToStep("Input")}
                 className="mt-2 px-3 py-1 text-sm bg-white border border-red-300 rounded-lg hover:bg-red-50"
               >
                 Try Again
@@ -601,7 +642,7 @@ export default function StudioPage() {
                 Publish All Approved
               </button>
               <button
-                onClick={() => setStep("Input")}
+                onClick={() => animateToStep("Input")}
                 className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 Start Over
@@ -911,6 +952,8 @@ export default function StudioPage() {
           )}
         </div>
       )}
+
+      </div>{/* end animation wrapper */}
     </div>
   );
 }
