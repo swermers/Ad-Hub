@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   api,
   type Product,
@@ -37,6 +37,13 @@ const TYPE_BADGES: Record<string, { bg: string; text: string }> = {
   ad_copy: { bg: "bg-orange-100", text: "text-orange-700" },
 };
 
+interface BrollItem {
+  id: number;
+  src: { medium: string };
+  alt: string;
+  photographer: string;
+}
+
 const PLATFORM_LABELS: Record<string, string> = {
   twitter: "X / Twitter",
   linkedin: "LinkedIn",
@@ -51,13 +58,11 @@ export default function StudioPage() {
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<Step>("Input");
   const [animating, setAnimating] = useState(false);
-  const prevStepRef = useRef<Step>("Input");
 
   const animateToStep = (next: Step) => {
     if (next === step) return;
     setAnimating(true);
     setTimeout(() => {
-      prevStepRef.current = step;
       setStep(next);
       setTimeout(() => setAnimating(false), 30);
     }, 200);
@@ -74,7 +79,6 @@ export default function StudioPage() {
   const [brief, setBrief] = useState<Record<string, unknown> | null>(null);
 
   // Generation
-  const [taskId, setTaskId] = useState<string | null>(null);
   const [taskStatus, setTaskStatus] = useState<TranscriptTaskStatus | null>(null);
   const [generating, setGenerating] = useState(false);
 
@@ -87,9 +91,12 @@ export default function StudioPage() {
   const [cardTab, setCardTab] = useState<Record<string, "content" | "preview" | "video">>({});
 
   // B-roll suggestions
-  const [brollResults, setBrollResults] = useState<{ id: number; src: { medium: string }; alt: string; photographer: string }[]>([]);
+  const [brollResults, setBrollResults] = useState<BrollItem[]>([]);
   const [brollLoading, setBrollLoading] = useState(false);
   const [brollQuery, setBrollQuery] = useState("");
+
+  // Copy feedback
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Publish
   const [connections, setConnections] = useState<PlatformConnection[]>([]);
@@ -159,7 +166,6 @@ export default function StudioPage() {
         product_id: productId,
         instructions: instructions || undefined,
       });
-      setTaskId(result.task_id);
       setTaskStatus(result);
 
       // Poll for completion
@@ -198,7 +204,7 @@ export default function StudioPage() {
               api.searchBroll(query, "photos", 8, "landscape")
                 .then((res) => {
                   setBrollResults(
-                    (res.results as { id: number; src: { medium: string }; alt: string; photographer: string }[]) || []
+                    (res.results as BrollItem[]) || []
                   );
                 })
                 .catch(console.error)
@@ -357,7 +363,7 @@ export default function StudioPage() {
 
       {/* ── Step Content with animation ────────────────────────────────── */}
       <div
-        className={`transition-all duration-300 ease-out ${
+        className={`transition-all duration-300 ease-out motion-reduce:transition-none ${
           animating ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
         }`}
       >
@@ -489,10 +495,17 @@ export default function StudioPage() {
           {/* Generate button */}
           <button
             onClick={handleGenerate}
-            disabled={!productId || !transcript.trim()}
-            className="w-full px-6 py-3 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+            disabled={!productId || !transcript.trim() || generating}
+            className="w-full px-6 py-3 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 active:scale-[0.98] disabled:opacity-50 transition-all duration-200"
           >
-            Find the Seed and Generate Week
+            {generating ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Generating...
+              </span>
+            ) : (
+              "Generate Content Week"
+            )}
           </button>
         </div>
       )}
@@ -594,16 +607,25 @@ export default function StudioPage() {
 
       {/* ── Step 3: Generating ────────────────────────────────────────── */}
       {step === "Generate" && (
-        <div className="flex flex-col items-center justify-center py-16 space-y-4">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
-          <p className="text-sm font-medium text-gray-900">
-            {taskStatus?.status === "running"
-              ? "Generating your content week..."
-              : "Starting pipeline..."}
-          </p>
-          <p className="text-xs text-gray-500">
-            Finding the seed, drafting newsletter, sharpening posts, building thread
-          </p>
+        <div className="flex flex-col items-center justify-center py-20 space-y-5">
+          <div className="relative">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center animate-pulse">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+            <div className="absolute -inset-2 rounded-3xl border-2 border-blue-200 animate-ping opacity-30" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-gray-900">
+              {taskStatus?.status === "running"
+                ? "Generating your content week..."
+                : "Starting pipeline..."}
+            </p>
+            <p className="text-xs text-gray-500 mt-1.5 max-w-xs mx-auto">
+              Finding the seed, drafting newsletter, sharpening posts, building thread
+            </p>
+          </div>
           {taskStatus && taskStatus.pieces_generated > 0 && (
             <p className="text-xs text-blue-600">
               {taskStatus.pieces_generated} pieces generated so far
@@ -643,7 +665,7 @@ export default function StudioPage() {
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
                     Suggested B-Roll
                   </p>
                   {brollQuery && (
@@ -662,14 +684,15 @@ export default function StudioPage() {
                         setBrollLoading(true);
                         api.searchBroll(brollQuery, "photos", 8, "landscape")
                           .then((res) => setBrollResults(
-                            (res.results as { id: number; src: { medium: string }; alt: string; photographer: string }[]) || []
+                            (res.results as BrollItem[]) || []
                           ))
                           .catch(console.error)
                           .finally(() => setBrollLoading(false));
                       }
                     }}
                     placeholder="Search b-roll..."
-                    className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 w-48"
+                    aria-label="Search b-roll images"
+                    className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow duration-150"
                   />
                 </div>
               </div>
@@ -685,11 +708,11 @@ export default function StudioPage() {
                     <div key={photo.id} className="group relative aspect-video rounded-lg overflow-hidden cursor-pointer">
                       <img
                         src={photo.src.medium}
-                        alt={photo.alt}
-                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        alt={photo.alt || `B-roll by ${photo.photographer}`}
+                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                       />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end">
-                        <p className="text-white text-[10px] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity truncate">
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-end">
+                        <p className="text-white text-[11px] px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 truncate w-full bg-gradient-to-t from-black/60 to-transparent">
                           {photo.photographer}
                         </p>
                       </div>
@@ -710,19 +733,21 @@ export default function StudioPage() {
               <div className="flex bg-gray-100 rounded-lg p-0.5">
                 <button
                   onClick={() => setReviewView("grid")}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                    reviewView === "grid" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+                  aria-label="Week grid view"
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                    reviewView === "grid" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
                 </button>
                 <button
                   onClick={() => setReviewView("list")}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                    reviewView === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+                  aria-label="List view"
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                    reviewView === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
                 </button>
               </div>
             </div>
@@ -733,7 +758,7 @@ export default function StudioPage() {
                     if (p.status === "draft") handleStatusChange(p.id, "approved");
                   });
                 }}
-                className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 active:scale-95 transition-all duration-150"
               >
                 Approve All
               </button>
@@ -746,7 +771,7 @@ export default function StudioPage() {
                   approved.forEach((p) => handlePublish(p.id, activeConn.id));
                 }}
                 disabled={!pieces.some((p) => p.status === "approved") || connections.length === 0}
-                className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
+                className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 disabled:opacity-40 transition-all duration-150"
               >
                 Publish All Approved
               </button>
@@ -802,7 +827,7 @@ export default function StudioPage() {
                             }}
                             className="w-full text-left bg-white rounded-lg p-2 shadow-sm hover:shadow transition-shadow border border-white/80"
                           >
-                            <span className={`inline-block px-1.5 py-0.5 text-[10px] font-medium rounded ${typeBadge.bg} ${typeBadge.text} mb-1`}>
+                            <span className={`inline-block px-1.5 py-0.5 text-[11px] font-medium rounded ${typeBadge.bg} ${typeBadge.text} mb-1`}>
                               {piece.content_type.replace("_", " ")}
                             </span>
                             <p className="text-xs text-gray-800 font-medium truncate">
@@ -812,13 +837,15 @@ export default function StudioPage() {
                               <span className={`w-1.5 h-1.5 rounded-full ${
                                 piece.status === "approved" ? "bg-green-500" : piece.status === "rejected" ? "bg-red-500" : "bg-yellow-500"
                               }`} />
-                              <span className="text-[10px] text-gray-400">{piece.status}</span>
+                              <span className="text-[11px] text-gray-400">{piece.status}</span>
                             </div>
                           </button>
                         );
                       })}
                       {dayPieces.length === 0 && (
-                        <p className="text-[10px] text-gray-400 italic">No content</p>
+                        <p className="text-[11px] text-gray-400 italic">
+                          {day === "Saturday" || day === "Sunday" ? "Rest day" : "Open slot"}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -914,7 +941,7 @@ export default function StudioPage() {
                         {piece.status}
                       </span>
                       <svg
-                        className={`w-4 h-4 text-gray-400 transition-transform ${
+                        className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
                           isExpanded ? "rotate-180" : ""
                         }`}
                         fill="none"
@@ -1117,13 +1144,13 @@ export default function StudioPage() {
                         </button>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(
-                              piece.body
-                            );
+                            navigator.clipboard.writeText(piece.body);
+                            setCopiedId(piece.id);
+                            setTimeout(() => setCopiedId(null), 2000);
                           }}
-                          className="px-3 py-1.5 text-xs font-medium bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 ml-auto"
+                          className="px-3 py-1.5 text-xs font-medium bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 active:scale-95 transition-all duration-150 ml-auto"
                         >
-                          Copy
+                          {copiedId === piece.id ? "Copied" : "Copy"}
                         </button>
 
                         {/* Publish dropdown */}
@@ -1198,11 +1225,22 @@ export default function StudioPage() {
           </div>}
 
           {pieces.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500">
-                No content generated yet. Go back and paste a transcript to get
-                started.
+            <div className="text-center py-16">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-gray-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-900 mb-1">No content yet</p>
+              <p className="text-xs text-gray-500">
+                Paste a transcript and generate to see your content week here
               </p>
+              <button
+                onClick={() => animateToStep("Input")}
+                className="mt-4 px-4 py-2 text-xs font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                Get started
+              </button>
             </div>
           )}
         </div>

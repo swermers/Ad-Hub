@@ -159,7 +159,7 @@ function MetaPreview({ hook, body, cta, authorName, imageUrl }: PlatformPreviewP
       {/* Image area */}
       <div className="aspect-square bg-gray-100 flex items-center justify-center">
         {imageUrl ? (
-          <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+          <img src={imageUrl} alt="Post media" className="w-full h-full object-cover" />
         ) : (
           <div className="text-gray-300 text-xs">Image / Video</div>
         )}
