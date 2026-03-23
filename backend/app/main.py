@@ -10,6 +10,7 @@ from app.config import settings
 from app.database import create_tables
 from app.middleware import AuthMiddleware
 from app.routers import (
+    agent,
     analytics,
     auth,
     bulk_generator,
@@ -78,6 +79,7 @@ app.include_router(bulk_generator.router, prefix="/api/products", tags=["bulk-ge
 app.include_router(bulk_upload.router, prefix="/api/products", tags=["bulk-upload"])
 app.include_router(optimizer.router, prefix="/api/products", tags=["optimizer"])
 app.include_router(image_gen.router, prefix="/api/products", tags=["image-gen"])
+app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
 
 
 # Serve uploaded files (screenshots, references, generated images, etc.)

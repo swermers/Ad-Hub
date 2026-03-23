@@ -344,6 +344,93 @@ export const api = {
       body: JSON.stringify({ password }),
     }),
   checkAuth: () => request<{ ok: boolean }>("/api/auth/me"),
+
+  // ─── Agent API ─────────────────────────────────────────────────────────────
+
+  // System Status
+  getAgentStatus: () => request<AgentSystemStatus>("/api/agent/status"),
+
+  // Content from Transcript (Voice Memo Pipeline)
+  contentFromTranscript: (data: TranscriptRequest) =>
+    request<TranscriptTaskStatus>("/api/agent/content-from-transcript", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getTranscriptStatus: (taskId: string) =>
+    request<TranscriptTaskStatus>(`/api/agent/content-from-transcript-status/${taskId}`),
+
+  // Creative Bundle (One-Shot Ad Package)
+  generateCreativeBundle: (data: CreativeBundleRequest) =>
+    request<CreativeBundleStatus>("/api/agent/creative-bundle", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getCreativeBundleStatus: (taskId: string) =>
+    request<CreativeBundleStatus>(`/api/agent/creative-bundle-status/${taskId}`),
+
+  // Campaigns
+  listCampaigns: (productId?: string, status?: string) => {
+    const params = new URLSearchParams();
+    if (productId) params.set("product_id", productId);
+    if (status) params.set("status", status);
+    const qs = params.toString();
+    return request<CampaignItem[]>(`/api/agent/campaigns${qs ? `?${qs}` : ""}`);
+  },
+  createCampaign: (data: CampaignCreateRequest) =>
+    request<CampaignCreateResponse>("/api/agent/campaigns", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateCampaign: (id: string, data: Partial<CampaignItem>) =>
+    request<{ id: string; status: string; updated: boolean }>(`/api/agent/campaigns/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  // Performance Ingestion
+  reportPerformance: (data: PerformanceReportRequest) =>
+    request<{ recorded: boolean; guardrails_triggered: GuardrailTrigger[] }>("/api/agent/report-performance", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // Safety Guardrails
+  listGuardrails: (productId?: string) => {
+    const qs = productId ? `?product_id=${productId}` : "";
+    return request<GuardrailItem[]>(`/api/agent/guardrails${qs}`);
+  },
+  createGuardrail: (data: GuardrailCreateRequest) =>
+    request<{ id: string; rule_type: string; enabled: boolean }>("/api/agent/guardrails", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateGuardrail: (id: string, data: Partial<GuardrailCreateRequest>) =>
+    request<{ id: string; updated: boolean }>(`/api/agent/guardrails/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  deleteGuardrail: (id: string) =>
+    request<{ deleted: boolean }>(`/api/agent/guardrails/${id}`, { method: "DELETE" }),
+
+  // Kill Switch
+  activateKillSwitch: () =>
+    request<{ paused: number; message: string }>("/api/agent/kill-switch", { method: "POST" }),
+
+  // Approvals
+  getPendingApprovals: () => request<AgentLogItem[]>("/api/agent/pending-approvals"),
+  approveAction: (logId: string, approved: boolean) =>
+    request<{ id: string; approved: boolean; message: string }>(`/api/agent/approve/${logId}`, {
+      method: "POST",
+      body: JSON.stringify({ approved }),
+    }),
+
+  // Activity Log
+  getActivityLog: (limit: number = 50, actionType?: string) => {
+    const params = new URLSearchParams();
+    params.set("limit", String(limit));
+    if (actionType) params.set("action_type", actionType);
+    return request<AgentLogItem[]>(`/api/agent/activity-log?${params.toString()}`);
+  },
 };
 
 // Types
@@ -746,4 +833,156 @@ export interface WinnerAnalysis {
   recommended_angles: string[];
   recommended_templates: string[];
   summary: string;
+}
+
+// ─── Agent API Types ─────────────────────────────────────────────────────────
+
+export interface AgentSystemStatus {
+  status: string;
+  products: { id: string; name: string; product_type: string }[];
+  campaigns: {
+    id: string;
+    name: string;
+    platform: string;
+    status: string;
+    daily_budget: number;
+    total_spend: number;
+  }[];
+  pending_approvals: number;
+  active_guardrails: number;
+  recent_actions: AgentLogItem[];
+}
+
+export interface TranscriptRequest {
+  transcript: string;
+  product_id: string;
+  weekly_mix?: {
+    day: string;
+    content_type: string;
+    platform: string;
+    purpose: string;
+  }[];
+  instructions?: string;
+}
+
+export interface TranscriptTaskStatus {
+  task_id: string;
+  status: string;
+  pieces_generated: number;
+  content_brief: { weekly_theme: string } | null;
+  error: string | null;
+}
+
+export interface CreativeBundleRequest {
+  product_id: string;
+  pain_point_text: string;
+  desired_outcome?: string;
+  template_type?: string;
+  platforms?: string[];
+  funnel_stage?: string;
+  generate_image?: boolean;
+  aspect_ratio?: string;
+}
+
+export interface CreativeBundleStatus {
+  task_id: string;
+  status: string;
+  pieces_generated: number;
+  content_ids?: string[];
+  image_url?: string | null;
+  error: string | null;
+}
+
+export interface CampaignItem {
+  id: string;
+  product_id: string;
+  platform: string;
+  name: string;
+  objective: string;
+  status: string;
+  daily_budget: number;
+  lifetime_budget: number | null;
+  total_spend: number;
+  targeting_config: Record<string, unknown>;
+  destination_url: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+}
+
+export interface CampaignCreateRequest {
+  product_id: string;
+  platform: string;
+  name: string;
+  objective?: string;
+  daily_budget?: number;
+  lifetime_budget?: number;
+  targeting_config?: Record<string, unknown>;
+  destination_url?: string;
+  variation_ids?: string[];
+}
+
+export interface CampaignCreateResponse {
+  id: string;
+  name: string;
+  status: string;
+  daily_budget: number;
+  approval_required: boolean;
+  message: string;
+}
+
+export interface PerformanceReportRequest {
+  campaign_id?: string;
+  ad_variation_id?: string;
+  platform: string;
+  impressions?: number;
+  clicks?: number;
+  conversions?: number;
+  spend?: number;
+  ctr?: number;
+  cpm?: number;
+  roas?: number;
+  collected_at?: string;
+}
+
+export interface GuardrailItem {
+  id: string;
+  product_id: string | null;
+  rule_type: string;
+  threshold_value: number;
+  action: string;
+  cooldown_hours: number;
+  enabled: boolean;
+  last_triggered_at: string | null;
+}
+
+export interface GuardrailCreateRequest {
+  product_id?: string;
+  rule_type: string;
+  threshold_value: number;
+  action?: string;
+  cooldown_hours?: number;
+  enabled?: boolean;
+}
+
+export interface GuardrailTrigger {
+  rule: string;
+  value?: number;
+  spend?: number;
+  roas?: number;
+  threshold: number;
+  action: string;
+}
+
+export interface AgentLogItem {
+  id: string;
+  agent_id?: string;
+  action_type: string;
+  resource_type: string;
+  resource_id: string | null;
+  details: Record<string, unknown>;
+  approval_required?: boolean;
+  approved?: boolean | null;
+  approved_at?: string | null;
+  created_at: string;
 }
