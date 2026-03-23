@@ -6,4 +6,5 @@
  *   npx remotion render src/components/ad-templates/remotion/Root.tsx AdVideo-1x1 output.mp4
  */
 export { AdComposition } from "./AdComposition";
+export { HandDrawnComposition } from "./HandDrawnComposition";
 export { VideoPreview } from "./VideoPreview";

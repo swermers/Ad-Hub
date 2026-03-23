@@ -12,6 +12,7 @@ import { SwissCarouselComposition } from "./SwissCarouselComposition";
 import { SwissStoryComposition } from "./SwissStoryComposition";
 import { SwissBoldComposition } from "./SwissBoldComposition";
 import { SwissStackComposition } from "./SwissStackComposition";
+import { HandDrawnComposition } from "./HandDrawnComposition";
 import type { AspectRatio } from "../types";
 import { ASPECT_DIMENSIONS } from "../types";
 
@@ -25,7 +26,8 @@ export type VideoStyle =
   | "swiss-story"
   | "default"
   | "pas"
-  | "kinetic";
+  | "kinetic"
+  | "hand-drawn";
 
 interface VideoPreviewProps {
   headline: string;
@@ -64,6 +66,7 @@ const STYLE_CONFIG: Record<VideoStyle, {
   default: { component: AdComposition, durationSeconds: 5 },
   pas: { component: PASComposition, durationSeconds: 6 },
   kinetic: { component: KineticTextComposition, durationSeconds: 5 },
+  "hand-drawn": { component: HandDrawnComposition, durationSeconds: 8 },
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -118,4 +121,5 @@ export const VIDEO_STYLE_OPTIONS: { value: VideoStyle; label: string; descriptio
   { value: "default", label: "Smooth Reveal", description: "Elegant text reveal with product entrance" },
   { value: "pas", label: "Problem → Solve", description: "3-scene drama: problem, agitate, solve" },
   { value: "kinetic", label: "Kinetic Type", description: "Words appear one-by-one with bounce effects" },
+  { value: "hand-drawn", label: "Hand-Drawn", description: "Organic, warm feel — animated underlines, sketched accents, b-roll support (8s)" },
 ];

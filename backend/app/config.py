@@ -14,10 +14,14 @@ class Settings(BaseSettings):
     twitter_client_secret: str = ""
     twitter_bearer_token: str = ""
 
-    # Image Generation (OpenAI DALL-E 3)
+    # OpenAI (Image Generation + Whisper Transcription)
     openai_api_key: str = ""
     image_gen_model: str = "dall-e-3"
     image_gen_size: str = "1024x1024"
+    whisper_model: str = "whisper-1"
+
+    # Pexels (B-roll stock footage/images)
+    pexels_api_key: str = ""
 
     # Meta/Facebook Ads API
     meta_app_id: str = ""

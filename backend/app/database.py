@@ -50,6 +50,9 @@ def create_tables():
     from app.models import (  # noqa: F401
         AdTemplate,
         AdVariation,
+        AgentLog,
+        Campaign,
+        CampaignAdVariation,
         ContentPiece,
         CrawledPage,
         OptimizationConfig,
@@ -58,7 +61,9 @@ def create_tables():
         PerformanceMetric,
         PlatformConnection,
         Product,
+        SafetyGuardrail,
         ScheduledPost,
+        Seed,
         UploadedDocument,
     )
 
