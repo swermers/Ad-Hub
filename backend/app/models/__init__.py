@@ -4,6 +4,7 @@ from app.models.content import ContentPiece
 from app.models.crawl import CrawledPage, UploadedDocument
 from app.models.distribution import PerformanceMetric, PlatformConnection, ScheduledPost
 from app.models.product import Product
+from app.models.seed_bank import Seed
 
 __all__ = [
     "Product",
@@ -22,4 +23,5 @@ __all__ = [
     "CampaignAdVariation",
     "SafetyGuardrail",
     "AgentLog",
+    "Seed",
 ]

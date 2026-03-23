@@ -153,6 +153,21 @@ export const api = {
   postNow: (id: string) =>
     request<ScheduledPost>(`/api/schedule/${id}/post-now`, { method: "POST" }),
 
+  // Seed Bank
+  listSeeds: (productId?: string, status?: string) => {
+    const params = new URLSearchParams();
+    if (productId) params.set("product_id", productId);
+    if (status) params.set("status", status);
+    const qs = params.toString();
+    return request<SeedItem[]>(`/api/seeds${qs ? `?${qs}` : ""}`);
+  },
+  createSeed: (data: SeedCreateRequest) =>
+    request<SeedItem>("/api/seeds", { method: "POST", body: JSON.stringify(data) }),
+  updateSeed: (id: string, data: Partial<SeedUpdateRequest>) =>
+    request<SeedItem>(`/api/seeds/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteSeed: (id: string) =>
+    request<{ deleted: boolean }>(`/api/seeds/${id}`, { method: "DELETE" }),
+
   // Analytics
   getOverview: (productId?: string, days: number = 30) => {
     const searchParams = new URLSearchParams();
@@ -454,6 +469,16 @@ export const api = {
     params.set("limit", String(limit));
     if (actionType) params.set("action_type", actionType);
     return request<AgentLogItem[]>(`/api/agent/activity-log?${params.toString()}`);
+  },
+
+  searchBroll: (query: string, mediaType: "photos" | "videos" = "photos", perPage = 10, orientation = "landscape") => {
+    const params = new URLSearchParams({
+      query,
+      media_type: mediaType,
+      per_page: String(perPage),
+      orientation,
+    });
+    return request<BrollSearchResult>(`/api/agent/broll/search?${params.toString()}`);
   },
 };
 
@@ -1015,4 +1040,80 @@ export interface AgentLogItem {
   approved?: boolean | null;
   approved_at?: string | null;
   created_at: string;
+}
+
+export interface BrollPhoto {
+  id: number;
+  url: string;
+  src: { original: string; large: string; medium: string };
+  alt: string;
+  photographer: string;
+}
+
+export interface BrollVideo {
+  id: number;
+  url: string;
+  image: string;
+  duration: number;
+  video_files: { link: string; width: number; height: number; quality: string }[];
+  photographer: string;
+}
+
+export interface SeedItem {
+  id: string;
+  product_id: string;
+  seed: string;
+  heat: string[];
+  audience_hook: string;
+  template_fit: string;
+  subject_line: string | null;
+  metaphor: string | null;
+  weekly_theme: string | null;
+  verdict: string;
+  raw_transcript: string | null;
+  raw_ideas: string[];
+  source: string;
+  status: string;
+  used_at: string | null;
+  content_piece_id: string | null;
+  notes: string | null;
+  priority: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SeedCreateRequest {
+  product_id: string;
+  seed: string;
+  heat?: string[];
+  audience_hook?: string;
+  template_fit?: string;
+  subject_line?: string;
+  metaphor?: string;
+  weekly_theme?: string;
+  verdict?: string;
+  raw_transcript?: string;
+  raw_ideas?: string[];
+  source?: string;
+  notes?: string;
+  priority?: number;
+}
+
+export interface SeedUpdateRequest {
+  seed?: string;
+  audience_hook?: string;
+  template_fit?: string;
+  subject_line?: string;
+  metaphor?: string;
+  weekly_theme?: string;
+  notes?: string;
+  priority?: number;
+  status?: string;
+}
+
+export interface BrollSearchResult {
+  query: string;
+  media_type: string;
+  total_results: number;
+  results: (BrollPhoto | BrollVideo)[];
 }

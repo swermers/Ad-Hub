@@ -24,6 +24,7 @@ from app.routers import (
     pain_points,
     products,
     schedule,
+    seeds,
     templates,
 )
 
@@ -80,6 +81,7 @@ app.include_router(bulk_upload.router, prefix="/api/products", tags=["bulk-uploa
 app.include_router(optimizer.router, prefix="/api/products", tags=["optimizer"])
 app.include_router(image_gen.router, prefix="/api/products", tags=["image-gen"])
 app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
+app.include_router(seeds.router, prefix="/api/seeds", tags=["seeds"])
 
 
 # Serve uploaded files (screenshots, references, generated images, etc.)

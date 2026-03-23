@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     image_gen_size: str = "1024x1024"
     whisper_model: str = "whisper-1"
 
+    # Pexels (B-roll stock footage/images)
+    pexels_api_key: str = ""
+
     # Meta/Facebook Ads API
     meta_app_id: str = ""
     meta_app_secret: str = ""

@@ -63,6 +63,7 @@ def create_tables():
         Product,
         SafetyGuardrail,
         ScheduledPost,
+        Seed,
         UploadedDocument,
     )
 

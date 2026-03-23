@@ -7,6 +7,7 @@ import {
   type Product,
   type TranscriptTaskStatus,
   type ContentPiece,
+  type PlatformConnection,
 } from "@/lib/api";
 
 const STEPS = ["Input", "Brief", "Generate", "Review"] as const;
@@ -65,6 +66,21 @@ export default function StudioPage() {
   // Review
   const [pieces, setPieces] = useState<ContentPiece[]>([]);
   const [expandedPiece, setExpandedPiece] = useState<string | null>(null);
+
+  // Publish
+  const [connections, setConnections] = useState<PlatformConnection[]>([]);
+  const [publishingPieceId, setPublishingPieceId] = useState<string | null>(null);
+  const [publishStatus, setPublishStatus] = useState<Record<string, "publishing" | "published" | "failed">>({});
+
+  // Load connections when entering Review step
+  useEffect(() => {
+    if (step === "Review" && productId) {
+      api
+        .listConnections(productId)
+        .then(setConnections)
+        .catch(console.error);
+    }
+  }, [step, productId]);
 
   useEffect(() => {
     api
@@ -173,6 +189,30 @@ export default function StudioPage() {
       );
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // ── Publish ────────────────────────────────────────────────────────────
+
+  const handlePublish = async (pieceId: string, connectionId: string) => {
+    setPublishStatus((prev) => ({ ...prev, [pieceId]: "publishing" }));
+    setPublishingPieceId(null);
+    try {
+      // Create a scheduled post for "now" and immediately publish
+      const scheduled = await api.createScheduledPost({
+        content_id: pieceId,
+        connection_id: connectionId,
+        scheduled_at: new Date().toISOString(),
+      });
+      await api.postNow(scheduled.id);
+      setPublishStatus((prev) => ({ ...prev, [pieceId]: "published" }));
+      // Update piece status to posted
+      setPieces((prev) =>
+        prev.map((p) => (p.id === pieceId ? { ...p, status: "posted" } : p))
+      );
+    } catch (err) {
+      console.error(err);
+      setPublishStatus((prev) => ({ ...prev, [pieceId]: "failed" }));
     }
   };
 
@@ -548,6 +588,19 @@ export default function StudioPage() {
                 Approve All
               </button>
               <button
+                onClick={() => {
+                  const approved = pieces.filter((p) => p.status === "approved");
+                  if (approved.length === 0 || connections.length === 0) return;
+                  const activeConn = connections.find((c) => c.status === "active");
+                  if (!activeConn) return;
+                  approved.forEach((p) => handlePublish(p.id, activeConn.id));
+                }}
+                disabled={!pieces.some((p) => p.status === "approved") || connections.length === 0}
+                className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
+              >
+                Publish All Approved
+              </button>
+              <button
                 onClick={() => setStep("Input")}
                 className="px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
               >
@@ -776,6 +829,70 @@ export default function StudioPage() {
                         >
                           Copy
                         </button>
+
+                        {/* Publish dropdown */}
+                        <div className="relative">
+                          {publishStatus[piece.id] === "publishing" ? (
+                            <span className="px-3 py-1.5 text-xs font-medium text-blue-600">
+                              Publishing...
+                            </span>
+                          ) : publishStatus[piece.id] === "published" ? (
+                            <span className="px-3 py-1.5 text-xs font-medium text-green-600">
+                              Published
+                            </span>
+                          ) : publishStatus[piece.id] === "failed" ? (
+                            <button
+                              onClick={() => setPublishingPieceId(piece.id)}
+                              className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50"
+                            >
+                              Retry
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                setPublishingPieceId(
+                                  publishingPieceId === piece.id ? null : piece.id
+                                )
+                              }
+                              disabled={piece.status !== "approved" && piece.status !== "posted"}
+                              className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
+                            >
+                              Publish
+                            </button>
+                          )}
+
+                          {publishingPieceId === piece.id && (
+                            <div className="absolute bottom-full right-0 mb-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-2">
+                              {connections.length === 0 ? (
+                                <p className="text-xs text-gray-500 px-2 py-1">
+                                  No connections.{" "}
+                                  <a href="/settings" className="text-blue-600 underline">
+                                    Add one
+                                  </a>
+                                </p>
+                              ) : (
+                                connections
+                                  .filter((c) => c.status === "active")
+                                  .map((conn) => (
+                                    <button
+                                      key={conn.id}
+                                      onClick={() => handlePublish(piece.id, conn.id)}
+                                      className="w-full text-left px-3 py-2 text-xs rounded hover:bg-gray-100 flex items-center gap-2"
+                                    >
+                                      <span className="font-medium capitalize">
+                                        {conn.platform}
+                                      </span>
+                                      {conn.platform_account_name && (
+                                        <span className="text-gray-400 truncate">
+                                          {conn.platform_account_name}
+                                        </span>
+                                      )}
+                                    </button>
+                                  ))
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}

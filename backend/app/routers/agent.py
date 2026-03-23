@@ -9,7 +9,8 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+import httpx
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -894,3 +895,75 @@ def activity_log(limit: int = 50, action_type: str | None = None, db: Session = 
         }
         for l in logs
     ]
+
+
+# ─── B-Roll Stock Media Search ────────────────────────────────────────────────
+
+
+@router.get("/broll/search")
+async def search_broll(
+    query: str = Query(..., description="Search term for b-roll (e.g. 'calm ocean waves')"),
+    media_type: str = Query("photos", description="'photos' or 'videos'"),
+    per_page: int = Query(10, ge=1, le=30),
+    orientation: str = Query("landscape", description="landscape, portrait, or square"),
+):
+    """Search Pexels for stock photos/videos to use as b-roll in compositions."""
+    from app.config import settings
+
+    if not settings.pexels_api_key:
+        raise HTTPException(status_code=503, detail="Pexels API key not configured")
+
+    headers = {"Authorization": settings.pexels_api_key}
+    base = "https://api.pexels.com"
+
+    async with httpx.AsyncClient() as client:
+        if media_type == "videos":
+            resp = await client.get(
+                f"{base}/videos/search",
+                headers=headers,
+                params={"query": query, "per_page": per_page, "orientation": orientation},
+            )
+        else:
+            resp = await client.get(
+                f"{base}/v1/search",
+                headers=headers,
+                params={"query": query, "per_page": per_page, "orientation": orientation},
+            )
+
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail="Pexels API error")
+
+        data = resp.json()
+
+    if media_type == "videos":
+        results = [
+            {
+                "id": v["id"],
+                "url": v["url"],
+                "image": v.get("image", ""),
+                "duration": v.get("duration"),
+                "video_files": [
+                    {"link": f["link"], "width": f.get("width"), "height": f.get("height"), "quality": f.get("quality")}
+                    for f in v.get("video_files", [])[:3]
+                ],
+                "photographer": v.get("user", {}).get("name", ""),
+            }
+            for v in data.get("videos", [])
+        ]
+    else:
+        results = [
+            {
+                "id": p["id"],
+                "url": p["url"],
+                "src": {
+                    "original": p["src"]["original"],
+                    "large": p["src"].get("large", ""),
+                    "medium": p["src"].get("medium", ""),
+                },
+                "alt": p.get("alt", ""),
+                "photographer": p.get("photographer", ""),
+            }
+            for p in data.get("photos", [])
+        ]
+
+    return {"query": query, "media_type": media_type, "total_results": data.get("total_results", 0), "results": results}
