@@ -79,6 +79,307 @@ The human's job reduces to **taste and direction**. The bot handles all executio
 > Feed your ideas and voice. Approve what you like. The bot handles everything else —
 > content creation, ad deployment, optimization, and continuous improvement.
 
+### Pricing & Cost Structure (Model C — Hybrid Tiers)
+
+Absorb token costs into the subscription. The "unlimited feel" is worth more than
+nickel-and-diming on API usage. Tokens are a rounding error relative to subscription price.
+
+**Subscription Tiers:**
+
+```
+Starter — $199/month
+├── 100 content generations/month
+├── 2 platforms connected
+├── Basic brand profile
+├── Tokens included (built into price)
+
+Pro — $399/month
+├── 500 generations/month
+├── Unlimited platforms
+├── Full brand profile + image library sync
+├── Ad management (bot runs their ads)
+├── Tokens included
+
+Agency — $999/month
+├── Up to 10 client brands
+├── Unlimited generations
+├── White-label option
+├── Tokens included
+```
+
+**Actual Cost Per Customer (API):**
+
+```
+Content Generation (Claude API)
+├── Idea Sharpener call:           ~$0.02-0.05
+├── Newsletter draft + edit:       ~$0.08-0.15
+├── 5 social posts:                ~$0.05-0.10
+├── X thread generation:           ~$0.03-0.06
+├── Full weekly pipeline:          ~$0.20-0.40
+├── Monthly (4 weeks):             ~$0.80-1.60
+
+Ad Copy Generation
+├── Bulk ad variations (20):       ~$0.15-0.30
+├── Monthly ad refresh (4x):       ~$0.60-1.20
+
+Research / Intelligence (Tier 5)
+├── Competitor analysis:           ~$0.10-0.20
+├── Niche trend scraping:          ~$0.05-0.10
+├── Weekly intelligence brief:     ~$0.15-0.25
+├── Monthly:                       ~$1.20-2.20
+
+Image Generation (DALL-E/Flux)
+├── Per image:                     ~$0.04-0.08
+├── Monthly (20 images):           ~$0.80-1.60
+
+B-roll Search (Pexels)
+├── Free tier:                     200 requests/month
+├── Effectively:                   $0
+
+Whisper Transcription
+├── Per minute of audio:           ~$0.006
+├── Monthly (30 min of memos):     ~$0.18
+
+TOTAL MONTHLY API COST PER CUSTOMER:  ~$3-7 typical
+                                      ~$15-40 heavy user
+```
+
+At $299/month with $7 average API cost = **97% gross margin**.
+Even heaviest user at $40/month = **87% margin**.
+
+**Real costs to watch:**
+1. Compute (hosting bot instances) — ~$20-50/customer/month on Railway/Fly
+2. Your time (support, onboarding) — the real expense early on
+
+Price for compute and time, not API tokens. Tokens are a rounding error.
+
+### Ad Spend — Keep It Completely Separate
+
+**Never touch their ad spend money.**
+
+```
+Your subscription fee = your revenue (platform + bot + tokens)
+Their ad spend = goes directly to Meta/Google through their own ad accounts
+```
+
+You manage campaigns via API, but money flows from their payment method to Meta/Google
+directly. This is how every ad management tool works (AdEspresso, Revealbot, Smartly).
+You don't want the liability, the accounting complexity, or the regulatory burden of
+handling ad spend.
+
+---
+
+## Ideal Customer Profile
+
+The ideal customer has:
+1. **Something to sell** (product, service, expertise)
+2. **A brand voice** (even informal — they know how they talk)
+3. **Visual assets** (or can easily create them — property photos, product shots)
+4. **Ad budget** (even small — $500-2k/month)
+5. **No time or expertise** to execute consistently
+
+### Tier 1 — Best Fit (highest pain, fastest adoption)
+
+Solo operators / small teams who are good at their craft but bad at marketing consistently:
+
+- **Real estate agents** — Perfect fit. They have listings (visual content), a local niche,
+  need consistent posting, and their biggest problem is time. They know what to say about
+  a property but never get around to posting. Upload property photos, bot handles everything.
+  They already spend money on marketing they hate (Zillow leads, generic Facebook ads) —
+  you're replacing an expense they already have with something better.
+
+- **Course creators / coaches** — Tons of ideas (voice memos from walks, podcast riffs)
+  but struggle to turn those into a weekly content calendar. The voice memo → content week
+  pipeline is literally built for this person.
+
+- **E-commerce DTC brands (1-5 person teams)** — Know their product, have product photos,
+  can't afford a marketing hire. Need ads on Meta, content on Instagram, email going out.
+  Currently doing it manually or not at all.
+
+- **Local service businesses (dentists, gyms, law firms, med spas)** — Have budget for
+  ads but zero time or knowledge to run them. Currently paying an agency $2-5k/month for
+  mediocre results. This tool at $200-500/month with better output is a no-brainer.
+
+### Tier 2 — Great Fit (slightly more complex)
+
+- **International schools like LAS** — Need multi-platform content in a polished brand
+  voice, have a photo library, need admissions-focused ads running consistently. Currently
+  have a 1-2 person marketing team that's overwhelmed.
+
+- **SaaS companies (seed to Series A)** — Founders who know they need content marketing
+  and paid acquisition but are focused on product. Maintain presence without hiring a
+  content person.
+
+- **Agencies themselves** — The sleeper hit. A small agency managing 10 clients could use
+  the tool to run all 10 with one person instead of five. You'd be infrastructure for
+  agencies, not competing with them.
+
+### Who Is NOT a Good Fit (Yet)
+
+- **Enterprise brands** — Too many approval layers, legal review, brand police. They need
+  Sprinklr, not this.
+- **People with no existing business** — No product, audience, or budget. The tool
+  amplifies what exists.
+- **Heavily regulated industries** — Pharma, financial services. Every piece of copy needs
+  legal review. The bot can't navigate that yet.
+
+---
+
+## Adoption & Onboarding
+
+### Hurdle #1 — API Keys (Biggest Friction)
+
+**Recommendation: OAuth flows, not API key paste.**
+
+Use OAuth so the client just clicks "Connect Facebook" and authorizes the app. They never
+see an API key. Tokens stored per-tenant. This is how Buffer, Hootsuite, and every social
+tool works.
+
+Requires getting approved as a Meta/X/LinkedIn developer app — one-time hurdle for us,
+not per-client.
+
+- [ ] OAuth flow for Meta (Facebook + Instagram)
+- [ ] OAuth flow for LinkedIn
+- [ ] OAuth flow for X
+- [ ] OAuth flow for Google Ads
+- [ ] Per-tenant token storage with refresh handling
+
+### Hurdle #2 — Trust ("Will the bot mess up my brand?")
+
+The real adoption killer. Not technical setup — the fear of letting AI represent their
+brand publicly. Solved by the Brand Profile System + Compliance Pipeline + Human Approval
+Gate (see below).
+
+### Hurdle #3 — Cost Clarity
+
+Clients need to understand what they're paying for (your service) vs. what they're spending
+(ad budgets on platforms). Keep these **completely separate** in all messaging and billing.
+
+---
+
+## Brand Profile System
+
+First-class database entity, not just a text field. Structured fields for voice, visual,
+and rules. This is the foundation everything else builds on.
+
+**Captured during onboarding, enforced on every generation:**
+
+```
+Voice & Tone
+├── Writing samples (5-10 real posts/emails they love)
+├── Tone descriptors (warm / authoritative / playful / formal)
+├── Words they ALWAYS use ("learners" not "students" for LAS)
+├── Words they NEVER use (competitors' names, certain slang)
+├── Sentence style (short punchy vs. long flowing)
+
+Visual Identity
+├── Logo files + usage rules (min size, clear space)
+├── Brand colors (primary, secondary, accent — exact hex)
+├── Approved fonts
+├── Photography style guide (candid vs. posed, filters, mood)
+├── Image library (approved photos — synced from cloud storage)
+├── Template preferences (which ad templates match their brand)
+
+Content Rules
+├── Topics they cover vs. topics that are off-limits
+├── Claims they can make vs. claims that need legal review
+├── Hashtag strategy
+├── Emoji usage (yes / no / which ones)
+├── CTA style preferences
+├── Regulatory constraints (education sector = specific rules)
+
+Platform-Specific Rules
+├── LinkedIn: formal, thought leadership tone
+├── Instagram: visual-first, shorter copy
+├── X: conversational, thread-friendly
+├── Meta Ads: compliant with ad policies, no prohibited claims
+```
+
+---
+
+## Brand Enforcement & Compliance Pipeline
+
+Four layers between generation and publishing. Even if each layer is simple at launch,
+having the pipeline in place means it can get smarter over time.
+
+### Layer 1 — Generation Constraints
+
+The brand profile becomes part of every prompt. Not as a suggestion — as **hard constraints**.
+"You MUST use these colors. You MUST NOT use the word 'cheap'. Voice samples attached."
+
+### Layer 2 — Post-Generation Compliance Check
+
+After the bot generates, run a brand + policy compliance check before anything enters
+the approval queue:
+
+- [ ] Does it use approved colors/fonts?
+- [ ] Does the copy match the voice profile? (compare against embeddings of writing samples)
+- [ ] Does it contain any forbidden words/topics?
+- [ ] Does it violate platform ad policies?
+- [ ] Does it comply with industry-specific regulations?
+- [ ] Flag anything that doesn't pass — with a reason
+
+**Industry-Specific Compliance Rulesets:**
+- [ ] Education — rules about targeting minors, enrollment claims, financial aid language
+- [ ] Real estate — Fair Housing Act compliance, no discriminatory targeting
+- [ ] Health/wellness — no medical claims without disclaimers
+- [ ] General — Meta/Google/X ad policy checkers per platform
+
+### Layer 3 — Human Approval Gate
+
+Nothing goes live without approval (at least initially). Over time, the client can loosen:
+- "Auto-publish social posts that pass compliance. Ads always need approval."
+- Configurable per content type and per platform
+
+### Layer 4 — Learning Loop (Rejection Feedback)
+
+When a client rejects content, **capture why**:
+- "Off-brand voice"
+- "Wrong imagery"
+- "Policy concern"
+- "Too casual / too formal"
+- "Other" (free text)
+
+This data is gold for the self-improvement loop. Feed rejections back into the brand
+profile automatically. Over time the bot learns: "they always reject carousel posts",
+"they prefer shorter hooks", "never use that CTA style."
+
+---
+
+## Known Gaps & Mitigations
+
+Being honest about where this can go wrong:
+
+### 1. Visual Brand Consistency
+Colors and fonts can be constrained, but ensuring imagery *feels* on-brand is subjective.
+LAS wants warm, alpine, international-school imagery — not generic stock photos.
+**Mitigation:** Per-client image library synced from cloud storage (Tier 6). Bot picks
+from approved images first, only suggests stock when library is exhausted. Stock always
+flagged for human review.
+
+### 2. Voice Drift Over Time
+The bot generates hundreds of pieces. Without active recalibration, it slowly drifts from
+the brand voice.
+**Mitigation:** Periodic voice audit — compare recent outputs against original samples.
+Alert if similarity drops below threshold. Versioned voice profiles with rollback.
+
+### 3. Context the Bot Can't Know
+A school might have a PR situation, a sensitive event, a policy change that makes certain
+content inappropriate. The bot doesn't know internal politics.
+**Mitigation:** "Content pause" topics the client can add on the fly. Telegram command:
+"pause anything about campus safety this week."
+
+### 4. Platform Policy Compliance
+Meta and Google have strict ad policies, especially for education, housing, and finance.
+The bot needs to know these rules per-vertical.
+**Mitigation:** Build a compliance ruleset per industry vertical. Education has specific
+rules about targeting minors, making enrollment claims, etc. (See Compliance Pipeline above.)
+
+### 5. Multi-Language / Multi-Market
+A school like LAS has international audiences. Content might need to work across cultures.
+**Mitigation:** Flag as Phase 2 concern, but architect the brand profile to support
+locale-specific variants from the start.
+
 ---
 
 ## What Already Exists (Built)
