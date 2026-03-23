@@ -110,14 +110,14 @@ export default function ContentDetailPage() {
   if (loading) return (
     <div className="max-w-5xl">
       <div className="animate-pulse space-y-4">
-        <div className="h-4 w-24 bg-gray-200 rounded" />
-        <div className="h-8 w-64 bg-gray-200 rounded" />
+        <div className="h-4 w-24 bg-white/10 rounded" />
+        <div className="h-8 w-64 bg-white/10 rounded" />
         <div className="grid grid-cols-2 gap-6">
-          <div className="aspect-square bg-gray-100 rounded-xl" />
+          <div className="aspect-square bg-white/10 rounded-xl" />
           <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded w-full" />
-            <div className="h-4 bg-gray-200 rounded w-3/4" />
-            <div className="h-4 bg-gray-200 rounded w-1/2" />
+            <div className="h-4 bg-white/10 rounded w-full" />
+            <div className="h-4 bg-white/10 rounded w-3/4" />
+            <div className="h-4 bg-white/10 rounded w-1/2" />
           </div>
         </div>
       </div>
@@ -269,7 +269,7 @@ export default function ContentDetailPage() {
       {/* Back link */}
       <button
         onClick={() => router.push("/content")}
-        className="text-sm text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1"
+        className="text-sm text-[#E5E1E4]/50 hover:text-[#dbc2ad] mb-4 flex items-center gap-1"
       >
         <span>&larr;</span> Back to Content Queue
       </button>
@@ -277,17 +277,17 @@ export default function ContentDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-[#E5E1E4]">
             {piece.title || "Untitled Content"}
           </h1>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-white/10 text-[#dbc2ad] border border-white/10">
               {typeLabel[piece.content_type] || piece.content_type}
             </span>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-white/10 text-[#dbc2ad] border border-white/10">
               {platformLabel[piece.platform] || piece.platform}
             </span>
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium border ${funnelColors[piece.funnel_stage] || "bg-gray-50 text-gray-600 border-gray-200"}`}>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium border ${funnelColors[piece.funnel_stage] || "bg-white/5 text-[#dbc2ad] border-white/10"}`}>
               {piece.funnel_stage.charAt(0).toUpperCase() + piece.funnel_stage.slice(1)}
             </span>
           </div>
@@ -301,16 +301,16 @@ export default function ContentDetailPage() {
         {isVisualContent && showVisual && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">Visual Preview</h3>
+              <h3 className="text-sm font-semibold text-[#dbc2ad]">Visual Preview</h3>
               <div className="flex items-center gap-2">
                 {/* Video / Static toggle */}
-                <div className="flex rounded-md border border-gray-200 overflow-hidden">
+                <div className="flex rounded-md border border-white/10 overflow-hidden">
                   <button
                     onClick={() => setPreviewMode("video")}
                     className={`px-2.5 py-1 text-xs font-medium transition-all ${
                       previewMode === "video"
                         ? "bg-[#FF9500] text-[#2d1600]"
-                        : "bg-white text-gray-500 hover:bg-gray-50"
+                        : "bg-[#201f21] text-[#E5E1E4]/50 hover:bg-white/5"
                     }`}
                   >
                     Video
@@ -320,7 +320,7 @@ export default function ContentDetailPage() {
                     className={`px-2.5 py-1 text-xs font-medium transition-all ${
                       previewMode === "static"
                         ? "bg-[#FF9500] text-[#2d1600]"
-                        : "bg-white text-gray-500 hover:bg-gray-50"
+                        : "bg-[#201f21] text-[#E5E1E4]/50 hover:bg-white/5"
                     }`}
                   >
                     Static
@@ -328,7 +328,7 @@ export default function ContentDetailPage() {
                 </div>
                 <button
                   onClick={() => setShowVisual(false)}
-                  className="text-xs text-gray-400 hover:text-gray-600"
+                  className="text-xs text-[#E5E1E4]/40 hover:text-[#dbc2ad]"
                 >
                   Hide
                 </button>
@@ -345,7 +345,7 @@ export default function ContentDetailPage() {
                     className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
                       videoStyle === opt.value
                         ? "bg-[#FF9500] text-[#2d1600] border-gray-900"
-                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                        : "bg-[#201f21] text-[#E5E1E4]/50 border-white/10 hover:border-white/10"
                     }`}
                     title={opt.description}
                   >
@@ -362,7 +362,7 @@ export default function ContentDetailPage() {
                     className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
                       previewTemplate === opt.value
                         ? "bg-[#FF9500] text-[#2d1600] border-gray-900"
-                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                        : "bg-[#201f21] text-[#E5E1E4]/50 border-white/10 hover:border-white/10"
                     }`}
                   >
                     {opt.label}
@@ -371,7 +371,7 @@ export default function ContentDetailPage() {
                 <select
                   value={previewTemplate}
                   onChange={(e) => setPreviewTemplate(e.target.value)}
-                  className="px-2 py-1 rounded-md text-xs border border-gray-200 bg-white text-gray-500"
+                  className="px-2 py-1 rounded-md text-xs border border-white/10 bg-[#201f21] text-[#E5E1E4]/50"
                 >
                   {TEMPLATE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -389,7 +389,7 @@ export default function ContentDetailPage() {
                   className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
                     previewAspect === ratio
                       ? "bg-[#FF9500] text-[#2d1600] border-gray-900"
-                      : "bg-white text-gray-500 border-gray-200"
+                      : "bg-[#201f21] text-[#E5E1E4]/50 border-white/10"
                   }`}
                 >
                   {ratio}
@@ -415,7 +415,7 @@ export default function ContentDetailPage() {
               />
             ) : (
               <div
-                className="rounded-xl overflow-hidden shadow-lg border border-gray-200"
+                className="rounded-xl overflow-hidden shadow-lg border border-white/10"
                 style={{ width: previewWidth, height: previewHeight }}
               >
                 <div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left" }}>
@@ -437,14 +437,14 @@ export default function ContentDetailPage() {
             {/* Brand color swatches if available */}
             {brandColors.length > 0 && (
               <div className="flex items-center gap-2 mt-3">
-                <span className="text-xs text-gray-400">Brand colors:</span>
+                <span className="text-xs text-[#E5E1E4]/40">Brand colors:</span>
                 {brandColors.slice(0, 5).map((c, i) => (
                   <button
                     key={i}
                     onClick={() => {
                       // Quick way to cycle accent color
                     }}
-                    className="w-5 h-5 rounded-full border border-gray-200 shadow-sm"
+                    className="w-5 h-5 rounded-full border border-white/10 shadow-sm"
                     style={{ backgroundColor: c }}
                     title={c}
                   />
@@ -475,25 +475,25 @@ export default function ContentDetailPage() {
           )}
 
           {/* Content body */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
+          <div className="bg-[#201f21] rounded-xl border border-white/10 overflow-hidden mb-4">
             {editing ? (
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">Title</label>
                   <input
                     type="text"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Body</label>
+                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">Body</label>
                   <textarea
                     value={editBody}
                     onChange={(e) => setEditBody(e.target.value)}
                     rows={12}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+                    className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm font-mono"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -506,7 +506,7 @@ export default function ContentDetailPage() {
                   </button>
                   <button
                     onClick={() => setEditing(false)}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                    className="px-4 py-2 bg-white/10 text-[#dbc2ad] rounded-lg text-sm font-medium hover:bg-white/10"
                   >
                     Cancel
                   </button>
@@ -514,7 +514,7 @@ export default function ContentDetailPage() {
               </div>
             ) : (
               <div className="p-6">
-                <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed whitespace-pre-wrap">
+                <div className="prose prose-sm max-w-none text-[#E5E1E4] leading-relaxed whitespace-pre-wrap">
                   {piece.body}
                 </div>
               </div>
@@ -522,9 +522,9 @@ export default function ContentDetailPage() {
 
             {/* CTA inside card */}
             {piece.cta && !editing && (
-              <div className="border-t border-gray-100 bg-gray-50 px-6 py-3">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Call to Action</p>
-                <p className="text-sm font-medium text-gray-900">{piece.cta}</p>
+              <div className="border-t border-white/5 bg-white/5 px-6 py-3">
+                <p className="text-xs font-semibold text-[#E5E1E4]/40 uppercase tracking-wide mb-1">Call to Action</p>
+                <p className="text-sm font-medium text-[#E5E1E4]">{piece.cta}</p>
               </div>
             )}
           </div>
@@ -551,7 +551,7 @@ export default function ContentDetailPage() {
             </button>
             <button
               onClick={() => handleStatusChange("rejected")}
-              className="px-4 py-2 bg-white text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
+              className="px-4 py-2 bg-[#201f21] text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
             >
               Reject
             </button>
@@ -560,14 +560,14 @@ export default function ContentDetailPage() {
         {piece.status === "approved" && (
           <button
             onClick={() => handleStatusChange("draft")}
-            className="px-4 py-2 bg-white text-gray-600 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
           >
             Move to Draft
           </button>
         )}
         <button
           onClick={handleCopy}
-          className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
         >
           {copied ? "Copied!" : "Copy"}
         </button>
@@ -583,7 +583,7 @@ export default function ContentDetailPage() {
         {!editing && (
           <button
             onClick={() => setEditing(true)}
-            className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
           >
             Edit
           </button>
@@ -600,7 +600,7 @@ export default function ContentDetailPage() {
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
-              className="px-3 py-1.5 text-gray-500 text-xs font-medium hover:text-gray-700"
+              className="px-3 py-1.5 text-[#E5E1E4]/50 text-xs font-medium hover:text-[#dbc2ad]"
             >
               Cancel
             </button>
@@ -630,14 +630,14 @@ export default function ContentDetailPage() {
             </div>
           )}
           {piece.image_url && (
-            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+            <div className="rounded-xl overflow-hidden border border-white/10 shadow-sm">
               <img
                 src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${piece.image_url}`}
                 alt="Generated ad image"
                 className="w-full max-w-lg"
               />
-              <div className="bg-gray-50 px-4 py-2 flex items-center justify-between">
-                <span className="text-xs text-gray-400">AI-generated ad image</span>
+              <div className="bg-white/5 px-4 py-2 flex items-center justify-between">
+                <span className="text-xs text-[#E5E1E4]/40">AI-generated ad image</span>
                 <a
                   href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${piece.image_url}`}
                   download
@@ -653,7 +653,7 @@ export default function ContentDetailPage() {
 
       {/* Generation info */}
       {metadata && (
-        <div className="text-xs text-gray-400 flex items-center gap-3">
+        <div className="text-xs text-[#E5E1E4]/40 flex items-center gap-3">
           <span>
             Generated by {String(metadata.model || "AI").replace(/-\d+$/, "")}
           </span>
@@ -678,7 +678,7 @@ function StatusBadge({ status }: { status: string }) {
     posted: { bg: "bg-blue-50 text-blue-700 border-blue-200", dot: "bg-blue-400" },
     rejected: { bg: "bg-red-50 text-red-700 border-red-200", dot: "bg-red-400" },
   };
-  const c = config[status] || { bg: "bg-gray-50 text-gray-700 border-gray-200", dot: "bg-gray-400" };
+  const c = config[status] || { bg: "bg-white/5 text-[#dbc2ad] border-white/10", dot: "bg-gray-400" };
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${c.bg}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />

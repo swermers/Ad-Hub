@@ -96,14 +96,14 @@ export default function AnalyticsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-[#E5E1E4]">Analytics</h1>
+          <p className="text-[#E5E1E4]/50 mt-1">
             Performance metrics and AI-powered insights
           </p>
         </div>
         <button
           onClick={handleCollect}
-          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm font-medium"
+          className="bg-[#201f21]/10 text-[#dbc2ad] px-4 py-2 rounded-lg hover:bg-[#201f21]/10 text-sm font-medium"
         >
           Collect Metrics
         </button>
@@ -114,7 +114,7 @@ export default function AnalyticsPage() {
         <select
           value={selectedProduct}
           onChange={(e) => setSelectedProduct(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+          className="border border-white/10 rounded-lg px-3 py-1.5 text-sm"
         >
           <option value="">All products</option>
           {products.map((p) => (
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
         <select
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+          className="border border-white/10 rounded-lg px-3 py-1.5 text-sm"
         >
           <option value={7}>Last 7 days</option>
           <option value={30}>Last 30 days</option>
@@ -135,7 +135,7 @@ export default function AnalyticsPage() {
       </div>
 
       {loading ? (
-        <div className="text-gray-500">Loading analytics...</div>
+        <div className="text-[#E5E1E4]/50">Loading analytics...</div>
       ) : (
         <>
           {/* Stats Grid */}
@@ -143,10 +143,10 @@ export default function AnalyticsPage() {
             {statCards.map((card) => (
               <div
                 key={card.label}
-                className="bg-white rounded-lg border border-gray-200 p-4"
+                className="bg-[#201f21] rounded-lg border border-white/10 p-4"
               >
-                <p className="text-sm text-gray-500">{card.label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
+                <p className="text-sm text-[#E5E1E4]/50">{card.label}</p>
+                <p className="text-2xl font-bold text-[#E5E1E4] mt-1">
                   {card.value}
                 </p>
               </div>
@@ -154,45 +154,45 @@ export default function AnalyticsPage() {
           </div>
 
           {overview && (
-            <p className="text-sm text-gray-400 mb-6">
+            <p className="text-sm text-[#E5E1E4]/40 mb-6">
               Tracking {overview.posts_tracked} posts over {overview.period_days} days
             </p>
           )}
 
           {/* Top Performers */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <h2 className="text-lg font-semibold text-[#E5E1E4] mb-4">
               Top Performing Content
             </h2>
             {topPerformers.length === 0 ? (
-              <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-                <p className="text-gray-500">
+              <div className="bg-[#201f21] rounded-lg border border-white/10 p-8 text-center">
+                <p className="text-[#E5E1E4]/50">
                   No performance data yet. Publish content and collect metrics to see results.
                 </p>
               </div>
             ) : (
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="bg-[#201f21] rounded-lg border border-white/10 overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-[#201f21]/5 border-b border-white/10">
                     <tr>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">Content</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">Platform</th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-600">Impressions</th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-600">Clicks</th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-600">CTR</th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-600">Likes</th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-600">Shares</th>
+                      <th className="text-left px-4 py-3 font-medium text-[#dbc2ad]">Content</th>
+                      <th className="text-left px-4 py-3 font-medium text-[#dbc2ad]">Platform</th>
+                      <th className="text-right px-4 py-3 font-medium text-[#dbc2ad]">Impressions</th>
+                      <th className="text-right px-4 py-3 font-medium text-[#dbc2ad]">Clicks</th>
+                      <th className="text-right px-4 py-3 font-medium text-[#dbc2ad]">CTR</th>
+                      <th className="text-right px-4 py-3 font-medium text-[#dbc2ad]">Likes</th>
+                      <th className="text-right px-4 py-3 font-medium text-[#dbc2ad]">Shares</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-white/5">
                     {topPerformers.map((tp, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
+                      <tr key={i} className="hover:bg-[#201f21]/5">
                         <td className="px-4 py-3">
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium text-[#E5E1E4]">
                             {tp.title || "Untitled"}
                           </p>
                           {tp.body_preview && (
-                            <p className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">
+                            <p className="text-xs text-[#E5E1E4]/50 mt-0.5 truncate max-w-xs">
                               {tp.body_preview}
                             </p>
                           )}
@@ -224,13 +224,13 @@ export default function AnalyticsPage() {
           {/* AI Insights */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-[#E5E1E4]">
                 AI Insights
               </h2>
               <button
                 onClick={loadInsights}
                 disabled={insightsLoading}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+                className="bg-[#FF9500] text-[#2d1600] px-4 py-2 rounded-lg hover:opacity-90 text-sm font-medium disabled:opacity-50"
               >
                 {insightsLoading ? "Generating..." : "Generate Insights"}
               </button>
@@ -238,39 +238,39 @@ export default function AnalyticsPage() {
 
             {insights ? (
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-white rounded-lg border border-gray-200 p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                <div className="bg-[#201f21] rounded-lg border border-white/10 p-5">
+                  <h3 className="text-sm font-semibold text-[#dbc2ad] mb-3">
                     Key Insights
                   </h3>
                   <ul className="space-y-2">
                     {insights.insights.map((item, i) => (
-                      <li key={i} className="text-sm text-gray-600 flex gap-2">
+                      <li key={i} className="text-sm text-[#dbc2ad] flex gap-2">
                         <span className="text-blue-500 mt-0.5 shrink-0">&#8226;</span>
                         {item}
                       </li>
                     ))}
                   </ul>
                 </div>
-                <div className="bg-white rounded-lg border border-gray-200 p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                <div className="bg-[#201f21] rounded-lg border border-white/10 p-5">
+                  <h3 className="text-sm font-semibold text-[#dbc2ad] mb-3">
                     Recommendations
                   </h3>
                   <ul className="space-y-2">
                     {insights.recommendations.map((item, i) => (
-                      <li key={i} className="text-sm text-gray-600 flex gap-2">
+                      <li key={i} className="text-sm text-[#dbc2ad] flex gap-2">
                         <span className="text-green-500 mt-0.5 shrink-0">&#8226;</span>
                         {item}
                       </li>
                     ))}
                   </ul>
                 </div>
-                <div className="bg-white rounded-lg border border-gray-200 p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                <div className="bg-[#201f21] rounded-lg border border-white/10 p-5">
+                  <h3 className="text-sm font-semibold text-[#dbc2ad] mb-3">
                     Content Angles to Explore
                   </h3>
                   <ul className="space-y-2">
                     {(insights.content_angles || []).map((item, i) => (
-                      <li key={i} className="text-sm text-gray-600 flex gap-2">
+                      <li key={i} className="text-sm text-[#dbc2ad] flex gap-2">
                         <span className="text-purple-500 mt-0.5 shrink-0">&#8226;</span>
                         {item}
                       </li>
@@ -279,8 +279,8 @@ export default function AnalyticsPage() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-                <p className="text-gray-500">
+              <div className="bg-[#201f21] rounded-lg border border-white/10 p-8 text-center">
+                <p className="text-[#E5E1E4]/50">
                   Select a product and click &quot;Generate Insights&quot; to get
                   AI-powered optimization recommendations.
                 </p>

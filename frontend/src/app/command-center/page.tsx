@@ -60,7 +60,7 @@ export default function CommandCenterPage() {
           <button
             onClick={() => fetchData(true)}
             disabled={aiLoading}
-            className="px-4 py-2 text-sm font-medium bg-[#FF9500] text-[#2d1600] rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium bg-[#FF9500] text-[#2d1600] rounded-lg hover:opacity-90 disabled:opacity-50"
           >
             {aiLoading ? "Analyzing..." : "Get AI Recommendations"}
           </button>
@@ -88,7 +88,7 @@ export default function CommandCenterPage() {
               <ul className="space-y-1">
                 {ai_recommendations.immediate_actions.map((a, i) => (
                   <li key={i} className="text-sm text-blue-800 flex gap-2">
-                    <span className="text-blue-500 shrink-0">&#x2022;</span>
+                    <span className="text-[#FF9500] shrink-0">&#x2022;</span>
                     {a}
                   </li>
                 ))}
@@ -99,7 +99,7 @@ export default function CommandCenterPage() {
               <ul className="space-y-1">
                 {ai_recommendations.budget_recommendations.map((r, i) => (
                   <li key={i} className="text-sm text-blue-800 flex gap-2">
-                    <span className="text-blue-500 shrink-0">&#x2022;</span>
+                    <span className="text-[#FF9500] shrink-0">&#x2022;</span>
                     {r}
                   </li>
                 ))}
@@ -110,7 +110,7 @@ export default function CommandCenterPage() {
               <ul className="space-y-1">
                 {ai_recommendations.next_tests.map((t, i) => (
                   <li key={i} className="text-sm text-blue-800 flex gap-2">
-                    <span className="text-blue-500 shrink-0">&#x2022;</span>
+                    <span className="text-[#FF9500] shrink-0">&#x2022;</span>
                     {t}
                   </li>
                 ))}
@@ -158,9 +158,9 @@ export default function CommandCenterPage() {
               {/* Top winner */}
               {p.top_winner && (
                 <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm mb-2">
-                  <span className="font-medium text-green-800">Top Winner:</span>{" "}
-                  <span className="text-green-700">&ldquo;{p.top_winner.headline}&rdquo;</span>
-                  <span className="text-green-600 ml-2">
+                  <span className="font-medium text-[#4ade80]">Top Winner:</span>{" "}
+                  <span className="text-[#4ade80]">&ldquo;{p.top_winner.headline}&rdquo;</span>
+                  <span className="text-[#4ade80] ml-2">
                     CTR {p.top_winner.ctr.toFixed(2)}% &middot; {p.top_winner.impressions.toLocaleString()} impressions
                   </span>
                 </div>
@@ -176,9 +176,9 @@ export default function CommandCenterPage() {
                         <span
                           className={`px-1.5 py-0.5 rounded font-medium ${
                             a.action === "paused"
-                              ? "bg-red-100 text-red-700"
+                              ? "bg-[#ffb4ab]/10 text-[#ffb4ab]"
                               : a.action === "promoted"
-                                ? "bg-green-100 text-green-700"
+                                ? "bg-[#4ade80]/10 text-[#4ade80]"
                                 : "bg-white/10 text-[#dbc2ad]"
                           }`}
                         >
@@ -222,7 +222,7 @@ export default function CommandCenterPage() {
                     </p>
                   </div>
                   <div className="text-right ml-4 shrink-0">
-                    <p className="text-sm font-bold text-green-600">{w.ctr.toFixed(2)}% CTR</p>
+                    <p className="text-sm font-bold text-[#4ade80]">{w.ctr.toFixed(2)}% CTR</p>
                     <p className="text-xs text-[#E5E1E4]/50">${w.cpm.toFixed(2)} CPM</p>
                   </div>
                 </div>
@@ -292,9 +292,9 @@ function SummaryCard({
   color?: "green" | "red" | "blue";
 }) {
   const colorClasses = {
-    green: "text-green-600",
+    green: "text-[#4ade80]",
     red: "text-red-600",
-    blue: "text-blue-600",
+    blue: "text-[#FF9500]",
   };
   return (
     <div className="bg-[#201f21] border border-white/10 rounded-xl p-4">
@@ -308,9 +308,9 @@ function SummaryCard({
 
 function StatusPill({ label, count, color }: { label: string; count: number; color: string }) {
   const colorMap: Record<string, string> = {
-    green: "bg-green-100 text-green-700",
-    red: "bg-red-100 text-red-700",
-    blue: "bg-blue-100 text-blue-700",
+    green: "bg-[#4ade80]/10 text-[#4ade80]",
+    red: "bg-[#ffb4ab]/10 text-[#ffb4ab]",
+    blue: "bg-[#FF9500]/10 text-[#FF9500]",
     gray: "bg-white/10 text-[#dbc2ad]",
   };
   return (
