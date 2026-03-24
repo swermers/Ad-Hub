@@ -383,6 +383,18 @@ function GenerateForm() {
             Content Types
           </p>
           <div className="flex flex-wrap gap-2">
+            <ChipButton
+              active={contentTypes.length === 6}
+              onClick={() => {
+                if (contentTypes.length === 6) {
+                  setContentTypes([]);
+                } else {
+                  setContentTypes(["social_post", "ad_copy", "carousel", "story", "email", "blog_draft"]);
+                }
+              }}
+            >
+              All
+            </ChipButton>
             {[
               ["social_post", "Social Post"],
               ["ad_copy", "Ad Copy"],
@@ -408,6 +420,18 @@ function GenerateForm() {
             Platforms
           </p>
           <div className="flex flex-wrap gap-2">
+            <ChipButton
+              active={platforms.length === 5}
+              onClick={() => {
+                if (platforms.length === 5) {
+                  setPlatforms([]);
+                } else {
+                  setPlatforms(["twitter", "linkedin", "meta", "google", "general"]);
+                }
+              }}
+            >
+              All
+            </ChipButton>
             {[
               ["twitter", "Twitter/X"],
               ["linkedin", "LinkedIn"],
