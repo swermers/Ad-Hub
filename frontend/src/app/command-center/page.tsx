@@ -94,8 +94,8 @@ const campaigns = [
 ];
 
 const avatarUrls = [
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuCbNzpxzeZ2KjsuEnH45MancHSVjFNK9MKBjchD8Q4MVo3vh0F-OQ7Y116nor0FJKjhF2nzvLVefITmJuxUk3XNuLnReGE4hGKXKkklKX-XIKcGqNb5_TskYnXpJJ-Z9Odc3Dtvzzt3Vji7-zUEnt68ADK4koXS71yFChTBlJp5Dq0VyBWFtWmK40XAWFRKllzQp_NO9RsQ9v-RRgyk_hfsUoZvOuLVG1j9J4Grk4x_1haxkw0RGnXVlPLs5V88y53-cc-uWWD3Lw5J",
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuBSpSijP6D9IRd__96UER5gEjwijypc8UKOWz2FrrS-4XmeD-8UCg5E0kB5OeBaoUmPUa_K5sng-p_1DQnp8bnJS5KtCfIEZ1blspkMqPyf54P7oEed_n6IBL5NQDu16KwXcCdUSpAfCiS548E6M41AvyEJ8I3yirJl0_k-7xbNDA_qOiSJVSN42HTfeA_xcXzS89QliCvuLSSibKiR5iyMpYVjxFV0jzqk0RGye5iSYm9Lbetmz0GlWB2cDS8AvUcHyq53cE1a33Xh",
+  "/placeholder.svg",
+  "/placeholder.svg",
 ];
 
 export default function CommandCenterPage() {
@@ -259,7 +259,7 @@ export default function CommandCenterPage() {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6tkJN8qK3-bgCH40o1oCGwR50P9JZrFwnVkGpxJ9pvBmlY4RacYrPeOC-qOkAjY738aJVOc6B8GBMUBLAjzos5qN-erzmu9ZP2hznvi1XaPT99Gl-P2mWv6N_kI-czAyivyfSL-3bIj7rEaM51MNxsQIxEZqzgdYIUUJrC1c75t7uxCsVlljY8N8li2q-JJ49dXKQHIECSSOScIR9bGvzD0YrMv9J4g0tnKnxM2rQ40oDcAVEZvO7uSpYjNlCs-6u7TyK92ZEGw0f"
+            src="/placeholder.svg"
             alt="Global reach map"
             className="absolute inset-0 w-full h-full object-cover opacity-40 grayscale pointer-events-none"
           />
