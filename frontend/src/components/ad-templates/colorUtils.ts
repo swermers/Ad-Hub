@@ -113,12 +113,15 @@ export function buildColorScheme(brandColors: string[]): BrandColorScheme {
     return pickFallback();
   }
 
-  // Pick accent = most saturated chromatic color
-  const accent = chromatic.sort((a, b) => {
+  // Sort by saturation descending
+  const sorted = [...chromatic].sort((a, b) => {
     const [, sa] = rgbToHsl(...hexToRgb(a));
     const [, sb] = rgbToHsl(...hexToRgb(b));
     return sb - sa;
-  })[0];
+  });
+
+  // Pick accent = most saturated chromatic color
+  const accent = sorted[0];
 
   // Pick background:
   // Prefer a dark chromatic color if available, otherwise darken the accent
@@ -132,10 +135,43 @@ export function buildColorScheme(brandColors: string[]): BrandColorScheme {
     bg = darken(accent, 0.7);
   }
 
-  // Text: white works best on dark backgrounds
+  // Text: white works best on dark backgrounds, dark on light
   const textColor = luminance(bg) < 0.3 ? "#ffffff" : "#111111";
 
   return { backgroundColor: bg, textColor, accentColor: accent };
+}
+
+/**
+ * Generate multiple color scheme variants from the same brand colors,
+ * useful for producing diverse ad variations.
+ */
+export function buildColorVariants(brandColors: string[], count: number = 3): BrandColorScheme[] {
+  const base = buildColorScheme(brandColors);
+  if (!brandColors || brandColors.length === 0) return [base];
+
+  const chromatic = brandColors.filter(isChromatic);
+  const variants: BrandColorScheme[] = [base];
+
+  // Create variants by rotating through chromatic colors as accent
+  for (let i = 1; i < count && i < chromatic.length; i++) {
+    const accent = chromatic[i];
+    const bg = darken(accent, 0.7);
+    const textColor = luminance(bg) < 0.3 ? "#ffffff" : "#111111";
+    variants.push({ backgroundColor: bg, textColor, accentColor: accent });
+  }
+
+  // Fill remaining with fallbacks if needed
+  while (variants.length < count) {
+    variants.push(FALLBACK_PALETTES[variants.length % FALLBACK_PALETTES.length]
+      ? {
+          backgroundColor: FALLBACK_PALETTES[variants.length % FALLBACK_PALETTES.length].bg,
+          textColor: FALLBACK_PALETTES[variants.length % FALLBACK_PALETTES.length].text,
+          accentColor: FALLBACK_PALETTES[variants.length % FALLBACK_PALETTES.length].accent
+        }
+      : base);
+  }
+
+  return variants;
 }
 
 let _fallbackCounter = 0;

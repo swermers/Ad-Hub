@@ -39,6 +39,7 @@ class ProductUpdate(BaseModel):
     differentiators: str | None = None
     product_type: str | None = None
     status: str | None = None
+    brand_colors: str | None = None
 
 
 class ProductResponse(BaseModel):
