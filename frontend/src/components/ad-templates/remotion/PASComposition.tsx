@@ -8,6 +8,7 @@ import {
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
+import { safeTruncate, responsiveFontSize } from "./animationUtils";
 
 export interface PASCompositionProps {
   /** The problem / pain point */
@@ -49,6 +50,11 @@ export function PASComposition({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { width, height } = getDimensions(aspectRatio);
+
+  // Apply text safety
+  const safeHeadline = safeTruncate(headline, 25);
+  const safeBody = safeTruncate(body, 50);
+  const safeSolution = solutionText ? safeTruncate(solutionText, 50) : undefined;
 
   // Scene boundaries (in frames)
   const scene1End = fps * 2;       // 0-2s: Problem
@@ -175,7 +181,7 @@ export function PASComposition({
         {/* Pain point text */}
         <h1
           style={{
-            fontSize: 60,
+            fontSize: responsiveFontSize(safeHeadline, 60, 25),
             fontWeight: 900,
             color: textColor,
             textAlign: "center",
@@ -183,7 +189,7 @@ export function PASComposition({
             margin: 0,
           }}
         >
-          {headline}
+          {safeHeadline}
         </h1>
       </div>
 
@@ -213,7 +219,7 @@ export function PASComposition({
             margin: 0,
           }}
         >
-          {body}
+          {safeBody}
         </p>
       </div>
 
@@ -276,7 +282,7 @@ export function PASComposition({
         )}
 
         {/* Solution text */}
-        {solutionText && (
+        {safeSolution && (
           <h2
             style={{
               fontSize: 40,
@@ -288,7 +294,7 @@ export function PASComposition({
               marginBottom: 32,
             }}
           >
-            {solutionText}
+            {safeSolution}
           </h2>
         )}
 

@@ -9,6 +9,7 @@ import {
 } from "remotion";
 import type { AdTemplateProps, AspectRatio } from "../types";
 import { getDimensions } from "../types";
+import { safeTruncate } from "./animationUtils";
 
 export interface AdCompositionProps extends AdTemplateProps {
   aspectRatio?: AspectRatio;
@@ -37,6 +38,10 @@ export function AdComposition({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { width, height } = getDimensions(aspectRatio);
+
+  // Apply text safety
+  const safeHeadline = safeTruncate(headline, 30);
+  const safeBody = safeTruncate(body, 60);
 
   // Animation timing (in frames)
   const bgRevealEnd = fps * 0.5;      // 0-0.5s: background
@@ -211,7 +216,7 @@ export function AdComposition({
             letterSpacing: -1,
           }}
         >
-          {headline}
+          {safeHeadline}
         </h1>
 
         {/* Body */}
@@ -228,7 +233,7 @@ export function AdComposition({
             maxWidth: width * 0.75,
           }}
         >
-          {body}
+          {safeBody}
         </p>
 
         {/* CTA button */}
