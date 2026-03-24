@@ -314,6 +314,7 @@ def content_from_transcript(
     data: TranscriptRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Generate a week of content from a voice memo transcript.
 
@@ -341,7 +342,7 @@ def content_from_transcript(
 
 
 @router.get("/content-from-transcript-status/{task_id}", response_model=TaskStatusResponse)
-def get_transcript_status(task_id: str):
+def get_transcript_status(task_id: str, current_user: dict = Depends(get_current_user)):
     status = _task_status.get(task_id)
     if not status:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -472,6 +473,7 @@ def generate_creative_bundle(
     data: CreativeBundleRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Generate a complete creative package: ad copy variations + optional image.
 
@@ -502,7 +504,7 @@ def generate_creative_bundle(
 
 
 @router.get("/creative-bundle-status/{task_id}")
-def get_creative_bundle_status(task_id: str):
+def get_creative_bundle_status(task_id: str, current_user: dict = Depends(get_current_user)):
     status = _task_status.get(task_id)
     if not status:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -513,7 +515,7 @@ def get_creative_bundle_status(task_id: str):
 
 
 @router.post("/campaigns")
-def create_campaign(data: CampaignCreateRequest, db: Session = Depends(get_db)):
+def create_campaign(data: CampaignCreateRequest, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     """Create a new campaign. Status starts as 'draft' — requires approval to go live."""
 
     product = db.query(Product).filter(Product.id == data.product_id).first()
@@ -580,7 +582,7 @@ def create_campaign(data: CampaignCreateRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/campaigns")
-def list_campaigns(product_id: str | None = None, status: str | None = None, db: Session = Depends(get_db)):
+def list_campaigns(product_id: str | None = None, status: str | None = None, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     q = db.query(Campaign)
     if product_id:
         q = q.filter(Campaign.product_id == product_id)
@@ -609,7 +611,7 @@ def list_campaigns(product_id: str | None = None, status: str | None = None, db:
 
 
 @router.put("/campaigns/{campaign_id}")
-def update_campaign(campaign_id: str, data: dict, db: Session = Depends(get_db)):
+def update_campaign(campaign_id: str, data: dict, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -629,7 +631,7 @@ def update_campaign(campaign_id: str, data: dict, db: Session = Depends(get_db))
 
 
 @router.post("/report-performance")
-def report_performance(data: PerformanceReportRequest, db: Session = Depends(get_db)):
+def report_performance(data: PerformanceReportRequest, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     """Ingest performance metrics from the agent.
 
     The agent pulls data from Meta/Google APIs and pushes it here
@@ -728,7 +730,7 @@ def _check_guardrails(db: Session, data: PerformanceReportRequest) -> list[dict]
 
 
 @router.get("/guardrails")
-def list_guardrails(product_id: str | None = None, db: Session = Depends(get_db)):
+def list_guardrails(product_id: str | None = None, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     q = db.query(SafetyGuardrail)
     if product_id:
         q = q.filter(
@@ -834,7 +836,7 @@ def kill_switch(db: Session = Depends(get_db)):
 
 
 @router.get("/pending-approvals")
-def pending_approvals(db: Session = Depends(get_db)):
+def pending_approvals(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     """List actions awaiting human approval."""
 
     logs = (
@@ -888,7 +890,7 @@ def approve_action(log_id: str, data: ApprovalRequest, db: Session = Depends(get
 
 
 @router.get("/activity-log")
-def activity_log(limit: int = 50, action_type: str | None = None, db: Session = Depends(get_db)):
+def activity_log(limit: int = 50, action_type: str | None = None, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     """Full audit trail of agent actions."""
 
     q = db.query(AgentLog)
@@ -922,6 +924,7 @@ async def search_broll(
     media_type: str = Query("photos", description="'photos' or 'videos'"),
     per_page: int = Query(10, ge=1, le=30),
     orientation: str = Query("landscape", description="landscape, portrait, or square"),
+    current_user: dict = Depends(get_current_user),
 ):
     """Search Pexels for stock photos/videos to use as b-roll in compositions."""
     from app.config import settings
