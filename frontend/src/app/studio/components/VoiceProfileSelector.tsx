@@ -376,11 +376,11 @@ function ProfileForm({
   const [styleRules, setStyleRules] = useState(src?.style_rules ?? "");
   const [sentenceStyle, setSentenceStyle] = useState(src?.sentence_style ?? "mixed");
   const [favoritePhrases, setFavoritePhrases] = useState(
-    profile?.favorite_phrases.join("\n") ?? "",
+    src?.favorite_phrases.join("\n") ?? "",
   );
-  const [wordsToAvoid, setWordsToAvoid] = useState(profile?.words_to_avoid.join(", ") ?? "");
-  const [wordsToUse, setWordsToUse] = useState(profile?.words_to_use.join(", ") ?? "");
-  const [writingSample, setWritingSample] = useState(profile?.writing_samples[0] ?? "");
+  const [wordsToAvoid, setWordsToAvoid] = useState(src?.words_to_avoid.join(", ") ?? "");
+  const [wordsToUse, setWordsToUse] = useState(src?.words_to_use.join(", ") ?? "");
+  const [writingSample, setWritingSample] = useState(src?.writing_samples[0] ?? "");
   const [isDefault, setIsDefault] = useState(profile?.is_default ?? false);
   const [saving, setSaving] = useState(false);
 
