@@ -29,14 +29,14 @@ const assets = [
     size: "4.2MB",
     type: "Simulation",
     typeColor: "#FF9500",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBe_XppvU69QG6BX0s8ZQmeb201ERugTQT5FQ8KZP6GMen90ZMedNYQQoQMT7wCgYIg_C37s3NzMp2uLSq3lDmvvp4xXN8NQ4d1E83j4b7NOMK6rLLvpBfQLaevHxCOtx-szEKoLOrFRQqmyp1fQXLFIFbNU5JkE3cGtSCV5_UfBOfZ5kUKC9sVkYxovJMiDkRpHp26aOiMe6l1fY1Ac0k37rYsTw9PopD-b0GibqOoLqqLeaaX7cpyF1e8SHedx69ir4slDej_Wy8u",
+    image: "/placeholder.svg",
   },
   {
     name: "Obsidian_Flow.mov",
     size: "128MB",
     type: "Video",
     typeColor: "#a0a0a0",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAxeXTpxHLKtIw0l12h5jdLOpaZcmnPPf5LWW57HZROEirBLlPQNM09QxEoqzBZxCPHCOt8RXegJnzv6wO0aUd4sviWiLaZrTjT6WfaSucsb665THr90pALOMLFJ3arXQK-SvBVni_1sE50XEytLhWT0yzFkiFrfmINtjlsfCyHPvHEET2rtje206o6JWEd8GxjyFYJ8sglDOvHfpl_2HnhrPbi5nRjPAKYY6s6OCHLVFuCMGyGXms1yb3oZq9zhyxqtwqejPM5Wlm9",
+    image: "/placeholder.svg",
   },
   {
     name: "Ember_Field.svg",
