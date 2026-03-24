@@ -119,7 +119,7 @@ export default function IntelligencePage() {
   const handleGenerateBrief = async () => {
     setRunning("brief");
     try {
-      const { task_id } = await api.generateBrief(productId);
+      const { task_id } = await api.generateIntelligenceBrief(productId);
       pollTask(task_id, () => api.listBriefs(productId).then(setBriefs));
     } catch { setRunning(""); }
   };

@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: (i: number) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.08, duration: 0.5, ease: [0.16, 1, 0.3, 1] },
-  }),
-};
-const stagger = { visible: { transition: { staggerChildren: 0.06 } } };
+/* ── Animation helpers (Command Center design language) ── */
+const fadeUp = (delay: number = 0) => ({
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
+});
 
+const stagger = {
+  animate: { transition: { staggerChildren: 0.08 } },
+};
+
+/* ── Data ── */
 const OUTPUT_TYPES = [
   { id: "whitepaper", label: "Whitepaper", icon: "description" },
   { id: "social", label: "Social Thread", icon: "forum" },
@@ -35,35 +38,53 @@ export default function StudioPage() {
   const [hookText, setHookText] = useState("");
 
   return (
-    <motion.div initial="hidden" animate="visible" variants={stagger}>
+    <motion.div
+      initial="initial"
+      animate="animate"
+      variants={stagger}
+      className="min-h-screen bg-[#131315] text-[#E5E1E4] px-4 md:px-8 py-8 pb-28"
+    >
       {/* ── Workflow Header ── */}
-      <motion.section variants={fadeUp} custom={0} className="mb-10">
+      <motion.section {...fadeUp(0)} className="mb-10">
         <div className="flex items-start justify-between gap-8 flex-wrap">
           {/* Left: title block */}
           <div className="max-w-xl">
-            <p className="text-xs font-mono tracking-widest uppercase text-[#FF9500] mb-2">
-              Process ID: LP-0042
-            </p>
-            <h1
-              className="font-extrabold leading-tight text-[#E5E1E4] mb-3"
-              style={{ fontSize: "3.5rem" }}
-            >
-              Content Studio<span className="text-[#FF9500]">.</span>
+            <div className="flex items-center gap-3 mb-3">
+              <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em]">
+                Content Studio
+              </p>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF9500] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF9500]" />
+              </span>
+            </div>
+            <h1 className="text-4xl md:text-7xl font-bold tracking-tighter text-[#E5E1E4] mb-3">
+              Content <span className="text-[#E5E1E4]/30">Studio</span>
+              <span className="text-[#FF9500]">.</span>
             </h1>
-            <p className="text-[#E5E1E4]/60 text-base leading-relaxed max-w-lg">
+            <p className="text-[#E5E1E4]/60 text-base leading-relaxed max-w-lg mb-2">
               Transform raw voice memos and unstructured notes into polished,
               multi-format content — powered by liquid-precision AI synthesis.
+            </p>
+            <p className="font-mono text-[11px] text-[#E5E1E4]/30 tracking-wider">
+              SRV-STUDIO-04 &middot; PID LP-0042 &middot; LATENCY 42ms
             </p>
           </div>
 
           {/* Right: progress bar */}
-          <div className="glass-card-subtle rounded-2xl px-6 py-5 min-w-[300px] entrance-fade stagger-2">
+          <motion.div
+            {...fadeUp(0.16)}
+            className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl px-6 py-5 min-w-[300px]"
+          >
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50">
                 Pipeline
               </span>
               <span className="text-sm font-bold text-[#FF9500]">
-                68% <span className="text-[#E5E1E4]/40 font-normal">Synthesizing</span>
+                68%{" "}
+                <span className="text-[#E5E1E4]/40 font-normal">
+                  Synthesizing
+                </span>
               </span>
             </div>
 
@@ -72,10 +93,12 @@ export default function StudioPage() {
               {/* Background bar */}
               <div className="absolute top-1/2 left-0 right-0 h-1 -translate-y-1/2 rounded-full bg-[#353437]" />
               {/* Filled bar */}
-              <div
+              <motion.div
                 className="absolute top-1/2 left-0 h-1 -translate-y-1/2 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: "68%" }}
+                transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
                 style={{
-                  width: "68%",
                   background: "linear-gradient(90deg, #FF9500, #ffbd7f)",
                 }}
               />
@@ -83,7 +106,10 @@ export default function StudioPage() {
               {/* Step dots */}
               <div className="relative flex justify-between w-full">
                 {PROGRESS_STEPS.map((s, i) => (
-                  <div key={s.label} className="flex flex-col items-center gap-1.5">
+                  <div
+                    key={s.label}
+                    className="flex flex-col items-center gap-1.5"
+                  >
                     <div
                       className={`w-4 h-4 rounded-full border-2 z-10 transition-all ${
                         s.complete
@@ -100,19 +126,22 @@ export default function StudioPage() {
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* ── Main Bento Grid ── */}
       <div className="grid grid-cols-12 gap-6">
         {/* ──── LEFT COLUMN (col-span-7) ──── */}
         <div className="col-span-12 lg:col-span-7 space-y-6">
           {/* Voice Memo Drop Zone */}
-          <div className="glass-card rounded-3xl p-8 entrance-fade stagger-3 group relative overflow-hidden">
+          <motion.div
+            {...fadeUp(0.24)}
+            className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-8 group relative overflow-hidden"
+          >
             {/* Subtle background glow */}
             <div
-              className="pointer-events-none absolute inset-0 opacity-[0.04] rounded-3xl"
+              className="pointer-events-none absolute inset-0 opacity-[0.04] rounded-2xl"
               style={{
                 background:
                   "radial-gradient(ellipse at 50% 40%, #FF9500 0%, transparent 70%)",
@@ -141,37 +170,49 @@ export default function StudioPage() {
                 Drop voice memo here
               </h3>
               <p className="text-sm text-[#E5E1E4]/40 mb-6">
-                or drag & drop an audio file to begin synthesis
+                or drag &amp; drop an audio file to begin synthesis
               </p>
 
-              {/* Waveform Bars */}
+              {/* Waveform Bars - framer-motion animated heights */}
               <div className="flex items-end gap-1.5 h-14 mb-6">
                 {WAVEFORM_HEIGHTS.map((h, i) => (
-                  <div
+                  <motion.div
                     key={i}
                     className="w-2 rounded-full bg-[#FF9500]"
-                    style={{
-                      height: `${h}px`,
-                      opacity: 0.4 + (h / 52) * 0.6,
-                      animation: `waveform 1.2s ease-in-out ${i * 0.1}s infinite alternate`,
+                    style={{ opacity: 0.4 + (h / 52) * 0.6 }}
+                    animate={{
+                      height: [h * 0.4, h, h * 0.4],
+                    }}
+                    transition={{
+                      duration: 1.2,
+                      delay: i * 0.1,
+                      repeat: Infinity,
+                      ease: "easeInOut",
                     }}
                   />
                 ))}
               </div>
 
-              <button className="haptic-btn px-5 py-2.5 rounded-xl border border-[#554334] text-sm font-medium text-[#E5E1E4]/70 hover:border-[#FF9500]/50 hover:text-[#E5E1E4] transition-all">
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+                className="px-5 py-2.5 rounded-xl border border-[#554334] text-sm font-medium text-[#E5E1E4]/70 hover:border-[#FF9500]/50 hover:text-[#E5E1E4] transition-colors"
+              >
                 <span className="material-symbols-outlined text-base mr-1.5 align-middle">
                   library_music
                 </span>
                 Select from library
-              </button>
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
 
           {/* AI Insights Preview */}
-          <div className="grid grid-cols-2 gap-4 entrance-fade stagger-4">
+          <motion.div {...fadeUp(0.32)} className="grid grid-cols-2 gap-4">
             {/* Tone Detection */}
-            <div className="glass-card-subtle rounded-2xl p-5 hover-lift">
+            <motion.div
+              whileHover={{ y: -4 }}
+              className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-5"
+            >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-[#FF9500]/10 flex items-center justify-center">
                   <span className="material-symbols-outlined text-[#FF9500] text-xl">
@@ -193,10 +234,12 @@ export default function StudioPage() {
                   <span className="text-[#FF9500] font-medium">87%</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-[#353437] overflow-hidden">
-                  <div
+                  <motion.div
                     className="h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: "87%" }}
+                    transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.5 }}
                     style={{
-                      width: "87%",
                       background: "linear-gradient(90deg, #FF9500, #ffbd7f)",
                     }}
                   />
@@ -206,16 +249,21 @@ export default function StudioPage() {
                   <span className="text-[#ffbd7f] font-medium">62%</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-[#353437] overflow-hidden">
-                  <div
+                  <motion.div
                     className="h-full rounded-full bg-[#ffbd7f]"
-                    style={{ width: "62%" }}
+                    initial={{ width: 0 }}
+                    animate={{ width: "62%" }}
+                    transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.6 }}
                   />
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Complexity Score */}
-            <div className="glass-card-subtle rounded-2xl p-5 hover-lift">
+            <motion.div
+              whileHover={{ y: -4 }}
+              className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-5"
+            >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-[#FF9500]/10 flex items-center justify-center">
                   <span className="material-symbols-outlined text-[#FF9500] text-xl">
@@ -243,14 +291,17 @@ export default function StudioPage() {
               <p className="text-xs text-[#E5E1E4]/40 mt-2">
                 Graduate-level readability — suitable for professional audiences
               </p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
 
         {/* ──── RIGHT COLUMN (col-span-5) ──── */}
         <div className="col-span-12 lg:col-span-5 space-y-6">
           {/* Studio Parameters Panel */}
-          <div className="glass-card rounded-3xl p-6 entrance-fade stagger-5">
+          <motion.div
+            {...fadeUp(0.4)}
+            className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-6"
+          >
             <h3 className="text-sm font-semibold uppercase tracking-wider text-[#E5E1E4]/50 mb-5">
               Studio Parameters
             </h3>
@@ -258,10 +309,12 @@ export default function StudioPage() {
             {/* Output Type Selector - 2x2 grid */}
             <div className="grid grid-cols-2 gap-3 mb-6">
               {OUTPUT_TYPES.map((t) => (
-                <button
+                <motion.button
                   key={t.id}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => setSelectedOutput(t.id)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all ${
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-colors ${
                     selectedOutput === t.id
                       ? "border-2 border-[#FF9500] bg-[#FF9500]/10 shadow-[0_0_20px_rgba(255,149,0,0.1)]"
                       : "border border-[#353437] bg-[#1b1b1d]/50 hover:border-[#554334]"
@@ -285,7 +338,7 @@ export default function StudioPage() {
                   >
                     {t.label}
                   </span>
-                </button>
+                </motion.button>
               ))}
             </div>
 
@@ -315,18 +368,19 @@ export default function StudioPage() {
                     Multi-lingual SEO
                   </span>
                 </div>
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => setMultiLingualSeo(!multiLingualSeo)}
                   className={`relative w-11 h-6 rounded-full transition-colors ${
                     multiLingualSeo ? "bg-[#FF9500]" : "bg-[#353437]"
                   }`}
                 >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                      multiLingualSeo ? "translate-x-5" : "translate-x-0"
-                    }`}
+                  <motion.span
+                    className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow"
+                    animate={{ x: multiLingualSeo ? 20 : 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   />
-                </button>
+                </motion.button>
               </div>
 
               {/* Auto-Image Gen */}
@@ -339,34 +393,41 @@ export default function StudioPage() {
                     Auto-Image Gen
                   </span>
                 </div>
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => setAutoImageGen(!autoImageGen)}
                   className={`relative w-11 h-6 rounded-full transition-colors ${
                     autoImageGen ? "bg-[#FF9500]" : "bg-[#353437]"
                   }`}
                 >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                      autoImageGen ? "translate-x-5" : "translate-x-0"
-                    }`}
+                  <motion.span
+                    className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow"
+                    animate={{ x: autoImageGen ? 20 : 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   />
-                </button>
+                </motion.button>
               </div>
             </div>
 
             {/* Begin Synthesis CTA */}
-            <button className="liquid-gradient w-full py-3.5 rounded-xl text-sm font-bold text-[#2d1600] haptic-btn transition-all hover:shadow-[0_4px_24px_rgba(255,149,0,0.35)] active:scale-[0.98]">
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              className="liquid-gradient w-full py-3.5 rounded-xl text-sm font-bold text-[#2d1600] transition-all hover:shadow-[0_4px_24px_rgba(255,149,0,0.35)]"
+            >
               <span className="flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined text-lg">
-                  bolt
-                </span>
+                <span className="material-symbols-outlined text-lg">bolt</span>
                 Begin Synthesis
               </span>
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
 
           {/* Recent Output Card */}
-          <div className="glass-card-subtle rounded-2xl overflow-hidden entrance-fade stagger-6 hover-lift">
+          <motion.div
+            {...fadeUp(0.48)}
+            whileHover={{ y: -4 }}
+            className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl overflow-hidden"
+          >
             <div className="relative h-36 overflow-hidden">
               <img
                 src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80"
@@ -397,28 +458,23 @@ export default function StudioPage() {
                 View
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* ── Floating FAB ── */}
-      <button className="fixed bottom-8 right-8 w-14 h-14 rounded-full liquid-gradient shadow-[0_4px_24px_rgba(255,149,0,0.4)] flex items-center justify-center haptic-btn hover:shadow-[0_6px_32px_rgba(255,149,0,0.55)] transition-all z-50 group">
+      <motion.button
+        initial={{ opacity: 0, scale: 0.5, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        whileHover={{ scale: 1.12 }}
+        whileTap={{ scale: 0.9 }}
+        className="fixed bottom-8 right-8 w-14 h-14 rounded-full liquid-gradient shadow-[0_4px_24px_rgba(255,149,0,0.4)] flex items-center justify-center hover:shadow-[0_6px_32px_rgba(255,149,0,0.55)] transition-shadow z-50 group"
+      >
         <span className="material-symbols-outlined text-[#2d1600] text-2xl group-hover:rotate-90 transition-transform duration-300">
           auto_awesome
         </span>
-      </button>
-
-      {/* Waveform keyframes */}
-      <style jsx>{`
-        @keyframes waveform {
-          0% {
-            transform: scaleY(0.4);
-          }
-          100% {
-            transform: scaleY(1);
-          }
-        }
-      `}</style>
+      </motion.button>
     </motion.div>
   );
 }
