@@ -43,7 +43,7 @@ const assets = [
     size: "84KB",
     type: "Vector",
     typeColor: "#FF9500",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBFQzAQ6n9fggm9omJqQFti-mmelHy3ohKuz3nisSrqrHQ4sJlWryUkEpgCPY18hgeH098FyCntFvW9Ing8C2RMLH4sCzz9QVJJnrC_wDxcORbE-MEf9ZWbkPk4ASwzMC5O2eLiDhZ_Sk9O9mw-2ofPO_zSBARnusYAEE0ezEd3xMnW2O_BHQSqH9C1zSoWplsSiY9vnvekPoohgaaQjHz6MJg1ave4zpZCv6h_dRqNHvOBRPubj5xSnWKkuIAJUsxgAIHlmZDvVc9G",
+    image: "/placeholder.svg",
   },
 ];
 
@@ -217,7 +217,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="w-full md:w-64 h-48 rounded-2xl overflow-hidden relative shadow-2xl">
-                <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIug6g2LPwzKADjEqXG6HsIy45hKm1XA5X9x3Ag5jufUSOx_MJ6QJkKTpJPGLBbANeJo2o1DrA7IMrGJPt28zthE9nZtTQdrAMu98GSvfVhg8v5hVIPnBY7nynAa-oFb6Ax_Bc-mpMXxoHjvTO1sYMjbhRhH0UFMRd77m1MH122oEpYOAOgp0yPQSn1nUNulqROKitdLur-FWDQKU17DCRaynhwXDxajDcn0aP0Pa4rdUwwgEGYRgNQRQX4QB8bvyYs3zz5hLUpf61" alt="Fluid asset preview" />
+                <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src="/placeholder.svg" alt="Fluid asset preview" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#131315]/80 to-transparent" />
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="absolute bottom-3 left-3">
                   <span className="text-[8px] font-black uppercase tracking-widest text-[#FF9500]">Live Preview</span>

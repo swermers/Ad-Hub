@@ -20,7 +20,7 @@ const products = [
     stockLabel: "42 in stock",
     sku: "CH-092",
     image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAcODxEv1iPFE7-2fQG9yLkTdQGMsUY80_xtWL9kiWMBp349tzNsWZBF_tt_d96MJTHUJ91y6gzrteeZgOaOXcnyywIAWNr2FhuyvDoJ3TZRnNGOK5BjNZY9Im5QK6Ym0CiXbW3TBSun1lUgfXF8E-_XiS7bkQDy49HZ19v5aI-t87BHjruOOHhr_VAJt2q4WaR_-hiFr57EMNtI7IqdQeIiauN-n59s6-OSWdUmOuEDRvuhaAFXv95BcwiQ_SoyHvB_40UEMjAX3Rm",
+      "/placeholder.svg",
     error: false,
   },
   {
@@ -30,7 +30,7 @@ const products = [
     stockLabel: "Low (3)",
     sku: "AU-112",
     image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuA8u0mxLR6SXzmI8pKdZ1yN5PM8px_Jk-d9G1enVgN9HH4pL6CALGT2b4Q8caobEszex1N8bAGVjcro8EyzhaVmPBmGAllmZYKqNaRkp-_AXaDapju1z6D3xTE4S-LdUcpotIOmaPLqCYTwRae0luX-jiTWDzF7_M3qhwOMcJssG5xThHGAucpjrxVGt8Io9DAQ9aC0TX_ocGhpNm1oz0gCzt0XZ5_yXqa1w9gvNPm2HsROQ5ScERAoRGA32ZEO2ZmEgsVUqaNPWvqU",
+      "/placeholder.svg",
     error: true,
   },
   {
@@ -40,7 +40,7 @@ const products = [
     stockLabel: "18 in stock",
     sku: "OP-882",
     image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBsCfTHcP_yiN5oR5E8jVGetdHh01UQqhs0yNHADb1R-JWSDdln0RTL-Yc6QhWW8JkdnI1AC6yvj7qn1a26Qrf9Ic7fmFIPlv0kH02mQ0nKd32wpq1juNRjvlWcpyFsN1NZaeNVeR2k1hjEpjYhqvsBUdvNYGLIj0kVJg1EDek8CksX5PVxch2ZGEdMKKtOfZPdzyEvUjX1IOAf1TjAgTw4JdasZpQOzZ3P2c0EVlDn9BK1s0OXq2J6wMHnGirwHfMQcnYfOBi_3BGH",
+      "/placeholder.svg",
     error: false,
   },
   {
@@ -50,7 +50,7 @@ const products = [
     stockLabel: "156 in stock",
     sku: "VX-001",
     image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuB2v1DX8Z-PpSMeJMNQMVT5URTosa4dBUtKyYoYsq2Tq98z-yjMVDLYvK-D0WUM38oh8nrZYjS5fnj8VXp-wIJWjg9sff6LUEdjsyPLw3ES_1xPhibnpAh6IxE7qSS4YlIzcEAjI8hQ60esGHjCD8k7tnVAfNbZ__AtR1MfJQJpY955_EcP3muKP6qZ2ZzMWn5IW9XWUw5aQ-sBjFQpFaViq0AM8eOqKwaAzFCNUtW5WbYStnb4GRr2AUqYUFrDrEw9ZYxMLIYMV6X9",
+      "/placeholder.svg",
     error: false,
   },
 ];
