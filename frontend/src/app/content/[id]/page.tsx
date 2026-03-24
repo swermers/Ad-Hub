@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useRef } from "react";
-import { api, type ContentPiece, type Product, type GenerateImageStatus } from "@/lib/api";
+import { api, API_BASE, type ContentPiece, type Product, type GenerateImageStatus } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
 import { VideoPreview, VIDEO_STYLE_OPTIONS, type VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
 import type { AspectRatio } from "@/components/ad-templates/types";
@@ -166,8 +166,7 @@ export default function ContentDetailPage() {
     try {
       const shots = JSON.parse(product.screenshots);
       if (shots.length > 0) {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        screenshotUrl = `${apiUrl}${shots[0]}`;
+        screenshotUrl = `${API_BASE}${shots[0]}`;
       }
     } catch { /* */ }
   }
@@ -632,14 +631,14 @@ export default function ContentDetailPage() {
           {piece.image_url && (
             <div className="rounded-xl overflow-hidden border border-white/10 shadow-sm">
               <img
-                src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${piece.image_url}`}
+                src={`${API_BASE}${piece.image_url}`}
                 alt="Generated ad image"
                 className="w-full max-w-lg"
               />
               <div className="bg-white/5 px-4 py-2 flex items-center justify-between">
                 <span className="text-xs text-[#E5E1E4]/40">AI-generated ad image</span>
                 <a
-                  href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${piece.image_url}`}
+                  href={`${API_BASE}${piece.image_url}`}
                   download
                   className="text-xs text-[#FF9500] hover:underline"
                 >

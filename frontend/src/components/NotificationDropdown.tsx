@@ -104,18 +104,18 @@ export function NotificationDropdown({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    setLoading(true);
-    api
-      .getActivityLog(20)
-      .then((data) => {
+    const fetchActivity = async () => {
+      setLoading(true);
+      try {
+        const data = await api.getActivityLog(20);
         if (!cancelled) setItems(data);
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setItems([]);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    };
+    fetchActivity();
     return () => {
       cancelled = true;
     };

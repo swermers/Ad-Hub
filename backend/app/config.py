@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     claude_model: str = "claude-sonnet-4-20250514"
     database_url: str = "sqlite:///./adhub.db"
     cors_origins: list[str] = ["http://localhost:3000"]
-    cors_origin_regex: str = r"https://.*\.vercel\.app"
+    cors_origin_regex: str = r"https://ad-hub.*\.vercel\.app"
     chromadb_path: str = "./chroma_data"
 
     # X/Twitter API

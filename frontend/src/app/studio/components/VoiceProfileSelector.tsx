@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { api, type VoiceProfileItem, type VoiceProfileCreate } from "@/lib/api";
+import { api, type VoiceProfileItem, type VoiceProfileCreate, type VoiceProfileParsed } from "@/lib/api";
 
 interface VoiceProfileSelectorProps {
   selectedId: string | null;
@@ -38,8 +38,6 @@ export default function VoiceProfileSelector({
   useEffect(() => {
     loadProfiles();
   }, [loadProfiles]);
-
-  const selected = profiles.find((p) => p.id === selectedId);
 
   return (
     <>
@@ -167,6 +165,10 @@ function ProfileManager({
   const [items, setItems] = useState(profiles);
   const [editing, setEditing] = useState<VoiceProfileItem | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importedData, setImportedData] = useState<VoiceProfileParsed | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const refreshList = useCallback(async () => {
     try {
@@ -188,6 +190,25 @@ function ProfileManager({
     },
     [],
   );
+
+  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset the input so the same file can be re-selected
+    e.target.value = "";
+
+    setImporting(true);
+    setImportError(null);
+    try {
+      const parsed = await api.parseVoiceMarkdown(file);
+      setImportedData(parsed);
+      setCreating(true);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Failed to parse markdown file");
+    } finally {
+      setImporting(false);
+    }
+  }, []);
 
   return (
     <motion.div
@@ -220,14 +241,17 @@ function ProfileManager({
               <ProfileForm
                 key="form"
                 profile={editing}
+                prefill={importedData}
                 onSave={async () => {
                   setCreating(false);
                   setEditing(null);
+                  setImportedData(null);
                   await refreshList();
                 }}
                 onCancel={() => {
                   setCreating(false);
                   setEditing(null);
+                  setImportedData(null);
                 }}
               />
             ) : (
@@ -286,18 +310,44 @@ function ProfileManager({
 
         {/* Footer */}
         {!creating && !editing && (
-          <div className="px-6 py-4 border-t border-[#353437]/50">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setCreating(true)}
-              className="liquid-gradient w-full py-2.5 rounded-xl text-sm font-bold text-[#2d1600]"
-            >
-              <span className="flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined text-lg">add</span>
-                New Voice Profile
-              </span>
-            </motion.button>
+          <div className="px-6 py-4 border-t border-[#353437]/50 space-y-2">
+            {importError && (
+              <div className="px-3 py-2 rounded-lg bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 text-[#ffb4ab] text-xs">
+                {importError}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setCreating(true)}
+                className="liquid-gradient flex-1 py-2.5 rounded-xl text-sm font-bold text-[#2d1600]"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-lg">add</span>
+                  New Profile
+                </span>
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-[#554334] text-[#E5E1E4]/70 hover:text-[#E5E1E4] hover:border-[#FF9500]/40 transition-colors disabled:opacity-50"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-lg">upload_file</span>
+                  {importing ? "Parsing..." : "Import .md"}
+                </span>
+              </motion.button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".md"
+              onChange={handleImportFile}
+              className="hidden"
+            />
           </div>
         )}
       </motion.div>
@@ -309,24 +359,28 @@ function ProfileManager({
 
 function ProfileForm({
   profile,
+  prefill,
   onSave,
   onCancel,
 }: {
   profile: VoiceProfileItem | null;
+  prefill?: VoiceProfileParsed | null;
   onSave: () => void;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState(profile?.name ?? "");
-  const [description, setDescription] = useState(profile?.description ?? "");
-  const [toneInput, setToneInput] = useState(profile?.tone_keywords.join(", ") ?? "");
-  const [styleRules, setStyleRules] = useState(profile?.style_rules ?? "");
-  const [sentenceStyle, setSentenceStyle] = useState(profile?.sentence_style ?? "mixed");
+  // prefill (from markdown import) takes priority over profile (edit mode)
+  const src = prefill ?? profile;
+  const [name, setName] = useState(src?.name ?? "");
+  const [description, setDescription] = useState(src?.description ?? "");
+  const [toneInput, setToneInput] = useState(src?.tone_keywords.join(", ") ?? "");
+  const [styleRules, setStyleRules] = useState(src?.style_rules ?? "");
+  const [sentenceStyle, setSentenceStyle] = useState(src?.sentence_style ?? "mixed");
   const [favoritePhrases, setFavoritePhrases] = useState(
-    profile?.favorite_phrases.join("\n") ?? "",
+    src?.favorite_phrases.join("\n") ?? "",
   );
-  const [wordsToAvoid, setWordsToAvoid] = useState(profile?.words_to_avoid.join(", ") ?? "");
-  const [wordsToUse, setWordsToUse] = useState(profile?.words_to_use.join(", ") ?? "");
-  const [writingSample, setWritingSample] = useState(profile?.writing_samples[0] ?? "");
+  const [wordsToAvoid, setWordsToAvoid] = useState(src?.words_to_avoid.join(", ") ?? "");
+  const [wordsToUse, setWordsToUse] = useState(src?.words_to_use.join(", ") ?? "");
+  const [writingSample, setWritingSample] = useState(src?.writing_samples[0] ?? "");
   const [isDefault, setIsDefault] = useState(profile?.is_default ?? false);
   const [saving, setSaving] = useState(false);
 

@@ -201,7 +201,7 @@ export default function AnalyticsPage() {
               Performance<span className="text-[#E5E1E4]/30"> Metrics.</span>
             </h1>
             <p className="text-[#E5E1E4]/40 text-sm mt-2 font-mono">
-              SYS:ANALYTICS // {overview ? `${overview.posts_tracked} posts tracked` : "initializing"} // {new Date().toLocaleDateString()}
+              SYS:ANALYTICS {/* // */} {overview ? `${overview.posts_tracked} posts tracked` : "initializing"} {/* // */} {new Date().toLocaleDateString()}
             </p>
           </div>
           <motion.button
