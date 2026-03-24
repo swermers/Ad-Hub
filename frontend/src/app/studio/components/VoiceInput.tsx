@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 
@@ -13,14 +13,28 @@ interface VoiceInputProps {
   disabled?: boolean;
 }
 
-type InputMode = "idle" | "transcribing" | "ready";
+type InputMode = "idle" | "recording" | "transcribing" | "ready";
 
 export default function VoiceInput({ value, onChange, disabled }: VoiceInputProps) {
   const [mode, setMode] = useState<InputMode>("idle");
   const [dragOver, setDragOver] = useState(false);
   const [transcriptText, setTranscriptText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -31,7 +45,6 @@ export default function VoiceInput({ value, onChange, disabled }: VoiceInputProp
         const result = await api.transcribeAudio(file);
         const transcript = result.transcript || "";
         setTranscriptText(transcript);
-        // Append transcript to existing manual text, or set it if empty
         const combined = value ? `${value}\n\n--- Voice Memo ---\n${transcript}` : transcript;
         onChange(combined);
         setMode("ready");
@@ -42,6 +55,59 @@ export default function VoiceInput({ value, onChange, disabled }: VoiceInputProp
     },
     [value, onChange],
   );
+
+  /* ── In-browser mic recording ── */
+
+  const startRecording = useCallback(async () => {
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+      const recorder = new MediaRecorder(stream, { mimeType });
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        // Stop all tracks so the browser mic indicator goes away
+        stream.getTracks().forEach((t) => t.stop());
+
+        if (chunksRef.current.length > 0) {
+          const blob = new Blob(chunksRef.current, { type: mimeType });
+          const file = new File([blob], "recording.webm", { type: mimeType });
+          handleFile(file);
+        }
+      };
+
+      recorder.start(1000); // collect chunks every second
+      mediaRecorderRef.current = recorder;
+      setRecordingTime(0);
+      setMode("recording");
+
+      // Start timer
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch {
+      setError("Microphone access denied. Check browser permissions.");
+    }
+  }, [handleFile]);
+
+  const stopRecording = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
+
+  /* ── File drop / select ── */
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
@@ -61,22 +127,30 @@ export default function VoiceInput({ value, onChange, disabled }: VoiceInputProp
     [handleFile],
   );
 
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
   return (
     <div className="space-y-4">
-      {/* Voice Memo Drop Zone */}
+      {/* Voice Input Zone */}
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
         onDragOver={(e) => {
           e.preventDefault();
-          setDragOver(true);
+          if (mode === "idle") setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
-        onDrop={onDrop}
+        onDrop={mode === "idle" ? onDrop : undefined}
         className={`glass-prism rounded-2xl border bg-[#1b1b1d]/60 backdrop-blur-xl p-6 group relative overflow-hidden transition-all ${
           dragOver
             ? "border-[#FF9500] shadow-[0_0_32px_rgba(255,149,0,0.15)]"
+            : mode === "recording"
+            ? "border-[#FF9500]/60 shadow-[0_0_24px_rgba(255,149,0,0.1)]"
             : "border-[#554334]/30"
         } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
       >
@@ -89,7 +163,63 @@ export default function VoiceInput({ value, onChange, disabled }: VoiceInputProp
         />
 
         <AnimatePresence mode="wait">
-          {mode === "transcribing" ? (
+          {mode === "recording" ? (
+            /* Recording state — live mic capture */
+            <motion.div
+              key="recording"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative flex flex-col items-center text-center py-6"
+            >
+              {/* Pulsing red indicator */}
+              <div className="relative mb-4">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="absolute w-20 h-20 rounded-full bg-[#FF9500]/10 animate-ping" />
+                </div>
+                <div className="relative w-16 h-16 rounded-full bg-[#FF9500]/20 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[#FF9500] text-3xl">
+                    graphic_eq
+                  </span>
+                </div>
+              </div>
+
+              {/* Live waveform */}
+              <div className="flex items-end gap-1.5 h-10 mb-3">
+                {WAVEFORM_HEIGHTS.map((h, i) => (
+                  <motion.div
+                    key={i}
+                    className="w-2 rounded-full bg-[#FF9500]"
+                    style={{ opacity: 0.5 + (h / 52) * 0.5 }}
+                    animate={{ height: [h * 0.3, h * 0.9, h * 0.3] }}
+                    transition={{
+                      duration: 0.8,
+                      delay: i * 0.07,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  />
+                ))}
+              </div>
+
+              <p className="text-sm font-medium text-[#FF9500] mb-1">Recording...</p>
+              <p className="text-2xl font-mono font-bold text-[#E5E1E4] mb-4">
+                {formatTime(recordingTime)}
+              </p>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={stopRecording}
+                className="px-6 py-2.5 rounded-xl bg-[#FF9500] text-sm font-bold text-[#2d1600] hover:bg-[#ffbd7f] transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg">stop</span>
+                  Stop &amp; Transcribe
+                </span>
+              </motion.button>
+            </motion.div>
+          ) : mode === "transcribing" ? (
             /* Transcribing state */
             <motion.div
               key="transcribing"
@@ -154,7 +284,7 @@ export default function VoiceInput({ value, onChange, disabled }: VoiceInputProp
               </motion.button>
             </motion.div>
           ) : (
-            /* Idle — drop zone */
+            /* Idle — record + upload zone */
             <motion.div
               key="idle"
               initial={{ opacity: 0 }}
@@ -177,23 +307,45 @@ export default function VoiceInput({ value, onChange, disabled }: VoiceInputProp
               </div>
 
               <h3 className="text-base font-semibold text-[#E5E1E4] mb-1">
-                Drop voice memo here
+                Record or upload a voice memo
               </h3>
-              <p className="text-xs text-[#E5E1E4]/40 mb-4">
-                Drag an audio file or click to upload — it will be transcribed automatically
+              <p className="text-xs text-[#E5E1E4]/40 mb-5">
+                Speak your idea — it will be transcribed to text automatically
               </p>
 
-              <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => fileRef.current?.click()}
-                className="px-4 py-2 rounded-xl border border-[#554334] text-sm font-medium text-[#E5E1E4]/70 hover:border-[#FF9500]/50 hover:text-[#E5E1E4] transition-colors"
-              >
-                <span className="material-symbols-outlined text-base mr-1.5 align-middle">
-                  upload_file
-                </span>
-                Select audio file
-              </motion.button>
+              <div className="flex items-center gap-3">
+                {/* Record button */}
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={startRecording}
+                  className="liquid-gradient px-5 py-2.5 rounded-xl text-sm font-bold text-[#2d1600] hover:shadow-[0_4px_24px_rgba(255,149,0,0.35)] transition-shadow"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg">mic</span>
+                    Record
+                  </span>
+                </motion.button>
+
+                <span className="text-xs text-[#E5E1E4]/25">or</span>
+
+                {/* Upload button */}
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => fileRef.current?.click()}
+                  className="px-5 py-2.5 rounded-xl border border-[#554334] text-sm font-medium text-[#E5E1E4]/70 hover:border-[#FF9500]/50 hover:text-[#E5E1E4] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg">upload_file</span>
+                    Upload file
+                  </span>
+                </motion.button>
+              </div>
+
+              <p className="text-[10px] text-[#E5E1E4]/20 mt-4">
+                Supports mp3, m4a, wav, webm, ogg, flac — or drag &amp; drop anywhere
+              </p>
 
               <input
                 ref={fileRef}
