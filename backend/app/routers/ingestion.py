@@ -149,6 +149,9 @@ def _run_crawl(task_id: str, product_id: str, url: str, max_pages: int):
             except Exception as e:
                 logger.info("Screenshot capture skipped: %s", e)
 
+            # Extract colors from screenshots using vision (most accurate method)
+            _extract_colors_from_screenshots_vision(product_id, db)
+
             _task_status[task_id] = {
                 "status": "completed",
                 "pages_crawled": len(pages),
@@ -163,6 +166,91 @@ def _run_crawl(task_id: str, product_id: str, url: str, max_pages: int):
             "pages_crawled": 0,
             "error": str(e),
         }
+
+
+def _extract_colors_from_screenshots_vision(product_id: str, db: Session):
+    """Use Claude vision to extract accurate brand colors from screenshots.
+
+    This is far more reliable than HTML parsing because it analyzes the actual
+    rendered visual appearance of the site.
+    """
+    import base64
+    import os
+
+    from app.services.claude_client import call_claude_sync
+
+    try:
+        product = db.query(Product).filter(Product.id == product_id).first()
+        if not product or not product.screenshots:
+            return
+
+        screenshots = json.loads(product.screenshots)
+        if not screenshots:
+            return
+
+        uploads_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "uploads",
+        )
+
+        images: list[dict] = []
+        for spath in screenshots[:3]:  # Use up to 3 screenshots
+            file_path = os.path.join(uploads_dir, spath.replace("/uploads/", "", 1))
+            if not os.path.exists(file_path):
+                continue
+            with open(file_path, "rb") as f:
+                img_data = base64.standard_b64encode(f.read()).decode("utf-8")
+            ext = file_path.rsplit(".", 1)[-1].lower()
+            media_type = {
+                "png": "image/png", "jpg": "image/jpeg",
+                "jpeg": "image/jpeg", "webp": "image/webp",
+            }.get(ext, "image/png")
+            images.append({"media_type": media_type, "data": img_data})
+
+        if not images:
+            return
+
+        result = call_claude_sync(
+            prompt=(
+                "Look at these website screenshots and extract the exact brand color palette. "
+                "Use an eyedropper approach — identify the precise hex colors you see for:\n"
+                "1. The dominant background color (even if very dark or nearly black)\n"
+                "2. The primary accent/highlight color (buttons, links, emphasized text)\n"
+                "3. Any secondary accent colors\n"
+                "4. The main text color\n\n"
+                "Return ONLY a JSON array of 3-5 hex color strings, ordered from most dominant to least. "
+                "Be precise — match what you actually see, not generic approximations. "
+                "Example: [\"#1a2420\", \"#8ba89a\", \"#e8e4e0\"]\n"
+                "Return ONLY the JSON array, nothing else."
+            ),
+            images=images,
+            max_tokens=256,
+        )
+
+        text = result["content"].strip()
+        # Parse the JSON array
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        colors = json.loads(text)
+
+        if isinstance(colors, list) and len(colors) >= 2:
+            # Validate each is a proper hex color
+            valid = []
+            for c in colors:
+                if isinstance(c, str) and c.startswith("#") and len(c) in (4, 7):
+                    try:
+                        int(c[1:], 16)
+                        valid.append(c.lower())
+                    except ValueError:
+                        continue
+            if valid:
+                product.brand_colors = json.dumps(valid)
+                db.commit()
+                logger.info(
+                    "Vision-extracted brand colors for %s: %s", product_id, valid
+                )
+    except Exception as e:
+        logger.warning("Vision color extraction failed for %s: %s", product_id, e)
 
 
 def _run_brief_generation(product_id: str):
@@ -214,19 +302,63 @@ def _run_brief_generation(product_id: str):
             except (json.JSONDecodeError, TypeError):
                 pass
 
+        # Load screenshots as base64 images for vision-based analysis
+        screenshot_images: list[dict] = []
         screenshot_context = ""
         if getattr(product, "screenshots", None):
             try:
                 screenshots = json.loads(product.screenshots)
                 if screenshots:
-                    screenshot_context = f"\n{len(screenshots)} screenshot(s) uploaded."
+                    import base64
+                    import os
+                    uploads_dir = os.path.join(
+                        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "uploads",
+                    )
+                    for spath in screenshots[:5]:  # Limit to 5 screenshots
+                        # spath is like "/uploads/screenshots/uuid.png"
+                        file_path = os.path.join(uploads_dir, spath.lstrip("/uploads/").lstrip("/"))
+                        if not os.path.exists(file_path):
+                            # Try direct path under uploads dir
+                            file_path = os.path.join(
+                                uploads_dir,
+                                spath.replace("/uploads/", "", 1),
+                            )
+                        if os.path.exists(file_path):
+                            with open(file_path, "rb") as f:
+                                img_data = base64.standard_b64encode(f.read()).decode("utf-8")
+                            ext = file_path.rsplit(".", 1)[-1].lower()
+                            media_type = {
+                                "png": "image/png",
+                                "jpg": "image/jpeg",
+                                "jpeg": "image/jpeg",
+                                "gif": "image/gif",
+                                "webp": "image/webp",
+                            }.get(ext, "image/png")
+                            screenshot_images.append({
+                                "media_type": media_type,
+                                "data": img_data,
+                            })
+                    if screenshot_images:
+                        screenshot_context = (
+                            f"\n{len(screenshot_images)} website screenshot(s) are attached as images. "
+                            "LOOK at them carefully to extract the EXACT brand colors, fonts, and visual style. "
+                            "The screenshots show the real rendered site — trust what you see over any text descriptions."
+                        )
+                    else:
+                        screenshot_context = f"\n{len(screenshots)} screenshot(s) referenced but files not loaded."
             except (json.JSONDecodeError, TypeError):
                 pass
+
+        # Also check for user-uploaded screenshots in the screenshots field
+        # that may have been uploaded via the product page UI
+        if not screenshot_images and getattr(product, "screenshots", None):
+            screenshot_context = ""
 
         # Build color instruction for the prompt
         color_ref = ""
         if brand_colors_str:
-            color_ref = f" Reference colors detected from site: {brand_colors_str}."
+            color_ref = f" Reference colors detected from site CSS: {brand_colors_str}. These may be inaccurate — trust the screenshots if available."
 
         prompt = f"""Analyze the following product information and generate a comprehensive brand brief.
 
@@ -259,7 +391,7 @@ Generate a JSON brand brief with these fields:
         "dont": ["things the brand should avoid"]
     }},
     "visual_identity": {{
-        "primary_colors": ["#hex1", "#hex2", "#hex3 — Extract the ACTUAL brand colors from the website. Include the dominant background color (even if dark), accent/highlight colors, and any button/CTA colors. Match the real visual identity — do NOT substitute generic bright colors. Dark-themed sites should include the dark background color and the muted/subtle accent colors actually used.{color_ref}"],
+        "primary_colors": ["#hex1", "#hex2", "#hex3 — {'LOOK at the attached screenshots and use an eyedropper approach to extract the EXACT hex colors you see. ' if screenshot_images else ''}Extract the ACTUAL brand colors from the website. Include the dominant background color (even if dark/nearly black), accent/highlight colors (even if muted/desaturated), and button/CTA colors. Match the real visual identity precisely — do NOT substitute generic bright colors or Tailwind defaults. Return 3-5 colors that accurately represent what a user SEES on the site.{color_ref}"],
         "fonts": ["Primary Font Name", "Secondary Font Name — extract the actual font families used on the website headings and body text.{' Detected fonts: ' + brand_fonts_str if brand_fonts_str else ''}"],
         "style": "description of visual style",
         "imagery_recommendations": ["type of imagery to use in ads"]
@@ -291,7 +423,10 @@ Generate a JSON brand brief with these fields:
 
 Return ONLY the JSON object, no markdown formatting."""
 
-        result = call_claude_sync(prompt)
+        result = call_claude_sync(
+            prompt,
+            images=screenshot_images if screenshot_images else None,
+        )
 
         try:
             text = result["content"].strip()

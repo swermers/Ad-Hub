@@ -50,15 +50,37 @@ def call_claude_sync(
     prompt: str,
     system: str | None = None,
     max_tokens: int = 4096,
+    images: list[dict] | None = None,
 ) -> dict:
     """Call Claude API (sync). Use in background tasks / threads
-    to avoid event loop conflicts with AsyncAnthropic."""
+    to avoid event loop conflicts with AsyncAnthropic.
+
+    If `images` is provided, sends a multipart vision request.
+    Each image dict should have: {"media_type": "image/png", "data": "<base64>"}
+    """
     client = _get_sync_client()
+
+    # Build message content — text-only or multipart with images
+    if images:
+        content: list[dict] = []
+        for img in images:
+            content.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": img["media_type"],
+                    "data": img["data"],
+                },
+            })
+        content.append({"type": "text", "text": prompt})
+        messages = [{"role": "user", "content": content}]
+    else:
+        messages = [{"role": "user", "content": prompt}]
 
     kwargs: dict = {
         "model": settings.claude_model,
         "max_tokens": max_tokens,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": messages,
     }
     if system:
         kwargs["system"] = system
