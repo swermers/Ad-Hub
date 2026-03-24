@@ -164,8 +164,8 @@ export function BillboardTemplate({
           </span>
         )}
 
-        {/* QR code — real if qrUrl provided, decorative placeholder otherwise */}
-        {qrUrl ? (
+        {/* QR code — only shown when a qrUrl is provided */}
+        {qrUrl && (
           <QRCodeBlock
             value={qrUrl}
             size={56 * s}
@@ -173,35 +173,22 @@ export function BillboardTemplate({
             label="Scan"
             labelSize={10 * s}
           />
-        ) : (
+        )}
+
+        {/* CTA badge when no QR */}
+        {!qrUrl && (
           <div
             style={{
-              width: 56 * s,
-              height: 56 * s,
-              border: `2px solid ${textColor}`,
-              borderRadius: 8 * s,
-              padding: 4 * s,
-              display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
-              gridTemplateRows: "repeat(5, 1fr)",
-              gap: 2 * s,
+              padding: `${8 * s}px ${20 * s}px`,
+              border: `1.5px solid ${textColor}`,
+              borderRadius: 6 * s,
+              fontSize: 13 * s,
+              fontWeight: 600,
+              color: textColor,
+              letterSpacing: 0.5 * s,
             }}
           >
-            {[
-              1, 1, 1, 0, 1,
-              1, 0, 1, 1, 0,
-              1, 1, 1, 0, 1,
-              0, 1, 0, 1, 1,
-              1, 0, 1, 1, 1,
-            ].map((filled, i) => (
-              <div
-                key={i}
-                style={{
-                  backgroundColor: filled ? textColor : "transparent",
-                  borderRadius: 1 * s,
-                }}
-              />
-            ))}
+            {cta}
           </div>
         )}
       </div>
