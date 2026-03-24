@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { AuthGuard } from "@/components/AuthGuard";
+import { NotificationDropdown } from "@/components/NotificationDropdown";
 
 function TopNav() {
   const pathname = usePathname();
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const handleUnreadCountChange = useCallback((count: number) => {
+    setUnreadCount(count);
+  }, []);
 
   const topLinks = [
     { href: "/", label: "Dashboard" },
@@ -51,9 +58,22 @@ function TopNav() {
           New Product
         </Link>
         <div className="flex items-center gap-2">
-          <button className="p-2 text-[#E5E1E4]/70 hover:bg-white/10 rounded-full transition-all hover-lift">
-            <span className="material-symbols-outlined">notifications</span>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setNotifOpen((prev) => !prev)}
+              className="p-2 text-[#E5E1E4]/70 hover:bg-white/10 rounded-full transition-all hover-lift"
+            >
+              <span className="material-symbols-outlined">notifications</span>
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[#FF9500] ring-2 ring-[#131315]" />
+              )}
+            </button>
+            <NotificationDropdown
+              open={notifOpen}
+              onClose={() => setNotifOpen(false)}
+              onUnreadCountChange={handleUnreadCountChange}
+            />
+          </div>
           <button className="p-2 text-[#E5E1E4]/70 hover:bg-white/10 rounded-full transition-all hover-lift">
             <span className="material-symbols-outlined">account_circle</span>
           </button>

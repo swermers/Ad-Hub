@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
   api,
   type Product,
@@ -9,6 +10,16 @@ import {
   type WinnerAnalysis,
   type RunOptimizationStatus,
 } from "@/lib/api";
+
+const fadeUp = (delay: number = 0) => ({
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
+});
+
+const stagger = {
+  animate: { transition: { staggerChildren: 0.08 } },
+};
 
 export default function OptimizerPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -113,13 +124,44 @@ export default function OptimizerPage() {
   };
 
   const actionColors: Record<string, string> = {
-    paused: "text-[#ffb4ab] bg-[#ffb4ab]/10",
-    promoted: "text-[#4ade80] bg-[#4ade80]/10",
-    kept: "text-[#dbc2ad] bg-white/5",
-    auto_iterate: "text-purple-600 bg-purple-50",
+    paused: "text-[#ffb4ab] bg-[#ffb4ab]/10 border-[#ffb4ab]/20",
+    promoted: "text-[#4ade80] bg-[#4ade80]/10 border-[#4ade80]/20",
+    kept: "text-[#dbc2ad] bg-white/5 border-[#dbc2ad]/20",
+    auto_iterate: "text-[#FF9500] bg-[#FF9500]/10 border-[#FF9500]/20",
   };
 
-  if (loading) return <div className="text-[#E5E1E4]/50">Loading...</div>;
+  // Loading skeleton
+  if (loading)
+    return (
+      <motion.div
+        className="animate-pulse space-y-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+      >
+        <div className="space-y-3">
+          <div className="h-3 w-28 bg-[#FF9500]/20 rounded" />
+          <div className="h-12 w-80 bg-[#E5E1E4]/10 rounded" />
+          <div className="h-4 w-56 bg-[#E5E1E4]/5 rounded" />
+        </div>
+        <div className="h-12 w-full max-w-md bg-[#1b1b1d]/60 rounded-2xl" />
+        <div className="grid grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-5 h-24" />
+          ))}
+        </div>
+        <div className="flex gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-10 w-32 bg-[#1b1b1d]/60 rounded-xl" />
+          ))}
+        </div>
+        <div className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-6 space-y-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-10 bg-[#E5E1E4]/5 rounded-xl" />
+          ))}
+        </div>
+      </motion.div>
+    );
 
   // Summary stats from logs
   const totalPaused = logs.filter((l) => l.action === "paused").length;
@@ -129,167 +171,185 @@ export default function OptimizerPage() {
     .reduce((sum, l) => sum + (l.metrics_snapshot.spend || 0), 0);
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-[#E5E1E4] mb-2">Ad Optimizer</h1>
-      <p className="text-[#E5E1E4]/50 mb-6">
-        Automatically pause low-performing ads and promote winners.
-      </p>
+    <motion.div initial="initial" animate="animate" variants={stagger}>
+      {/* Header */}
+      <motion.div {...fadeUp(0)} className="mb-10">
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em]">
+                Ad Optimizer
+              </p>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF9500] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF9500]" />
+              </span>
+            </div>
+            <h1 className="text-4xl md:text-7xl font-bold tracking-tighter text-[#E5E1E4]">
+              Performance<span className="text-[#E5E1E4]/30">{" "}Optimizer.</span>
+            </h1>
+            <p className="text-[#E5E1E4]/40 text-sm mt-2 font-mono">
+              SYS:AD_OPTIMIZER // auto-pause losers, promote winners // {new Date().toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Product selector */}
-      <div className="mb-6">
+      <motion.div {...fadeUp(0.06)} className="mb-8">
+        <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-2">
+          Select Product
+        </p>
         <select
           value={productId}
           onChange={(e) => setProductId(e.target.value)}
-          className="w-full max-w-md px-3 py-2 border border-white/10 rounded-lg text-sm bg-[#201f21] text-[#E5E1E4]"
+          className="w-full max-w-md px-4 py-3 glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl text-sm text-[#E5E1E4] focus:outline-none focus:border-[#FF9500]/50 transition-colors"
         >
           <option value="">Select a product...</option>
           {products.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
-      </div>
+      </motion.div>
 
       {productId && config && (
         <>
-          {/* Summary cards */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="p-4 bg-[#ffb4ab]/10 rounded-xl">
-              <p className="text-2xl font-bold text-[#ffb4ab]">{totalPaused}</p>
-              <p className="text-sm text-[#ffb4ab]">Ads Paused</p>
-            </div>
-            <div className="p-4 bg-[#4ade80]/10 rounded-xl">
-              <p className="text-2xl font-bold text-[#4ade80]">{totalPromoted}</p>
-              <p className="text-sm text-[#4ade80]">Winners Promoted</p>
-            </div>
-            <div className="p-4 bg-[#FF9500]/10 rounded-xl">
-              <p className="text-2xl font-bold text-[#FF9500]">${totalSpendSaved.toFixed(2)}</p>
-              <p className="text-sm text-[#FF9500]">Spend on Paused Ads</p>
-            </div>
-          </div>
+          {/* Summary stat cards */}
+          <motion.div {...fadeUp(0.1)} className="grid grid-cols-3 gap-4 mb-8">
+            <StatCard label="Ads Paused" value={totalPaused} color="#ffb4ab" delay={0.1} />
+            <StatCard label="Winners Promoted" value={totalPromoted} color="#4ade80" delay={0.18} />
+            <StatCard
+              label="Spend on Paused"
+              value={`$${totalSpendSaved.toFixed(2)}`}
+              color="#FF9500"
+              delay={0.26}
+            />
+          </motion.div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-6 border-b border-white/10">
-            {(["config", "log", "analysis"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => {
-                  setActiveTab(tab);
-                  if (tab === "analysis" && !analysis) handleLoadAnalysis();
-                }}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab
-                    ? "border-[#FF9500] text-[#FF9500]"
-                    : "border-transparent text-[#E5E1E4]/50 hover:text-[#dbc2ad]"
-                }`}
-              >
-                {tab === "config" ? "Configuration" : tab === "log" ? "Decision Log" : "Winner Analysis"}
-              </button>
-            ))}
-          </div>
+          <motion.div {...fadeUp(0.16)} className="flex gap-1 mb-8">
+            <div className="flex rounded-2xl border border-[#554334]/30 overflow-hidden backdrop-blur-xl">
+              {(["config", "log", "analysis"] as const).map((tab) => (
+                <motion.button
+                  key={tab}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => {
+                    setActiveTab(tab);
+                    if (tab === "analysis" && !analysis) handleLoadAnalysis();
+                  }}
+                  className={`px-5 py-2.5 text-xs font-semibold transition-all ${
+                    activeTab === tab
+                      ? "bg-[#FF9500] text-[#2d1600]"
+                      : "bg-[#1b1b1d]/60 text-[#E5E1E4]/50 hover:bg-[#1b1b1d]/80"
+                  }`}
+                >
+                  {tab === "config" ? "Configuration" : tab === "log" ? "Decision Log" : "Winner Analysis"}
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
 
           {/* Config tab */}
           {activeTab === "config" && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
-                <div>
-                  <p className="font-medium text-[#E5E1E4]">Auto-Optimization</p>
-                  <p className="text-sm text-[#E5E1E4]/50">
-                    Runs every {config.check_interval_hours} hours when enabled
-                  </p>
-                </div>
-                <button
-                  onClick={() => setConfig({ ...config, enabled: !config.enabled })}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    config.enabled ? "bg-[#FF9500]" : "bg-white/10"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 w-5 h-5 rounded-full bg-[#201f21] shadow transition-transform ${
-                      config.enabled ? "left-6" : "left-0.5"
+            <motion.div
+              className="space-y-6"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {/* Auto-Optimization toggle */}
+              <motion.div
+                className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-5"
+                whileHover={{ borderColor: "rgba(255,149,0,0.25)" }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
+                      Auto-Optimization
+                    </p>
+                    <p className="text-sm text-[#E5E1E4]/40">
+                      Runs every {config.check_interval_hours} hours when enabled
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setConfig({ ...config, enabled: !config.enabled })}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      config.enabled ? "bg-[#FF9500]" : "bg-[#353437]"
                     }`}
-                  />
-                </button>
-              </div>
+                  >
+                    <span
+                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-[#131315] shadow transition-transform ${
+                        config.enabled ? "left-6" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </motion.div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
-                    Min Impressions Before Decision
-                  </label>
-                  <input
+              {/* Threshold config grid */}
+              <motion.div
+                className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-6"
+                whileHover={{ borderColor: "rgba(255,149,0,0.15)" }}
+              >
+                <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-5">
+                  Thresholds
+                </p>
+                <div className="grid grid-cols-2 gap-5">
+                  <InputField
+                    label="Min Impressions Before Decision"
                     type="number"
                     value={config.min_impressions}
-                    onChange={(e) => setConfig({ ...config, min_impressions: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
+                    onChange={(v) => setConfig({ ...config, min_impressions: Number(v) })}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
-                    Max CPM (kill threshold)
-                  </label>
-                  <input
+                  <InputField
+                    label="Max CPM (kill threshold)"
                     type="number"
                     step="0.5"
                     value={config.max_cpm}
-                    onChange={(e) => setConfig({ ...config, max_cpm: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
+                    onChange={(v) => setConfig({ ...config, max_cpm: Number(v) })}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
-                    Min CTR % (kill threshold)
-                  </label>
-                  <input
+                  <InputField
+                    label="Min CTR % (kill threshold)"
                     type="number"
                     step="0.1"
                     value={config.min_ctr}
-                    onChange={(e) => setConfig({ ...config, min_ctr: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
+                    onChange={(v) => setConfig({ ...config, min_ctr: Number(v) })}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
-                    Winner CTR % (promote threshold)
-                  </label>
-                  <input
+                  <InputField
+                    label="Winner CTR % (promote threshold)"
                     type="number"
                     step="0.1"
                     value={config.winner_ctr_threshold}
-                    onChange={(e) => setConfig({ ...config, winner_ctr_threshold: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
+                    onChange={(v) => setConfig({ ...config, winner_ctr_threshold: Number(v) })}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
-                    Winner Budget Multiplier
-                  </label>
-                  <input
+                  <InputField
+                    label="Winner Budget Multiplier"
                     type="number"
                     step="0.5"
                     value={config.winner_budget_multiplier}
-                    onChange={(e) => setConfig({ ...config, winner_budget_multiplier: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
+                    onChange={(v) => setConfig({ ...config, winner_budget_multiplier: Number(v) })}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
-                    Check Interval (hours)
-                  </label>
-                  <input
+                  <InputField
+                    label="Check Interval (hours)"
                     type="number"
                     value={config.check_interval_hours}
-                    onChange={(e) => setConfig({ ...config, check_interval_hours: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
+                    onChange={(v) => setConfig({ ...config, check_interval_hours: Number(v) })}
                   />
                 </div>
-              </div>
+              </motion.div>
 
               {/* Auto-Iterate Flywheel */}
-              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-3">
+              <motion.div
+                className="glass-prism rounded-2xl border border-[#FF9500]/20 bg-[#FF9500]/5 backdrop-blur-xl p-6 space-y-4"
+                whileHover={{ borderColor: "rgba(255,149,0,0.35)" }}
+              >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-purple-900">Auto-Iterate Flywheel</p>
-                    <p className="text-sm text-purple-700">
+                    <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
+                      Auto-Iterate Flywheel
+                    </p>
+                    <p className="text-sm text-[#E5E1E4]/40 max-w-lg">
                       When enabled, automatically generates the next batch of ads after finding winners.
                       Analyzes winning patterns and creates evolved variations.
                     </p>
@@ -297,11 +357,11 @@ export default function OptimizerPage() {
                   <button
                     onClick={() => setConfig({ ...config, auto_iterate: !config.auto_iterate })}
                     className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ml-4 ${
-                      config.auto_iterate ? "bg-purple-600" : "bg-white/10"
+                      config.auto_iterate ? "bg-[#FF9500]" : "bg-[#353437]"
                     }`}
                   >
                     <span
-                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-[#201f21] shadow transition-transform ${
+                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-[#131315] shadow transition-transform ${
                         config.auto_iterate ? "left-6" : "left-0.5"
                       }`}
                     />
@@ -310,162 +370,347 @@ export default function OptimizerPage() {
 
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-purple-800 mb-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[#E5E1E4]/40 mb-2">
                       Max Iterations (safety cap)
                     </label>
                     <input
                       type="number"
                       value={config.max_iterations}
                       onChange={(e) => setConfig({ ...config, max_iterations: Number(e.target.value) })}
-                      className="w-full px-3 py-1.5 border border-purple-300 rounded-lg text-sm"
+                      className="w-full px-4 py-2.5 rounded-xl border border-[#FF9500]/20 bg-[#1b1b1d]/80 backdrop-blur-xl text-sm text-[#E5E1E4] focus:outline-none focus:border-[#FF9500]/50 transition-colors"
                       min={1}
                       max={100}
                     />
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs text-purple-700">Progress</p>
-                    <p className="text-lg font-bold text-purple-900">
-                      {config.iterations_run} / {config.max_iterations}
+                  <div className="glass-prism rounded-2xl border border-[#FF9500]/20 bg-[#1b1b1d]/60 backdrop-blur-xl px-5 py-3 text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#E5E1E4]/40 mb-1">
+                      Progress
+                    </p>
+                    <p className="text-2xl font-bold text-[#FF9500]">
+                      {config.iterations_run}
+                      <span className="text-[#E5E1E4]/20"> / {config.max_iterations}</span>
                     </p>
                   </div>
                   {config.iterations_run > 0 && (
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.97 }}
                       onClick={handleResetIterations}
-                      className="px-3 py-1.5 text-xs font-medium text-purple-700 bg-[#201f21] border border-purple-300 rounded-lg hover:bg-purple-50"
+                      className="px-4 py-2.5 text-xs font-semibold text-[#FF9500] bg-[#1b1b1d]/60 border border-[#FF9500]/20 rounded-xl hover:bg-[#FF9500]/10 transition-colors"
                     >
                       Reset Counter
-                    </button>
+                    </motion.button>
                   )}
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="flex gap-3">
-                <button
+              {/* Action buttons */}
+              <div className="flex gap-3 pt-2">
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={handleSaveConfig}
                   disabled={saving}
-                  className="px-6 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium disabled:opacity-50"
+                  className="px-6 py-2.5 bg-[#FF9500] text-[#2d1600] rounded-xl text-sm font-semibold disabled:opacity-50 shadow-lg shadow-[#FF9500]/10 hover:shadow-[#FF9500]/25 transition-shadow"
                 >
                   {saving ? "Saving..." : "Save Configuration"}
-                </button>
-                <button
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={handleRunOptimization}
                   disabled={running}
-                  className="px-6 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium disabled:opacity-50"
+                  className="px-6 py-2.5 bg-[#FF9500]/15 text-[#FF9500] border border-[#FF9500]/20 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-[#FF9500]/25 transition-colors"
                 >
-                  {running ? "Running..." : "Run Optimization Now"}
-                </button>
-                <button
+                  {running ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-3 h-3 border-2 border-[#FF9500]/30 border-t-[#FF9500] rounded-full animate-spin" />
+                      Running...
+                    </span>
+                  ) : (
+                    "Run Optimization Now"
+                  )}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={handleTriggerAutoIterate}
                   disabled={iterating}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                  className="px-6 py-2.5 bg-[#FF9500]/15 text-[#FF9500] border border-[#FF9500]/20 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-[#FF9500]/25 transition-colors"
                 >
-                  {iterating ? "Iterating..." : "Run Auto-Iterate Now"}
-                </button>
+                  {iterating ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-3 h-3 border-2 border-[#FF9500]/30 border-t-[#FF9500] rounded-full animate-spin" />
+                      Iterating...
+                    </span>
+                  ) : (
+                    "Run Auto-Iterate Now"
+                  )}
+                </motion.button>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Log tab */}
           {activeTab === "log" && (
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            >
               {logs.length === 0 ? (
-                <p className="text-center py-8 text-[#E5E1E4]/50">
-                  No optimization decisions yet. Run the optimizer to start.
-                </p>
+                <motion.div
+                  className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-16 text-center"
+                  {...fadeUp(0.1)}
+                >
+                  <p className="text-sm font-semibold text-[#E5E1E4]/50">No optimization decisions yet</p>
+                  <p className="text-xs text-[#E5E1E4]/30 mt-1.5">
+                    Run the optimizer to start seeing decisions here.
+                  </p>
+                </motion.div>
               ) : (
-                <div className="space-y-2">
-                  {logs.map((log) => (
-                    <div key={log.id} className="flex items-start gap-3 p-3 bg-[#201f21] rounded-lg border border-white/10">
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${actionColors[log.action] || ""}`}>
+                <div className="space-y-3">
+                  <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-3">
+                    Decision History ({logs.length})
+                  </p>
+                  {logs.map((log, i) => (
+                    <motion.div
+                      key={log.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.35, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                      whileHover={{ borderColor: "rgba(255,149,0,0.2)" }}
+                      className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-4 flex items-start gap-4"
+                    >
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border shrink-0 ${
+                          actionColors[log.action] || "text-[#E5E1E4]/50 bg-white/5 border-white/10"
+                        }`}
+                      >
                         {log.action}
                       </span>
                       <div className="flex-1 min-w-0">
                         {log.headline && (
-                          <p className="text-sm font-medium text-[#E5E1E4] truncate">{log.headline}</p>
+                          <p className="text-sm font-semibold text-[#E5E1E4] truncate">{log.headline}</p>
                         )}
-                        <p className="text-sm text-[#dbc2ad]">{log.reason}</p>
-                        <div className="flex gap-3 mt-1 text-xs text-[#E5E1E4]/40">
+                        <p className="text-sm text-[#E5E1E4]/50 mt-0.5">{log.reason}</p>
+                        <div className="flex gap-4 mt-2">
                           {log.metrics_snapshot.impressions !== undefined && (
-                            <span>{log.metrics_snapshot.impressions} imp</span>
+                            <MetricPill label="IMP" value={String(log.metrics_snapshot.impressions)} />
                           )}
                           {log.metrics_snapshot.ctr !== undefined && (
-                            <span>{log.metrics_snapshot.ctr.toFixed(2)}% CTR</span>
+                            <MetricPill label="CTR" value={`${log.metrics_snapshot.ctr.toFixed(2)}%`} />
                           )}
                           {log.metrics_snapshot.cpm !== undefined && (
-                            <span>${log.metrics_snapshot.cpm.toFixed(2)} CPM</span>
+                            <MetricPill label="CPM" value={`$${log.metrics_snapshot.cpm.toFixed(2)}`} />
                           )}
                           {log.metrics_snapshot.spend !== undefined && (
-                            <span>${log.metrics_snapshot.spend.toFixed(2)} spent</span>
+                            <MetricPill label="SPEND" value={`$${log.metrics_snapshot.spend.toFixed(2)}`} />
                           )}
                         </div>
                       </div>
-                      <span className="text-xs text-[#E5E1E4]/40 whitespace-nowrap">
+                      <span className="text-[10px] text-[#E5E1E4]/30 whitespace-nowrap font-mono">
                         {new Date(log.created_at).toLocaleString()}
                       </span>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               )}
-            </div>
+            </motion.div>
           )}
 
           {/* Analysis tab */}
           {activeTab === "analysis" && (
-            <div className="space-y-6">
+            <motion.div
+              className="space-y-6"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            >
               {!analysis ? (
-                <p className="text-center py-8 text-[#E5E1E4]/50">Loading analysis...</p>
+                <motion.div className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-16 text-center">
+                  <span className="w-5 h-5 border-2 border-[#FF9500]/30 border-t-[#FF9500] rounded-full animate-spin inline-block mb-3" />
+                  <p className="text-sm text-[#E5E1E4]/50">Loading analysis...</p>
+                </motion.div>
               ) : (
                 <>
-                  <div className="p-4 bg-white/5 rounded-xl">
-                    <p className="text-sm text-[#dbc2ad]">{analysis.summary}</p>
-                  </div>
+                  {/* Summary */}
+                  <motion.div
+                    {...fadeUp(0.08)}
+                    className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-6"
+                  >
+                    <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-3">
+                      Analysis Summary
+                    </p>
+                    <p className="text-sm text-[#E5E1E4]/60 leading-relaxed">{analysis.summary}</p>
+                  </motion.div>
 
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="text-sm font-semibold text-[#4ade80] mb-2">Winning Patterns</h3>
-                      <ul className="space-y-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Winning patterns */}
+                    <motion.div
+                      {...fadeUp(0.14)}
+                      className="glass-prism rounded-2xl border border-[#4ade80]/15 bg-[#4ade80]/[0.03] backdrop-blur-xl p-6"
+                    >
+                      <p className="text-[#4ade80] text-[11px] font-black uppercase tracking-[0.2em] mb-4">
+                        Winning Patterns
+                      </p>
+                      <ul className="space-y-2.5">
                         {analysis.winning_patterns.map((p, i) => (
-                          <li key={i} className="text-sm text-[#dbc2ad] flex items-start gap-2">
-                            <span className="text-[#4ade80] mt-0.5">+</span> {p}
-                          </li>
+                          <motion.li
+                            key={i}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.35, delay: 0.2 + i * 0.06 }}
+                            className="text-sm text-[#E5E1E4]/60 flex items-start gap-2.5"
+                          >
+                            <span className="text-[#4ade80] mt-0.5 shrink-0 font-bold">+</span>
+                            <span>{p}</span>
+                          </motion.li>
                         ))}
                       </ul>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-[#ffb4ab] mb-2">Losing Patterns</h3>
-                      <ul className="space-y-1">
+                    </motion.div>
+
+                    {/* Losing patterns */}
+                    <motion.div
+                      {...fadeUp(0.18)}
+                      className="glass-prism rounded-2xl border border-[#ffb4ab]/15 bg-[#ffb4ab]/[0.03] backdrop-blur-xl p-6"
+                    >
+                      <p className="text-[#ffb4ab] text-[11px] font-black uppercase tracking-[0.2em] mb-4">
+                        Losing Patterns
+                      </p>
+                      <ul className="space-y-2.5">
                         {analysis.losing_patterns.map((p, i) => (
-                          <li key={i} className="text-sm text-[#dbc2ad] flex items-start gap-2">
-                            <span className="text-[#ffb4ab] mt-0.5">-</span> {p}
-                          </li>
+                          <motion.li
+                            key={i}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.35, delay: 0.2 + i * 0.06 }}
+                            className="text-sm text-[#E5E1E4]/60 flex items-start gap-2.5"
+                          >
+                            <span className="text-[#ffb4ab] mt-0.5 shrink-0 font-bold">-</span>
+                            <span>{p}</span>
+                          </motion.li>
                         ))}
                       </ul>
-                    </div>
+                    </motion.div>
                   </div>
 
-                  <div>
-                    <h3 className="text-sm font-semibold text-[#FF9500] mb-2">Recommended Next Angles</h3>
-                    <ul className="space-y-1">
+                  {/* Recommended angles */}
+                  <motion.div
+                    {...fadeUp(0.22)}
+                    className="glass-prism rounded-2xl border border-[#FF9500]/15 bg-[#FF9500]/[0.03] backdrop-blur-xl p-6"
+                  >
+                    <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-4">
+                      Recommended Next Angles
+                    </p>
+                    <ul className="space-y-2.5">
                       {analysis.recommended_angles.map((a, i) => (
-                        <li key={i} className="text-sm text-[#dbc2ad] flex items-start gap-2">
-                          <span className="text-[#FF9500] mt-0.5">&#x2192;</span> {a}
-                        </li>
+                        <motion.li
+                          key={i}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.35, delay: 0.3 + i * 0.06 }}
+                          className="text-sm text-[#E5E1E4]/60 flex items-start gap-2.5"
+                        >
+                          <span className="text-[#FF9500] mt-0.5 shrink-0">&#x2192;</span>
+                          <span>{a}</span>
+                        </motion.li>
                       ))}
                     </ul>
-                  </div>
+                  </motion.div>
 
-                  <button
+                  <motion.button
+                    {...fadeUp(0.28)}
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={handleLoadAnalysis}
-                    className="px-4 py-2 border border-white/10 rounded-lg text-sm"
+                    className="px-5 py-2.5 glass-prism rounded-xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl text-sm font-semibold text-[#E5E1E4]/60 hover:text-[#FF9500] hover:border-[#FF9500]/30 transition-colors"
                   >
                     Refresh Analysis
-                  </button>
+                  </motion.button>
                 </>
               )}
-            </div>
+            </motion.div>
           )}
         </>
       )}
+    </motion.div>
+  );
+}
+
+/** Animated stat card */
+function StatCard({
+  label,
+  value,
+  color,
+  delay,
+}: {
+  label: string;
+  value: number | string;
+  color: string;
+  delay: number;
+}) {
+  return (
+    <motion.div
+      {...fadeUp(delay)}
+      whileHover={{ borderColor: `${color}33` }}
+      className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-5"
+    >
+      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#E5E1E4]/40 mb-2">
+        {label}
+      </p>
+      <p className="text-2xl font-bold tracking-tight" style={{ color }}>
+        {value}
+      </p>
+      <div className="mt-3 h-1 rounded-full bg-[#353437] overflow-hidden">
+        <motion.div
+          className="h-full rounded-full"
+          style={{ backgroundColor: color }}
+          initial={{ width: 0 }}
+          animate={{ width: typeof value === "number" && value > 0 ? "100%" : typeof value === "string" ? "65%" : "0%" }}
+          transition={{ duration: 0.8, delay: delay + 0.2, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
+/** Styled form input field */
+function InputField({
+  label,
+  type = "text",
+  step,
+  value,
+  onChange,
+}: {
+  label: string;
+  type?: string;
+  step?: string;
+  value: number | string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[#E5E1E4]/40 mb-2">
+        {label}
+      </label>
+      <input
+        type={type}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-4 py-2.5 rounded-xl border border-[#554334]/30 bg-[#1b1b1d]/80 backdrop-blur-xl text-sm text-[#E5E1E4] focus:outline-none focus:border-[#FF9500]/50 transition-colors"
+      />
     </div>
+  );
+}
+
+/** Compact metric pill for decision log entries */
+function MetricPill({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-[#E5E1E4]/30">
+      <span className="font-bold uppercase tracking-wider text-[#E5E1E4]/20">{label}</span>
+      {value}
+    </span>
   );
 }
