@@ -3,6 +3,51 @@ import json
 from app.engines.vectorstore import get_vectorstore
 from app.services.claude_client import call_claude
 
+# Template text constraints — max character counts per field.
+# Used to instruct Claude to generate copy that fits each template's layout.
+TEMPLATE_CONSTRAINTS = {
+    "bold_hook": {"headline": 30, "body": 60, "cta": 20},
+    "before_after": {"headline": 25, "body": 50, "cta": 18},
+    "pain_solution": {"headline": 30, "body": 60, "cta": 20},
+    "stat_proof": {"headline": 15, "body": 50, "cta": 18},
+    "testimonial": {"headline": 40, "body": 60, "cta": 18},
+    "gradient_card": {"headline": 30, "body": 55, "cta": 20},
+    "minimal_clean": {"headline": 25, "body": 50, "cta": 18},
+    "split_image": {"headline": 30, "body": 55, "cta": 18},
+    "story_vertical": {"headline": 25, "body": 45, "cta": 18},
+    "carousel_card": {"headline": 25, "body": 50, "cta": 18},
+    "ugc_style": {"headline": 30, "body": 55, "cta": 20},
+    # Video styles
+    "swiss-bold": {"headline": 25, "body": 50, "cta": 18},
+    "swiss-stack": {"headline": 30, "body": 60, "cta": 18},
+    "swiss-type": {"headline": 20, "body": 45, "cta": 16},
+    "swiss-grid": {"headline": 25, "body": 50, "cta": 18},
+    "swiss-minimal": {"headline": 20, "body": 40, "cta": 16},
+    "swiss-carousel": {"headline": 25, "body": 50, "cta": 18},
+    "swiss-story": {"headline": 25, "body": 45, "cta": 18},
+    "saas-demo": {"headline": 35, "body": 60, "cta": 20},
+    "data-hype": {"headline": 40, "body": 30, "cta": 20},
+    "social-proof": {"headline": 50, "body": 70, "cta": 22},
+    "default": {"headline": 30, "body": 60, "cta": 20},
+    "pas": {"headline": 25, "body": 50, "cta": 18},
+    "kinetic": {"headline": 30, "body": 55, "cta": 18},
+    "hand-drawn": {"headline": 25, "body": 50, "cta": 18},
+}
+
+
+def _enforce_template_limits(piece_data: dict, template_type: str | None) -> dict:
+    """Truncate fields to template limits as safety net."""
+    if not template_type or template_type not in TEMPLATE_CONSTRAINTS:
+        return piece_data
+    tc = TEMPLATE_CONSTRAINTS[template_type]
+    if piece_data.get("headline") and len(piece_data["headline"]) > tc["headline"]:
+        piece_data["headline"] = piece_data["headline"][:tc["headline"] - 1] + "\u2026"
+    if piece_data.get("body") and len(piece_data["body"]) > tc["body"]:
+        piece_data["body"] = piece_data["body"][:tc["body"] - 1] + "\u2026"
+    if piece_data.get("cta") and len(piece_data["cta"]) > tc["cta"]:
+        piece_data["cta"] = piece_data["cta"][:tc["cta"] - 1] + "\u2026"
+    return piece_data
+
 
 def _build_brand_constraints(brand_profile) -> str:
     """Build hard brand constraints from a BrandProfile object for injection into prompts."""
@@ -156,6 +201,7 @@ async def generate_content_batch(
     funnel_stage: str = "awareness",
     instructions: str | None = None,
     brand_profile=None,
+    template_type: str | None = None,
 ) -> list[dict]:
     """Generate a batch of content pieces using RAG + Claude."""
 
@@ -197,6 +243,18 @@ Funnel Stage: {funnel_stage}
 IMPORTANT: Only use factual information from the provided context. Do not invent features or claims.
 {f"IMPORTANT: Follow ALL brand voice constraints and content rules above. They are mandatory, not suggestions." if brand_constraints else ""}"""
 
+    # Add template constraints to the prompt if a template is specified
+    template_constraint_text = ""
+    if template_type and template_type in TEMPLATE_CONSTRAINTS:
+        tc = TEMPLATE_CONSTRAINTS[template_type]
+        template_constraint_text = f"""
+
+CRITICAL — Template Text Constraints for "{template_type}":
+- Headline: MAXIMUM {tc['headline']} characters (this is a HARD limit — text will be cut off if longer)
+- Body: MAXIMUM {tc['body']} characters
+- CTA: MAXIMUM {tc['cta']} characters
+Write punchy, concise copy that fits these limits exactly. Count your characters."""
+
     all_pieces = []
 
     for content_type in content_types:
@@ -222,6 +280,7 @@ IMPORTANT COPY CONSTRAINTS for ad_copy, carousel, and story:
 - cta: MAX 15 characters. Action verb + value.
 - For carousel: include "slide_headlines" as pipe-delimited string ("Slide 1|Slide 2|Slide 3|Slide 4|Slide 5")
 - Every word must earn its place. Swiss minimalism: less is more.
+{template_constraint_text}
 
 Return your response as a JSON array with this structure:
 [
@@ -264,17 +323,18 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                 # Store carousel slide headlines in metadata if present
                 if piece.get("slide_headlines"):
                     piece_meta["slide_headlines"] = piece["slide_headlines"]
-                all_pieces.append(
-                    {
-                        "content_type": content_type,
-                        "platform": platform,
-                        "title": piece.get("title"),
-                        "body": piece.get("body", ""),
-                        "hook": piece.get("hook"),
-                        "cta": piece.get("cta"),
-                        "metadata": json.dumps(piece_meta),
-                    }
-                )
+                piece_dict = {
+                    "content_type": content_type,
+                    "platform": platform,
+                    "title": piece.get("title"),
+                    "body": piece.get("body", ""),
+                    "hook": piece.get("hook"),
+                    "cta": piece.get("cta"),
+                    "metadata": json.dumps(piece_meta),
+                }
+                # Enforce template character limits as safety net
+                _enforce_template_limits(piece_dict, template_type)
+                all_pieces.append(piece_dict)
 
     return all_pieces
 
@@ -287,6 +347,7 @@ def generate_content_batch_sync(
     funnel_stage: str = "awareness",
     instructions: str | None = None,
     brand_profile=None,
+    template_type: str | None = None,
 ) -> list[dict]:
     """Sync version of generate_content_batch for background threads."""
     from app.services.claude_client import call_claude_sync
@@ -327,6 +388,18 @@ Funnel Stage: {funnel_stage}
 IMPORTANT: Only use factual information from the provided context. Do not invent features or claims.
 {f"IMPORTANT: Follow ALL brand voice constraints and content rules above. They are mandatory, not suggestions." if brand_constraints else ""}"""
 
+    # Add template constraints to the prompt if a template is specified
+    template_constraint_text = ""
+    if template_type and template_type in TEMPLATE_CONSTRAINTS:
+        tc = TEMPLATE_CONSTRAINTS[template_type]
+        template_constraint_text = f"""
+
+CRITICAL — Template Text Constraints for "{template_type}":
+- Headline: MAXIMUM {tc['headline']} characters (this is a HARD limit — text will be cut off if longer)
+- Body: MAXIMUM {tc['body']} characters
+- CTA: MAXIMUM {tc['cta']} characters
+Write punchy, concise copy that fits these limits exactly. Count your characters."""
+
     all_pieces = []
 
     for content_type in content_types:
@@ -352,6 +425,7 @@ IMPORTANT COPY CONSTRAINTS for ad_copy, carousel, and story:
 - cta: MAX 15 characters. Action verb + value.
 - For carousel: include "slide_headlines" as pipe-delimited string ("Slide 1|Slide 2|Slide 3|Slide 4|Slide 5")
 - Every word must earn its place. Swiss minimalism: less is more.
+{template_constraint_text}
 
 Return your response as a JSON array with this structure:
 [
@@ -392,17 +466,18 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                 }
                 if piece.get("slide_headlines"):
                     piece_meta["slide_headlines"] = piece["slide_headlines"]
-                all_pieces.append(
-                    {
-                        "content_type": content_type,
-                        "platform": platform,
-                        "title": piece.get("title"),
-                        "body": piece.get("body", ""),
-                        "hook": piece.get("hook"),
-                        "cta": piece.get("cta"),
-                        "metadata": json.dumps(piece_meta),
-                    }
-                )
+                piece_dict = {
+                    "content_type": content_type,
+                    "platform": platform,
+                    "title": piece.get("title"),
+                    "body": piece.get("body", ""),
+                    "hook": piece.get("hook"),
+                    "cta": piece.get("cta"),
+                    "metadata": json.dumps(piece_meta),
+                }
+                # Enforce template character limits as safety net
+                _enforce_template_limits(piece_dict, template_type)
+                all_pieces.append(piece_dict)
 
     return all_pieces
 
@@ -553,9 +628,11 @@ Ad Format: {template_instruction}
 {color_instruction}
 
 CONSTRAINTS:
-- Headline: max 40 characters
-- Body: max 125 characters
-- CTA: max 30 characters (e.g., "Try Free", "Learn More", "Get Started")
+- Headline: max {TEMPLATE_CONSTRAINTS.get(template_type, TEMPLATE_CONSTRAINTS["default"])["headline"]} characters
+- Body: max {TEMPLATE_CONSTRAINTS.get(template_type, TEMPLATE_CONSTRAINTS["default"])["body"]} characters
+- CTA: max {TEMPLATE_CONSTRAINTS.get(template_type, TEMPLATE_CONSTRAINTS["default"])["cta"]} characters (e.g., "Try Free", "Learn More", "Get Started")
+
+{"CRITICAL — Template Text Constraints for " + repr(template_type) + ": these are HARD limits — text will be cut off if longer. Write punchy, concise copy that fits. Count your characters." if template_type and template_type in TEMPLATE_CONSTRAINTS else ""}
 
 Write copy that speaks directly to the pain point. Be specific, not generic.
 {f"IMPORTANT: Follow ALL brand voice constraints and content rules above. They are mandatory, not suggestions." if brand_constraints else ""}"""

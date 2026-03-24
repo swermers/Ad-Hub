@@ -8,6 +8,7 @@ import {
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
+import { safeTruncate, shiftHue } from "./animationUtils";
 
 export interface KineticTextProps {
   headline: string;
@@ -43,7 +44,10 @@ export function KineticTextComposition({
   const { fps } = useVideoConfig();
   const { width, height } = getDimensions(aspectRatio);
 
-  const words = headline.split(/\s+/);
+  // Apply text safety
+  const safeHeadline = safeTruncate(headline, 35);
+
+  const words = safeHeadline.split(/\s+/);
   const framesPerWord = Math.min(Math.floor((fps * 2) / Math.max(words.length, 1)), fps * 0.4);
   const totalWordAnimTime = words.length * framesPerWord;
 
@@ -230,7 +234,7 @@ export function KineticTextComposition({
         {/* CTA */}
         <div
           style={{
-            background: `linear-gradient(135deg, ${accentColor}, ${shiftHue(accentColor)})`,
+            background: `linear-gradient(135deg, ${accentColor}, ${shiftHue(accentColor, 30)})`,
             color: "#fff",
             fontSize: 22,
             fontWeight: 800,
@@ -249,10 +253,3 @@ export function KineticTextComposition({
   );
 }
 
-function shiftHue(hex: string): string {
-  const num = parseInt(hex.replace("#", ""), 16);
-  const r = Math.min(255, ((num >> 16) & 0xff) + 40);
-  const g = Math.max(0, ((num >> 8) & 0xff) - 20);
-  const b = Math.min(255, (num & 0xff) + 60);
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
-}

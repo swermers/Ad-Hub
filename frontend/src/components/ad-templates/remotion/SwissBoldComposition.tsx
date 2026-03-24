@@ -9,6 +9,8 @@ import {
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
 import { TYPE, GRID, PALETTE, SPACE, isLightColor } from "./swissDesign";
+import { safeTruncate } from "./animationUtils";
+import { IconArrowRight } from "./icons";
 
 export interface SwissBoldProps {
   headline: string;
@@ -83,14 +85,18 @@ export function SwissBoldComposition({
     extrapolateRight: "clamp",
   });
 
+  // Apply text safety
+  const safeHeadline = safeTruncate(headline, 30);
+  const safeBody = safeTruncate(body, 60);
+
   // Split headline into words — last word (or short phrase) gets emphasis
-  const words = headline.split(/\s+/);
+  const words = safeHeadline.split(/\s+/);
   // Pick emphasis: if the body is short (1-2 words), use it as emphasis text
   // Otherwise use the last word of headline
-  const bodyWords = body.trim().split(/\s+/);
-  const useBodyAsEmphasis = bodyWords.length <= 3 && body.trim().length <= 20;
+  const bodyWords = safeBody.trim().split(/\s+/);
+  const useBodyAsEmphasis = bodyWords.length <= 3 && safeBody.trim().length <= 20;
   const mainWords = words;
-  const emphasisText = useBodyAsEmphasis ? body.trim() : null;
+  const emphasisText = useBodyAsEmphasis ? safeBody.trim() : null;
 
   // Word stagger animation
   const wordStartFrame = fps * 0.2;
@@ -146,7 +152,7 @@ export function SwissBoldComposition({
   });
 
   // Headline font size — bigger than standard, this is BOLD
-  const hlSize = headline.length > 18
+  const hlSize = safeHeadline.length > 18
     ? Math.round(width * 0.09)
     : Math.round(width * 0.115);
 
@@ -310,7 +316,7 @@ export function SwissBoldComposition({
                 maxWidth: "75%",
               }}
             >
-              {useBodyAsEmphasis ? cta : body}
+              {useBodyAsEmphasis ? cta : safeBody}
             </p>
 
             {/* Arrow indicator */}
@@ -322,20 +328,11 @@ export function SwissBoldComposition({
                 alignItems: "center",
               }}
             >
-              <svg
-                width={Math.round(width * 0.06)}
-                height={Math.round(width * 0.04)}
-                viewBox="0 0 60 40"
-                fill="none"
-              >
-                <path
-                  d="M0 20H52M52 20L38 6M52 20L38 34"
-                  stroke={headlineColor}
-                  strokeWidth={4}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <IconArrowRight
+                size={Math.round(width * 0.06)}
+                color={headlineColor}
+                strokeWidth={3}
+              />
             </div>
           </div>
         </div>

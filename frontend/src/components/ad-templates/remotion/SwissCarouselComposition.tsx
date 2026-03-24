@@ -9,6 +9,7 @@ import {
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
 import { TYPE, GRID, PALETTE, headlineSize, SPACE, isLightColor } from "./swissDesign";
+import { safeTruncate } from "./animationUtils";
 
 export interface SwissCarouselProps {
   headline: string;
@@ -179,7 +180,7 @@ export function SwissCarouselComposition({
         {/* Slide headline */}
         <h1
           style={{
-            fontSize: headlineSize(currentSlide.text),
+            fontSize: headlineSize(safeTruncate(currentSlide.text, 25)),
             fontWeight: TYPE.display.weight,
             lineHeight: TYPE.display.lineHeight,
             letterSpacing: TYPE.display.tracking,
@@ -189,7 +190,7 @@ export function SwissCarouselComposition({
             maxWidth: GRID.spanWidth(10, width),
           }}
         >
-          {currentSlide.text}
+          {safeTruncate(currentSlide.text, 25)}
         </h1>
 
         {/* Accent bar */}

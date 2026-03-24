@@ -13,6 +13,9 @@ import { SwissStoryComposition } from "./SwissStoryComposition";
 import { SwissBoldComposition } from "./SwissBoldComposition";
 import { SwissStackComposition } from "./SwissStackComposition";
 import { HandDrawnComposition } from "./HandDrawnComposition";
+import { SaasDemoComposition } from "./SaasDemoComposition";
+import { DataHypeComposition } from "./DataHypeComposition";
+import { SocialProofComposition } from "./SocialProofComposition";
 import type { AspectRatio } from "../types";
 import { ASPECT_DIMENSIONS } from "../types";
 
@@ -27,7 +30,10 @@ export type VideoStyle =
   | "default"
   | "pas"
   | "kinetic"
-  | "hand-drawn";
+  | "hand-drawn"
+  | "saas-demo"
+  | "data-hype"
+  | "social-proof";
 
 interface VideoPreviewProps {
   headline: string;
@@ -67,6 +73,9 @@ const STYLE_CONFIG: Record<VideoStyle, {
   pas: { component: PASComposition, durationSeconds: 6 },
   kinetic: { component: KineticTextComposition, durationSeconds: 5 },
   "hand-drawn": { component: HandDrawnComposition, durationSeconds: 8 },
+  "saas-demo": { component: SaasDemoComposition, durationSeconds: 8 },
+  "data-hype": { component: DataHypeComposition, durationSeconds: 6 },
+  "social-proof": { component: SocialProofComposition, durationSeconds: 7, forceAspect: "9:16" },
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -122,4 +131,7 @@ export const VIDEO_STYLE_OPTIONS: { value: VideoStyle; label: string; descriptio
   { value: "pas", label: "Problem → Solve", description: "3-scene drama: problem, agitate, solve" },
   { value: "kinetic", label: "Kinetic Type", description: "Words appear one-by-one with bounce effects" },
   { value: "hand-drawn", label: "Hand-Drawn", description: "Organic, warm feel — animated underlines, sketched accents, b-roll support (8s)" },
+  { value: "saas-demo", label: "SaaS Demo", description: "Browser mockup with cursor animation, feature callouts, zoom-in effect (8s)" },
+  { value: "data-hype", label: "Data Hype", description: "Animated stats counter, bar chart, growth trend line — metrics-driven (6s)" },
+  { value: "social-proof", label: "Social Proof", description: "Star ratings, review count, user counter, verified badge — trust-building (9:16, 7s)" },
 ];

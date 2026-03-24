@@ -9,6 +9,8 @@ import {
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
 import { TYPE, GRID, PALETTE, headlineSize, isLightColor } from "./swissDesign";
+import { safeTruncate, responsiveFontSize } from "./animationUtils";
+import { IconArrowRight } from "./icons";
 
 export interface SwissStoryProps {
   headline: string;
@@ -63,8 +65,12 @@ export function SwissStoryComposition({
     easing: Easing.out(Easing.cubic),
   });
 
+  // Apply text safety
+  const safeHeadline = safeTruncate(headline, 30);
+  const safeBody = safeTruncate(body, 60);
+
   // Headline — split into words for staggered entrance
-  const words = headline.split(/\s+/);
+  const words = safeHeadline.split(/\s+/);
   const wordDelay = 4; // frames between each word
   const headlineStartFrame = fps * 0.3;
 
@@ -196,7 +202,7 @@ export function SwissStoryComposition({
               <span
                 key={i}
                 style={{
-                  fontSize: headlineSize(headline) * 0.8,
+                  fontSize: responsiveFontSize(safeHeadline, headlineSize(safeHeadline) * 0.8, 30),
                   fontWeight: TYPE.display.weight,
                   lineHeight: 0.95,
                   letterSpacing: TYPE.display.tracking,
@@ -237,7 +243,7 @@ export function SwissStoryComposition({
             maxWidth: width - storyMargin * 2,
           }}
         >
-          {body}
+          {safeBody}
         </p>
       </div>
 
@@ -284,16 +290,12 @@ export function SwissStoryComposition({
             transform: `translateY(${swipePulse}px)`,
           }}
         >
-          {/* Chevron up */}
-          <div
-            style={{
-              width: 0,
-              height: 0,
-              borderLeft: "8px solid transparent",
-              borderRight: "8px solid transparent",
-              borderBottom: `10px solid ${textColor}`,
-              opacity: 0.5,
-            }}
+          {/* Chevron up — rotated arrow */}
+          <IconArrowRight
+            size={20}
+            color={textColor}
+            strokeWidth={2.5}
+            style={{ transform: "rotate(-90deg)", opacity: 0.5 }}
           />
           <span
             style={{
