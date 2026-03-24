@@ -20,6 +20,7 @@ from app.routers import (
     bulk_upload,
     connections,
     content,
+    content_pipeline,
     generation,
     image_gen,
     ingestion,
@@ -30,6 +31,7 @@ from app.routers import (
     schedule,
     seeds,
     templates,
+    voice_profiles,
 )
 
 logger = logging.getLogger(__name__)
@@ -90,6 +92,8 @@ app.include_router(brand_profile.router, prefix="/api/products", tags=["brand-pr
 app.include_router(autonomous_loop.router, prefix="/api/products", tags=["autonomous-loop"])
 app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 app.include_router(intelligence.router, prefix="/api/products", tags=["intelligence"])
+app.include_router(voice_profiles.router, prefix="/api/voice-profiles", tags=["voice-profiles"])
+app.include_router(content_pipeline.router, prefix="/api/pipeline", tags=["content-pipeline"])
 
 
 # Serve uploaded files (screenshots, references, generated images, etc.)

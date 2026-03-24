@@ -616,6 +616,48 @@ export const api = {
     request<{ task_id: string }>(`/api/products/${productId}/intelligence/run-cycle`, { method: "POST" }),
   getIntelligenceTaskStatus: (productId: string, taskId: string) =>
     request<{ status: string; result?: unknown; error?: string }>(`/api/products/${productId}/intelligence/task/${taskId}`),
+
+  // ─── Voice Profiles ─────────────────────────────────────────────────────────
+
+  listVoiceProfiles: () =>
+    request<VoiceProfileItem[]>("/api/voice-profiles/"),
+  getVoiceProfile: (id: string) =>
+    request<VoiceProfileItem>(`/api/voice-profiles/${id}`),
+  createVoiceProfile: (data: VoiceProfileCreate) =>
+    request<VoiceProfileItem>("/api/voice-profiles/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateVoiceProfile: (id: string, data: Partial<VoiceProfileCreate>) =>
+    request<VoiceProfileItem>(`/api/voice-profiles/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  deleteVoiceProfile: (id: string) =>
+    request<{ deleted: boolean }>(`/api/voice-profiles/${id}`, { method: "DELETE" }),
+
+  // ─── Content Pipeline (Stepped) ─────────────────────────────────────────────
+
+  pipelineSharpen: (data: PipelineSharpenRequest) =>
+    request<PipelineSharpenResult>("/api/pipeline/sharpen", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  pipelineDraft: (data: PipelineDraftRequest) =>
+    request<PipelineDraftResult>("/api/pipeline/draft", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  pipelineExpand: (data: PipelineExpandRequest) =>
+    request<PipelineExpandResult>("/api/pipeline/expand", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  pipelineFinalize: (data: PipelineFinalizeRequest) =>
+    request<PipelineFinalizeResult>("/api/pipeline/finalize", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
 
 // Types
@@ -1503,4 +1545,113 @@ export interface IntelligenceBriefData extends IntelligenceBriefSummary {
   evidence_found: { claim: string; evidence: string; source: string }[];
   creative_recommendations: { format: string; reason: string; expected_impact: string }[];
   next_actions: { action: string; priority: string; rationale: string }[];
+}
+
+// ─── Voice Profiles ───────────────────────────────────────────────────────────
+
+export interface VoiceProfileItem {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  tone_keywords: string[];
+  style_rules: string | null;
+  sentence_style: string | null;
+  favorite_phrases: string[];
+  words_to_avoid: string[];
+  words_to_use: string[];
+  writing_samples: string[];
+  default_template: string | null;
+  content_themes: string[];
+  is_default: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface VoiceProfileCreate {
+  name: string;
+  description?: string;
+  tone_keywords?: string[];
+  style_rules?: string;
+  sentence_style?: string;
+  favorite_phrases?: string[];
+  words_to_avoid?: string[];
+  words_to_use?: string[];
+  writing_samples?: string[];
+  default_template?: string;
+  content_themes?: string[];
+  is_default?: boolean;
+}
+
+// ─── Content Pipeline (Stepped) ───────────────────────────────────────────────
+
+export interface PipelineSharpenRequest {
+  product_id: string;
+  raw_text: string;
+  voice_profile_id?: string;
+}
+
+export interface PipelineSharpenResult {
+  seed: string;
+  heat: string[];
+  audience_hook: string;
+  template_fit: string;
+  subject_line: string;
+  metaphor: string | null;
+  weekly_theme: string;
+  raw_ideas: string[];
+  verdict: string;
+}
+
+export interface PipelineDraftRequest {
+  product_id: string;
+  seed: PipelineSharpenResult;
+  voice_profile_id?: string;
+  template_override?: string;
+}
+
+export interface PipelineDraftResult {
+  title: string;
+  subject_line: string;
+  preview_text: string;
+  body: string;
+  template_used: string;
+}
+
+export interface PipelineExpandRequest {
+  product_id: string;
+  seed: PipelineSharpenResult;
+  draft: PipelineDraftResult;
+  voice_profile_id?: string;
+  platforms?: string[];
+  include_video_script?: boolean;
+  include_thread?: boolean;
+}
+
+export interface PipelineExpandedPiece {
+  content_type: string;
+  platform: string;
+  title: string;
+  body: string;
+  hook: string | null;
+  cta: string | null;
+  funnel_stage: string;
+  metadata: Record<string, string>;
+}
+
+export interface PipelineExpandResult {
+  pieces: PipelineExpandedPiece[];
+}
+
+export interface PipelineFinalizeRequest {
+  product_id: string;
+  seed: PipelineSharpenResult;
+  pieces: PipelineExpandedPiece[];
+  save_seed?: boolean;
+}
+
+export interface PipelineFinalizeResult {
+  content_ids: string[];
+  seed_id: string | null;
+  pieces_saved: number;
 }
