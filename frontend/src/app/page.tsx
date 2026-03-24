@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { api, type ContentPiece, type ScheduledPost } from "@/lib/api";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -45,7 +47,58 @@ const assets = [
   },
 ];
 
+interface WeekData {
+  inReview: number;
+  scheduled: number;
+  published: number;
+  seedsActive: number;
+  recentContent: ContentPiece[];
+}
+
+function useWeekData() {
+  const [data, setData] = useState<WeekData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [contentRes, scheduleRes, seedsRes] = await Promise.all([
+          api.listContent().catch(() => ({ items: [] })),
+          api.listScheduledPosts().catch(() => ({ items: [] })),
+          api.listSeeds().catch(() => []),
+        ]);
+        const content = (contentRes as { items: ContentPiece[] }).items || [];
+        const scheduled = (scheduleRes as { items: ScheduledPost[] }).items || [];
+        const seeds = Array.isArray(seedsRes) ? seedsRes : [];
+        setData({
+          inReview: content.filter((c) => c.status === "review").length,
+          scheduled: scheduled.filter((s) => s.status === "scheduled").length,
+          published: content.filter((c) => c.status === "published").length,
+          seedsActive: seeds.filter((s: { status?: string }) => s.status === "developing").length,
+          recentContent: content.slice(0, 4),
+        });
+      } catch {
+        // Graceful degradation — section just won't show
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  return { data, loading };
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  draft: "text-[#E5E1E4]/50 bg-[#353437]/50 border-[#554334]/20",
+  review: "text-[#ffbd7f] bg-[#ffbd7f]/10 border-[#ffbd7f]/20",
+  approved: "text-[#4ade80] bg-[#4ade80]/10 border-[#4ade80]/20",
+  published: "text-[#a4a7ff] bg-[#a4a7ff]/10 border-[#a4a7ff]/20",
+  rejected: "text-[#ffb4ab] bg-[#ffb4ab]/10 border-[#ffb4ab]/20",
+};
+
 export default function DashboardPage() {
+  const { data: weekData, loading: weekLoading } = useWeekData();
+
   return (
     <motion.div initial="hidden" animate="visible" variants={stagger} className="relative">
       {/* Hero Header */}
@@ -174,6 +227,116 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* ── This Week — Content at a Glance ── */}
+      <motion.section variants={fadeUp} custom={4.5} className="mb-12">
+        <div className="flex items-baseline space-x-4 mb-6">
+          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#FF9500]">This Week</span>
+          <div className="h-px flex-grow bg-[#554334]/20" />
+        </div>
+
+        {weekLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="glass-prism rounded-2xl border border-[#554334]/30 p-5 space-y-3">
+                <div className="h-3 w-16 bg-[#353437]/50 rounded" />
+                <div className="h-8 w-12 bg-[#353437]/40 rounded-lg" />
+                <div className="h-1 bg-[#353437]/30 rounded-full" />
+              </div>
+            ))}
+          </div>
+        ) : weekData ? (
+          <div className="space-y-6">
+            {/* Stat Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: "In Review", value: weekData.inReview, icon: "rate_review", color: "#ffbd7f" },
+                { label: "Scheduled", value: weekData.scheduled, icon: "schedule_send", color: "#a4a7ff" },
+                { label: "Seeds Active", value: weekData.seedsActive, icon: "eco", color: "#4ade80" },
+                { label: "Published", value: weekData.published, icon: "check_circle", color: "#FF9500" },
+              ].map((stat, i) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 + i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                  className="glass-prism rounded-2xl border border-[#554334]/30 p-5 hover:border-[#FF9500]/20 transition-colors group"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-sm" style={{ color: stat.color, fontVariationSettings: "'FILL' 1" }}>{stat.icon}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#E5E1E4]/40">{stat.label}</span>
+                  </div>
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.8 + i * 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="text-3xl font-black"
+                    style={{ color: stat.color }}
+                  >
+                    {stat.value}
+                  </motion.span>
+                  <div className="h-1 w-full bg-[#353437] rounded-full overflow-hidden mt-3">
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: stat.color }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(stat.value * 15, 100)}%` }}
+                      transition={{ delay: 0.9 + i * 0.1, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Recent Content List */}
+            {weekData.recentContent.length > 0 && (
+              <div className="glass-prism rounded-2xl border border-[#554334]/30 overflow-hidden">
+                <div className="px-5 py-3 border-b border-[#554334]/10">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#E5E1E4]/40">Recent Content</span>
+                </div>
+                <div className="divide-y divide-[#554334]/10">
+                  {weekData.recentContent.map((item, i) => (
+                    <motion.a
+                      key={item.id}
+                      href={`/content/${item.id}`}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 1 + i * 0.05 }}
+                      className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#FF9500]/[0.02] transition-colors group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-[#353437]/50 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-base text-[#E5E1E4]/40" style={{ fontVariationSettings: "'FILL' 1" }}>
+                          {item.content_type === "video" ? "movie" : item.content_type === "newsletter" ? "mail" : "article"}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[#E5E1E4] truncate group-hover:text-[#FF9500] transition-colors">
+                          {item.title || "Untitled"}
+                        </p>
+                        <p className="text-xs text-[#E5E1E4]/30 font-mono mt-0.5">
+                          {item.content_type || "content"} &middot; {new Date(item.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-full border shrink-0 ${STATUS_STYLES[item.status] || STATUS_STYLES.draft}`}>
+                        {item.status}
+                      </span>
+                    </motion.a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {weekData.inReview === 0 && weekData.scheduled === 0 && weekData.published === 0 && weekData.recentContent.length === 0 && (
+              <div className="text-center py-10 glass-prism rounded-2xl border border-[#554334]/30">
+                <div className="w-12 h-12 rounded-2xl bg-[#FF9500]/10 flex items-center justify-center mx-auto mb-3">
+                  <span className="material-symbols-outlined text-xl text-[#FF9500]">edit_calendar</span>
+                </div>
+                <p className="text-sm text-[#E5E1E4]/50">No content this week — start creating!</p>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </motion.section>
 
       {/* Recent Studio Assets */}
       <motion.section variants={fadeUp} custom={5}>
