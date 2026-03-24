@@ -215,6 +215,20 @@ export default function ContentDetailPage() {
     }
   };
 
+  // Save brand colors back to product
+  const handleSaveColors = useCallback(async (colors: string[]) => {
+    if (!product) return;
+    setSavingColors(true);
+    try {
+      await api.updateProduct(product.id, { brand_colors: JSON.stringify(colors) });
+      setProduct({ ...product, brand_colors: JSON.stringify(colors) });
+    } catch {
+      setError("Failed to save brand colors");
+    } finally {
+      setSavingColors(false);
+    }
+  }, [product]);
+
   if (loading) return (
     <div className="max-w-5xl">
       <div className="animate-pulse space-y-4">
@@ -290,20 +304,6 @@ export default function ContentDetailPage() {
   const bgColor = toned.bg;
   const accentColor = toned.accent;
   const textColor = toned.text;
-
-  // Save brand colors back to product
-  const handleSaveColors = useCallback(async (colors: string[]) => {
-    if (!product) return;
-    setSavingColors(true);
-    try {
-      await api.updateProduct(product.id, { brand_colors: JSON.stringify(colors) });
-      setProduct({ ...product, brand_colors: JSON.stringify(colors) });
-    } catch {
-      setError("Failed to save brand colors");
-    } finally {
-      setSavingColors(false);
-    }
-  }, [product]);
 
   const handleAddCustomColor = () => {
     const c = customColorInput.trim();
