@@ -17,6 +17,7 @@ import { AdPreviewCard } from "@/components/ad-templates/AdPreviewCard";
 import { exportAdsAsZip } from "@/lib/export";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
+import { CsvBulkImport, type CsvAdRow } from "@/components/CsvBulkImport";
 
 const VideoPreview = dynamic(
   () => import("@/components/ad-templates/remotion/VideoPreview").then((m) => m.VideoPreview),
@@ -55,6 +56,8 @@ export default function BulkGeneratePage() {
   const [previewMode, setPreviewMode] = useState<"still" | "video">("still");
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("default");
   const [videoStyleOptions, setVideoStyleOptions] = useState<{ value: VideoStyle; label: string; description: string }[]>([]);
+  const [showCsvImport, setShowCsvImport] = useState(false);
+  const [csvImportedRows, setCsvImportedRows] = useState<CsvAdRow[]>([]);
 
   useEffect(() => {
     VIDEO_STYLE_OPTIONS_PROMISE.then(setVideoStyleOptions).catch(console.error);
@@ -205,14 +208,70 @@ export default function BulkGeneratePage() {
     }
   }, [variations, selectedVariationIds]);
 
+  const handleCsvImport = (rows: CsvAdRow[]) => {
+    setCsvImportedRows(rows);
+    setShowCsvImport(false);
+    // Convert CSV rows to AdVariation-like objects for preview
+    const csvVariations: AdVariation[] = rows.map((row, i) => ({
+      id: `csv-${Date.now()}-${i}`,
+      product_id: productId || "",
+      batch_id: `csv-import-${Date.now()}`,
+      template_id: "",
+      pain_point_id: null,
+      headline: row.headline,
+      body: row.body,
+      cta: row.cta,
+      template_type: row.template_type || selectedTemplateType,
+      template_config: {
+        ...(row.backgroundColor ? { backgroundColor: row.backgroundColor } : {}),
+        ...(row.textColor ? { textColor: row.textColor } : {}),
+        ...(row.accentColor ? { accentColor: row.accentColor } : {}),
+      },
+      status: "draft",
+      image_url: null,
+      meta_ad_id: null,
+      performance_score: null,
+      pain_point_text: null,
+      desired_outcome: null,
+      created_at: new Date().toISOString(),
+    }));
+    setVariations(csvVariations);
+    setSelectedVariationIds(csvVariations.map((v) => v.id));
+    setStep("preview");
+  };
+
   if (loading) return <div className="text-[#E5E1E4]/50">Loading...</div>;
 
   return (
     <div className="max-w-6xl">
-      <h1 className="text-2xl font-bold text-[#E5E1E4] mb-2">Bulk Ad Generator</h1>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold text-[#E5E1E4]">Bulk Ad Generator</h1>
+        <button
+          onClick={() => setShowCsvImport(!showCsvImport)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#FF9500] border border-[#FF9500]/20 rounded-lg hover:bg-[#FF9500]/10 transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+          </svg>
+          Import CSV
+        </button>
+      </div>
       <p className="text-[#E5E1E4]/50 mb-6">
-        Generate hundreds of ad variations from pain points, preview them, and export or upload to Facebook.
+        Generate hundreds of ad variations from pain points or import a CSV of headlines, preview them, and export or upload to Facebook.
       </p>
+
+      {/* CSV Import Panel */}
+      {showCsvImport && (
+        <div className="mb-6">
+          <CsvBulkImport
+            onImport={handleCsvImport}
+            onClose={() => setShowCsvImport(false)}
+          />
+        </div>
+      )}
 
       {/* Step indicator */}
       <div className="flex gap-1 mb-8">

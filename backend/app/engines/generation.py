@@ -32,6 +32,12 @@ TEMPLATE_CONSTRAINTS = {
     "pas": {"headline": 25, "body": 50, "cta": 18},
     "kinetic": {"headline": 30, "body": 55, "cta": 18},
     "hand-drawn": {"headline": 25, "body": 50, "cta": 18},
+    # Typography-heavy templates
+    "editorial_stack": {"headline": 35, "body": 50, "cta": 18},
+    "brand_hero": {"headline": 35, "body": 55, "cta": 18},
+    "status_card": {"headline": 25, "body": 65, "cta": 18},
+    "handwritten_quote": {"headline": 50, "body": 60, "cta": 16},
+    "billboard": {"headline": 30, "body": 30, "cta": 18},
 }
 
 

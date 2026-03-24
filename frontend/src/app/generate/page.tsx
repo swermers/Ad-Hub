@@ -29,6 +29,11 @@ const TEMPLATE_CHOICES = [
   { value: "story_vertical", label: "Story / Reel" },
   { value: "carousel_card", label: "Carousel Card" },
   { value: "ugc_style", label: "UGC / Native" },
+  { value: "editorial_stack", label: "Editorial Stack" },
+  { value: "brand_hero", label: "Brand Hero" },
+  { value: "status_card", label: "Status Card" },
+  { value: "handwritten_quote", label: "Handwritten Quote" },
+  { value: "billboard", label: "Billboard" },
 ];
 
 const ASPECT_CHOICES = [
@@ -184,6 +189,8 @@ function GenerateForm() {
   const [templateType, setTemplateType] = useState("");
   const [aspectRatio, setAspectRatio] = useState("");
   const [industryVertical, setIndustryVertical] = useState("");
+  const [logoFile, setLogoFile] = useState<string>("");
+  const [qrUrl, setQrUrl] = useState("");
 
   useEffect(() => {
     api
@@ -629,8 +636,72 @@ function GenerateForm() {
           </p>
         </motion.div>
 
-        {/* Instructions */}
+        {/* Assets — Logo & QR */}
         <motion.div {...fadeUp(0.38)}>
+          <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
+            Brand Assets
+          </p>
+          <p className="text-xs text-[#E5E1E4]/30 mb-3 font-mono">
+            Optional logo image &amp; QR code URL for templates that support them
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Logo upload */}
+            <div>
+              <label className="block text-xs text-[#E5E1E4]/50 mb-1.5">Logo Image</label>
+              <div className="flex items-center gap-3">
+                <label className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2.5 glass-prism rounded-xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl text-sm text-[#E5E1E4]/60 hover:border-[#FF9500]/30 transition-colors">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    {logoFile ? "Logo uploaded" : "Upload logo"}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setLogoFile(ev.target?.result as string);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
+                {logoFile && (
+                  <div className="flex items-center gap-2">
+                    <img src={logoFile} alt="Logo" className="h-8 w-8 object-contain rounded" />
+                    <button
+                      onClick={() => setLogoFile("")}
+                      className="text-[#ffb4ab] text-xs hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* QR Code URL */}
+            <div>
+              <label className="block text-xs text-[#E5E1E4]/50 mb-1.5">QR Code URL</label>
+              <input
+                type="url"
+                value={qrUrl}
+                onChange={(e) => setQrUrl(e.target.value)}
+                placeholder="https://your-landing-page.com"
+                className="w-full px-4 py-2.5 glass-prism rounded-xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl text-sm text-[#E5E1E4] placeholder:text-[#E5E1E4]/20 focus:outline-none focus:border-[#FF9500]/50 transition-colors"
+              />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Instructions */}
+        <motion.div {...fadeUp(0.42)}>
           <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-3">
             Additional Instructions
             <span className="text-[#E5E1E4]/20 font-medium normal-case tracking-normal ml-2">
@@ -679,7 +750,7 @@ function GenerateForm() {
         )}
 
         {/* Generate Button */}
-        <motion.div {...fadeUp(0.42)}>
+        <motion.div {...fadeUp(0.46)}>
           <motion.button
             whileHover={{ scale: 1.015 }}
             whileTap={{ scale: 0.985 }}
