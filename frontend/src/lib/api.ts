@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -635,6 +635,52 @@ export const api = {
     }),
   deleteVoiceProfile: (id: string) =>
     request<{ deleted: boolean }>(`/api/voice-profiles/${id}`, { method: "DELETE" }),
+
+  parseVoiceMarkdown: async (file: File): Promise<VoiceProfileParsed> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/voice-profiles/import-markdown`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(error.detail || "Failed to parse markdown");
+    }
+    return res.json();
+  },
+
+  importVoiceMarkdown: async (file: File): Promise<VoiceProfileItem> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/voice-profiles/import-markdown-and-create`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(error.detail || "Failed to import markdown");
+    }
+    return res.json();
+  },
 
   // ─── Content Pipeline (Stepped) ─────────────────────────────────────────────
 
@@ -1581,6 +1627,19 @@ export interface VoiceProfileCreate {
   default_template?: string;
   content_themes?: string[];
   is_default?: boolean;
+}
+
+export interface VoiceProfileParsed {
+  name: string;
+  description: string;
+  tone_keywords: string[];
+  style_rules: string;
+  sentence_style: string;
+  favorite_phrases: string[];
+  words_to_avoid: string[];
+  words_to_use: string[];
+  writing_samples: string[];
+  content_themes: string[];
 }
 
 // ─── Content Pipeline (Stepped) ───────────────────────────────────────────────

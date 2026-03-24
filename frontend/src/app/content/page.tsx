@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { api, type ContentPiece, type Product } from "@/lib/api";
+import { api, API_BASE, type ContentPiece, type Product } from "@/lib/api";
 import { TemplateRenderer } from "@/components/ad-templates/TemplateRenderer";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
@@ -417,7 +417,6 @@ function StatCard({
 function GridCard({
   piece,
   product,
-  onStatusChange,
   delay = 0,
 }: {
   piece: ContentPiece;
@@ -654,8 +653,7 @@ function useProductVisuals(product: Product | undefined, productId: string) {
     try {
       const shots = JSON.parse(product.screenshots);
       if (shots.length > 0) {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        screenshotUrl = `${apiUrl}${shots[0]}`;
+        screenshotUrl = `${API_BASE}${shots[0]}`;
       }
     } catch {
       /* */

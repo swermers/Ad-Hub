@@ -10,27 +10,31 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
 
   useEffect(() => {
-    // Don't check auth on the login page
-    if (pathname === "/login") {
-      setStatus("authenticated");
-      return;
-    }
+    const checkAuth = async () => {
+      // Don't check auth on the login page
+      if (pathname === "/login") {
+        setStatus("authenticated");
+        return;
+      }
 
-    const token = localStorage.getItem("adhub_token");
-    if (!token) {
-      setStatus("unauthenticated");
-      router.push("/login");
-      return;
-    }
+      const token = localStorage.getItem("adhub_token");
+      if (!token) {
+        setStatus("unauthenticated");
+        router.push("/login");
+        return;
+      }
 
-    // Verify token is still valid
-    api.checkAuth()
-      .then(() => setStatus("authenticated"))
-      .catch(() => {
+      // Verify token is still valid
+      try {
+        await api.checkAuth();
+        setStatus("authenticated");
+      } catch {
         localStorage.removeItem("adhub_token");
         setStatus("unauthenticated");
         router.push("/login");
-      });
+      }
+    };
+    checkAuth();
   }, [pathname, router]);
 
   if (status === "loading") {

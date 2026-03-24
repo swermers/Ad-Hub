@@ -52,12 +52,18 @@ export default function SeedBankPage() {
 
   useEffect(() => {
     if (!productId) return;
-    setLoading(true);
-    api
-      .listSeeds(productId, statusFilter || undefined)
-      .then(setSeeds)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    const fetchSeeds = async () => {
+      setLoading(true);
+      try {
+        const data = await api.listSeeds(productId, statusFilter || undefined);
+        setSeeds(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSeeds();
   }, [productId, statusFilter]);
 
   const handleCreate = async () => {
