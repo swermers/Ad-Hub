@@ -5,7 +5,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useRef } from "react";
 import { api, API_BASE, type ContentPiece, type Product, type GenerateImageStatus } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
-import { VideoPreview, VIDEO_STYLE_OPTIONS, type VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
+import { VideoPreview, VIDEO_STYLE_OPTIONS, STYLE_CONFIG, FPS, type VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
+import { Thumbnail } from "@remotion/player";
+import { toPng } from "html-to-image";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
 import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
@@ -130,6 +132,8 @@ export default function ContentDetailPage() {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [imageGenStatus, setImageGenStatus] = useState<GenerateImageStatus | null>(null);
   const imageGenPollRef = useRef<NodeJS.Timeout | null>(null);
+  const [exportingFrame, setExportingFrame] = useState(false);
+  const frameExportRef = useRef<HTMLDivElement>(null);
   // Color override state
   const [colorOverride, setColorOverride] = useState<{ bg?: string; text?: string; accent?: string }>({});
   const [showColorPanel, setShowColorPanel] = useState(false);
@@ -359,6 +363,32 @@ export default function ContentDetailPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Image generation failed");
       setGeneratingImage(false);
+    }
+  };
+
+  const handleExportFrame = async () => {
+    setExportingFrame(true);
+    try {
+      // Wait for the hidden thumbnail to render
+      await new Promise((r) => setTimeout(r, 200));
+      const el = frameExportRef.current;
+      if (!el) throw new Error("Frame render element not found");
+      const config = STYLE_CONFIG[videoStyle];
+      const effectiveAspect = config.forceAspect || previewAspect;
+      const dims = ASPECT_DIMENSIONS[effectiveAspect];
+      const dataUrl = await toPng(el, {
+        width: dims.width,
+        height: dims.height,
+        pixelRatio: 1,
+      });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `${(piece.title || "ad-frame").replace(/\s+/g, "-").toLowerCase()}-${videoStyle}.png`;
+      a.click();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Frame export failed");
+    } finally {
+      setExportingFrame(false);
     }
   };
 
@@ -839,6 +869,15 @@ export default function ContentDetailPage() {
             {generatingImage ? "Generating..." : "Generate Image"}
           </button>
         )}
+        {isVisualContent && (
+          <button
+            onClick={handleExportFrame}
+            disabled={exportingFrame}
+            className="px-4 py-2 bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg text-sm font-medium hover:bg-white/5 disabled:opacity-50 transition-colors"
+          >
+            {exportingFrame ? "Exporting..." : "Export PNG"}
+          </button>
+        )}
         {!editing && (
           <button
             onClick={() => setEditing(true)}
@@ -963,6 +1002,52 @@ export default function ContentDetailPage() {
               <span>&middot;</span>
               <span>{Number(metadata.output_tokens)} tokens</span>
             </>
+          )}
+        </div>
+      )}
+      {/* Hidden full-resolution frame for PNG export */}
+      {isVisualContent && (
+        <div
+          ref={frameExportRef}
+          style={{ position: "absolute", left: "-9999px", top: 0 }}
+        >
+          {previewMode === "video" ? (
+            <Thumbnail
+              component={STYLE_CONFIG[videoStyle].component}
+              inputProps={{
+                headline,
+                body: bodyText,
+                cta: ctaText,
+                backgroundColor: bgColor,
+                textColor,
+                accentColor,
+                screenshotUrl,
+                aspectRatio: STYLE_CONFIG[videoStyle].forceAspect || previewAspect,
+                brandFont,
+                slideHeadlines,
+              }}
+              compositionWidth={ASPECT_DIMENSIONS[STYLE_CONFIG[videoStyle].forceAspect || previewAspect].width}
+              compositionHeight={ASPECT_DIMENSIONS[STYLE_CONFIG[videoStyle].forceAspect || previewAspect].height}
+              durationInFrames={FPS * STYLE_CONFIG[videoStyle].durationSeconds}
+              fps={FPS}
+              frameToDisplay={0}
+              style={{
+                width: ASPECT_DIMENSIONS[STYLE_CONFIG[videoStyle].forceAspect || previewAspect].width,
+                height: ASPECT_DIMENSIONS[STYLE_CONFIG[videoStyle].forceAspect || previewAspect].height,
+              }}
+            />
+          ) : (
+            <TemplateRenderer
+              templateType={previewTemplate}
+              headline={headline}
+              body={bodyText}
+              cta={ctaText}
+              aspectRatio={previewAspect}
+              backgroundColor={bgColor}
+              textColor={textColor}
+              accentColor={accentColor}
+              screenshotUrl={screenshotUrl}
+            />
           )}
         </div>
       )}

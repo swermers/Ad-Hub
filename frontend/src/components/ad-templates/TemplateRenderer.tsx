@@ -12,6 +12,7 @@ import { SplitImageTemplate } from "./SplitImageTemplate";
 import { StoryVerticalTemplate } from "./StoryVerticalTemplate";
 import { CarouselCardTemplate } from "./CarouselCardTemplate";
 import { UGCStyleTemplate } from "./UGCStyleTemplate";
+import { ImageFrameOverlayTemplate } from "./ImageFrameOverlayTemplate";
 
 interface TemplateRendererProps extends AdTemplateProps {
   templateType: string;
@@ -29,6 +30,7 @@ const TEMPLATES: Record<string, React.ComponentType<AdTemplateProps>> = {
   story_vertical: StoryVerticalTemplate,
   carousel_card: CarouselCardTemplate,
   ugc_style: UGCStyleTemplate,
+  image_frame_overlay: ImageFrameOverlayTemplate,
 };
 
 export function TemplateRenderer({ templateType, ...props }: TemplateRendererProps) {
@@ -123,5 +125,12 @@ export const TEMPLATE_OPTIONS: {
     description: "Looks like native social content with caption overlay and engagement icons",
     bestFor: ["stories", "reels", "tiktok"],
     defaultAspect: "9:16",
+  },
+  {
+    value: "image_frame_overlay",
+    label: "Image Frame Overlay",
+    description: "Product photo with promotional badge overlay — great for sales and launches",
+    bestFor: ["feed", "stories", "carousel"],
+    defaultAspect: "1:1",
   },
 ];

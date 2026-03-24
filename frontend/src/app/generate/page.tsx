@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api, type Product, type GenerateStatus } from "@/lib/api";
+import { INDUSTRY_THEMES, getTheme } from "@/components/ad-templates/industryThemes";
 
 const fadeUp = (delay: number = 0) => ({
   initial: { opacity: 0, y: 24 },
@@ -182,6 +183,7 @@ function GenerateForm() {
   const [instructions, setInstructions] = useState("");
   const [templateType, setTemplateType] = useState("");
   const [aspectRatio, setAspectRatio] = useState("");
+  const [industryVertical, setIndustryVertical] = useState("");
 
   useEffect(() => {
     api
@@ -208,6 +210,7 @@ function GenerateForm() {
         instructions: instructions || undefined,
         template_type: templateType || undefined,
         aspect_ratio: aspectRatio || undefined,
+        industry_vertical: industryVertical || undefined,
       });
       setStatus(result);
 
@@ -472,8 +475,59 @@ function GenerateForm() {
           </div>
         </motion.div>
 
-        {/* Visual Template */}
+        {/* Industry Vertical */}
         <motion.div {...fadeUp(0.22)}>
+          <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
+            Industry Vertical
+          </p>
+          <p className="text-xs text-[#E5E1E4]/30 mb-3 font-mono">
+            Auto-recommends templates &amp; color palettes for your industry
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <ChipButton
+              active={industryVertical === ""}
+              onClick={() => setIndustryVertical("")}
+            >
+              Auto
+            </ChipButton>
+            {INDUSTRY_THEMES.map((theme) => (
+              <ChipButton
+                key={theme.id}
+                active={industryVertical === theme.id}
+                onClick={() => setIndustryVertical(theme.id)}
+              >
+                {theme.label}
+              </ChipButton>
+            ))}
+          </div>
+          {industryVertical && (() => {
+            const theme = getTheme(industryVertical);
+            if (!theme) return null;
+            const templateLabels = theme.recommendedTemplates.slice(0, 3).map((t) => {
+              const match = TEMPLATE_CHOICES.find((c) => c.value === t);
+              return match ? match.label : t;
+            });
+            return (
+              <div className="mt-3 flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  {[theme.colors.background, theme.colors.text, theme.colors.accent, theme.colors.accentSecondary].map((color, i) => (
+                    <span
+                      key={i}
+                      className="inline-block w-4 h-4 rounded-full border border-[#E5E1E4]/10"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+                <span className="font-mono text-[10px] text-[#E5E1E4]/30">
+                  Recommended: {templateLabels.join(", ")}
+                </span>
+              </div>
+            );
+          })()}
+        </motion.div>
+
+        {/* Visual Template */}
+        <motion.div {...fadeUp(0.26)}>
           <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
             Visual Template
           </p>
@@ -505,7 +559,7 @@ function GenerateForm() {
         </motion.div>
 
         {/* Aspect Ratio */}
-        <motion.div {...fadeUp(0.26)}>
+        <motion.div {...fadeUp(0.30)}>
           <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-3">
             Aspect Ratio
           </p>
@@ -523,7 +577,7 @@ function GenerateForm() {
         </motion.div>
 
         {/* Count Slider */}
-        <motion.div {...fadeUp(0.3)}>
+        <motion.div {...fadeUp(0.34)}>
           <div className="flex items-baseline justify-between mb-3">
             <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em]">
               Variations per type/platform
@@ -576,7 +630,7 @@ function GenerateForm() {
         </motion.div>
 
         {/* Instructions */}
-        <motion.div {...fadeUp(0.34)}>
+        <motion.div {...fadeUp(0.38)}>
           <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-3">
             Additional Instructions
             <span className="text-[#E5E1E4]/20 font-medium normal-case tracking-normal ml-2">
@@ -625,7 +679,7 @@ function GenerateForm() {
         )}
 
         {/* Generate Button */}
-        <motion.div {...fadeUp(0.38)}>
+        <motion.div {...fadeUp(0.42)}>
           <motion.button
             whileHover={{ scale: 1.015 }}
             whileTap={{ scale: 0.985 }}

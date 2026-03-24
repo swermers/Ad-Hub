@@ -16,6 +16,7 @@ import { HandDrawnComposition } from "./HandDrawnComposition";
 import { SaasDemoComposition } from "./SaasDemoComposition";
 import { DataHypeComposition } from "./DataHypeComposition";
 import { SocialProofComposition } from "./SocialProofComposition";
+import { ImageFrameOverlayComposition } from "./ImageFrameOverlayComposition";
 import type { AspectRatio } from "../types";
 import { ASPECT_DIMENSIONS } from "../types";
 
@@ -33,7 +34,8 @@ export type VideoStyle =
   | "hand-drawn"
   | "saas-demo"
   | "data-hype"
-  | "social-proof";
+  | "social-proof"
+  | "image-overlay";
 
 interface VideoPreviewProps {
   headline: string;
@@ -76,8 +78,11 @@ const STYLE_CONFIG: Record<VideoStyle, {
   "saas-demo": { component: SaasDemoComposition, durationSeconds: 8 },
   "data-hype": { component: DataHypeComposition, durationSeconds: 6 },
   "social-proof": { component: SocialProofComposition, durationSeconds: 7, forceAspect: "9:16" },
+  "image-overlay": { component: ImageFrameOverlayComposition, durationSeconds: 7 },
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+export { STYLE_CONFIG, FPS };
 
 export function VideoPreview({
   previewWidth = 540,
@@ -134,4 +139,5 @@ export const VIDEO_STYLE_OPTIONS: { value: VideoStyle; label: string; descriptio
   { value: "saas-demo", label: "SaaS Demo", description: "Browser mockup with cursor animation, feature callouts, zoom-in effect (8s)" },
   { value: "data-hype", label: "Data Hype", description: "Animated stats counter, bar chart, growth trend line — metrics-driven (6s)" },
   { value: "social-proof", label: "Social Proof", description: "Star ratings, review count, user counter, verified badge — trust-building (9:16, 7s)" },
+  { value: "image-overlay", label: "Image Overlay", description: "Product photo with animated badge overlay — sales, launches, features (7s)" },
 ];
