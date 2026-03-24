@@ -259,7 +259,7 @@ Generate a JSON brand brief with these fields:
         "dont": ["things the brand should avoid"]
     }},
     "visual_identity": {{
-        "primary_colors": ["#hex1", "#hex2", "#hex3 — IMPORTANT: these MUST be vibrant, chromatic colors (NOT black, white, or gray). Extract the real brand colors from buttons, links, accents, logos, or gradients on the website. If the site is dark-themed, pick the accent/highlight colors. Every color must have visible hue and saturation.{color_ref}"],
+        "primary_colors": ["#hex1", "#hex2", "#hex3 — Extract the ACTUAL brand colors from the website. Include the dominant background color (even if dark), accent/highlight colors, and any button/CTA colors. Match the real visual identity — do NOT substitute generic bright colors. Dark-themed sites should include the dark background color and the muted/subtle accent colors actually used.{color_ref}"],
         "fonts": ["Primary Font Name", "Secondary Font Name — extract the actual font families used on the website headings and body text.{' Detected fonts: ' + brand_fonts_str if brand_fonts_str else ''}"],
         "style": "description of visual style",
         "imagery_recommendations": ["type of imagery to use in ads"]
@@ -305,7 +305,8 @@ Return ONLY the JSON object, no markdown formatting."""
 
         # Update brand_colors from the brief's visual_identity if Claude found better ones
         vi_colors = brief.get("visual_identity", {}).get("primary_colors", [])
-        # Filter to valid hex colors that are actually chromatic (not black/white/gray)
+        # Filter to valid hex colors — trust Claude's judgment on actual brand colors
+        # since it has full website context. Only reject malformed values.
         valid_colors = []
         for c in vi_colors:
             if not isinstance(c, str) or not c.startswith("#"):
@@ -314,10 +315,13 @@ Return ONLY the JSON object, no markdown formatting."""
             c = c.split(" ")[0].split("—")[0].strip()
             if len(c) not in (4, 7):
                 continue
-            # Check it's actually chromatic using the ingestion engine's filter
-            from app.engines.ingestion import _is_brand_color
-            if _is_brand_color(c):
-                valid_colors.append(c)
+            # Validate it's a parseable hex color
+            try:
+                from app.engines.ingestion import _hex_to_rgb
+                _hex_to_rgb(c)
+                valid_colors.append(c.lower())
+            except (ValueError, IndexError):
+                continue
         if valid_colors:
             product.brand_colors = json.dumps(valid_colors)
 
