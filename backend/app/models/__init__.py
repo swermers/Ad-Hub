@@ -19,6 +19,7 @@ from app.models.intelligence import (
 from app.models.product import Product
 from app.models.seed_bank import Seed
 from app.models.user import AgentAPIKey, User
+from app.models.content_prompts import ContentPromptSet
 from app.models.voice_profile import VoiceProfile
 
 __all__ = [
@@ -55,4 +56,5 @@ __all__ = [
     "ResearchCache",
     "IntelligenceConfig",
     "VoiceProfile",
+    "ContentPromptSet",
 ]

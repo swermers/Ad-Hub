@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { api, type ContentPiece, type ScheduledPost } from "@/lib/api";
+import { GettingStarted, GettingStartedBanner } from "@/components/GettingStarted";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -98,9 +99,17 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function DashboardPage() {
   const { data: weekData, loading: weekLoading } = useWeekData();
+  const [guideOpen, setGuideOpen] = useState(false);
+  const openGuide = useCallback(() => setGuideOpen(true), []);
 
   return (
     <motion.div initial="hidden" animate="visible" variants={stagger} className="relative">
+      {/* Getting Started Banner */}
+      <div className="mb-8">
+        <GettingStartedBanner onOpen={openGuide} />
+      </div>
+      <GettingStarted open={guideOpen} onClose={() => setGuideOpen(false)} />
+
       {/* Hero Header */}
       <motion.section variants={fadeUp} custom={0} className="mb-12 md:mb-16">
         <div className="flex items-baseline space-x-4 mb-2">
