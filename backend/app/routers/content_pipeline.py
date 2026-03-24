@@ -198,8 +198,8 @@ def _get_brand_context(product: Product, db: Session) -> str:
     return "\n".join(parts)
 
 
-# Import voice rules from the existing pipeline
-from app.engines.content_pipeline import VOICE_RULES  # noqa: E402
+# Load per-product prompt sets with generic defaults
+from app.engines.prompt_defaults import load_prompt_set  # noqa: E402
 
 
 # ─── Step 1: Sharpen ────────────────────────────────────────────────────────
@@ -216,6 +216,7 @@ async def sharpen_idea(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
+    prompt_set = load_prompt_set(data.product_id, db)
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
     brand_context = _get_brand_context(product, db)
 
@@ -229,7 +230,7 @@ Target Audience: {product.target_audience or "General audience"}
 
 {brand_context}
 
-{VOICE_RULES}"""
+{prompt_set["voice_rules"]}"""
 
     user_prompt = f"""Here is raw input from the content creator (may include transcribed voice memo and typed notes):
 
@@ -237,29 +238,7 @@ Target Audience: {product.target_audience or "General audience"}
 {data.raw_text}
 ---
 
-Find the ONE observation, metaphor, or reframe strong enough to build content around.
-
-Look for:
-- A metaphor that emerged naturally
-- A somatic observation (chest, jaw, weight, breath)
-- A contradiction or tension
-- A moment of recognition
-- A line worth screenshotting
-
-Return ONLY a JSON object:
-{{
-    "seed": "one sentence, the core observation",
-    "heat": ["the 1-2 specific lines that have the most energy"],
-    "audience_hook": "who is stuck because of this, and what shifts for them",
-    "template_fit": "A (Reflective Essay) | B (Practical Guide) | C (Personal Story) | D (Quick Hit)",
-    "subject_line": "a concrete image or phrase, not abstract",
-    "metaphor": "the central metaphor if one emerged, or null",
-    "weekly_theme": "one sentence theme for the week's content",
-    "raw_ideas": ["raw ideas or phrases worth preserving exactly as spoken"],
-    "verdict": "Strong enough to build on | Needs another angle | Park it for later"
-}}
-
-Return ONLY the JSON object."""
+{prompt_set["idea_sharpener_prompt"]}"""
 
     result = await call_claude(user_prompt, system=system_prompt)
 
@@ -298,33 +277,12 @@ async def create_draft(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
+    prompt_set = load_prompt_set(data.product_id, db)
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
     brand_context = _get_brand_context(product, db)
     template = data.template_override or data.seed.get("template_fit", "A")
 
-    template_instructions = {
-        "A": """TEMPLATE A: REFLECTIVE ESSAY
-OPENING: Start with "I have been noticing lately..." or similar first-person observation.
-Drop into a specific, recognizable micro-moment within 3 sentences.
-THE METAPHOR: Introduce ONE central metaphor. Bold it. Commit to it.
-"the mechanics" (lowercase header): Unpack what's happening beneath the behavior.
-"the weight" (lowercase header): Extend metaphor into lived experience.
-CLOSE: 1-2 reflective questions. Final line: Stay mindful, stay curious.""",
-        "B": """TEMPLATE B: PRACTICAL GUIDE
-HOOK: Relatable scenario. THE INSIGHT: Bold standalone insight.
-THE FRAMEWORK: 3-5 clear, actionable steps with "Try this:" prompts.
-CLOSE: Encouragement + Stay Mindful, Stay Curious.""",
-        "C": """TEMPLATE C: PERSONAL STORY
-THE SCENE: Specific anecdote, first person, past tense, sensory details.
-THE LESSON: Bridge from personal to universal, name the pattern.
-THE APPLICATION: Light touch, questions over directives.
-CLOSE: Reflection or signature sign-off.""",
-        "D": """TEMPLATE D: QUICK HIT
-OBSERVATION: 2-3 sentences naming a common experience.
-REFRAME: 2-3 sentences offering a different way to see it.
-INVITATION: 1-2 reflective questions.
-SIGN-OFF: Stay mindful, stay curious.""",
-    }
+    template_instructions = prompt_set["template_instructions"]
 
     system_prompt = f"""You are a content writer. Write in the creator's authentic voice.
 
@@ -335,7 +293,7 @@ Target Audience: {product.target_audience or "General audience"}
 
 {brand_context}
 
-{VOICE_RULES}
+{prompt_set["voice_rules"]}
 
 CONTENT BRIEF:
 Seed: {data.seed.get('seed', '')}
@@ -344,7 +302,7 @@ Audience Hook: {data.seed.get('audience_hook', '')}
 Metaphor: {data.seed.get('metaphor', 'None')}
 Weekly Theme: {data.seed.get('weekly_theme', '')}
 
-{template_instructions.get(template, template_instructions["A"])}"""
+{template_instructions.get(template, template_instructions.get("A", ""))}"""
 
     user_prompt = f"""Write a complete newsletter draft following Template {template}.
 
@@ -408,27 +366,22 @@ async def expand_to_platforms(
 
     pieces_spec = "\n".join([f"- {p['content_type']} for {p['platform']}" for p in pieces_to_gen])
 
+    prompt_set = load_prompt_set(data.product_id, db)
+
     system_prompt = f"""You are a content creator expanding a newsletter into platform-specific content.
 
 {voice_context}
 
-{VOICE_RULES}
+{prompt_set["voice_rules"]}
 
 SOCIAL POST RULES:
-Every post must pass three filters:
-1. SPECIFICITY: Contains at least one moment the reader can SEE
-2. TENSION: Holds two things that pull against each other
-3. STEALABLE LINE: One phrase someone would screenshot
+{prompt_set["social_post_rules"]}
 
 VIDEO SCRIPT RULES:
-- Each block = ONE thought, 2-4 sentences max
-- Keep metaphors and strong lines EXACTLY as written
-- Open with the newsletter hook nearly verbatim
+{prompt_set["video_script_rules"]}
 
 X THREAD RULES:
-- Tweet 1 = the insight or metaphor, no preamble
-- Each tweet under 280 characters
-- 5-8 tweets total"""
+{prompt_set["x_thread_rules"]}"""
 
     user_prompt = f"""Here is the approved newsletter draft:
 

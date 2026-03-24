@@ -58,6 +58,7 @@ def create_tables():
         CampaignAdVariation,
         CompetitorProfile,
         ContentPiece,
+        ContentPromptSet,
         CrawledPage,
         EvidenceItem,
         HookPattern,

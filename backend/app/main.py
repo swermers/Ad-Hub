@@ -21,6 +21,7 @@ from app.routers import (
     connections,
     content,
     content_pipeline,
+    content_prompts,
     generation,
     image_gen,
     ingestion,
@@ -94,6 +95,7 @@ app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 app.include_router(intelligence.router, prefix="/api/products", tags=["intelligence"])
 app.include_router(voice_profiles.router, prefix="/api/voice-profiles", tags=["voice-profiles"])
 app.include_router(content_pipeline.router, prefix="/api/pipeline", tags=["content-pipeline"])
+app.include_router(content_prompts.router, prefix="/api/products", tags=["content-prompts"])
 
 
 # Serve uploaded files (screenshots, references, generated images, etc.)
