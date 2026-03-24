@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { GettingStarted } from "@/components/GettingStarted";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: "dashboard" },
@@ -23,6 +25,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -76,15 +79,15 @@ export function Sidebar() {
 
       {/* Bottom Links */}
       <div className="mt-auto pt-8 border-t border-white/5 flex flex-col gap-1 entrance-fade stagger-3">
-        <Link
-          href="#"
-          className="flex items-center gap-3 px-4 py-2 text-[#E5E1E4]/50 hover:text-[#E5E1E4] transition-all duration-200 rounded-lg"
+        <button
+          onClick={() => setGuideOpen(true)}
+          className="flex items-center gap-3 px-4 py-2 text-[#E5E1E4]/50 hover:text-[#E5E1E4] transition-all duration-200 rounded-lg w-full text-left"
         >
-          <span className="material-symbols-outlined">help</span>
+          <span className="material-symbols-outlined">rocket_launch</span>
           <span className="text-[11px] uppercase tracking-[0.1em] font-medium">
-            Help
+            Getting Started
           </span>
-        </Link>
+        </button>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-2 text-[#E5E1E4]/50 hover:text-[#ffb4ab] transition-all duration-200 rounded-lg w-full text-left"
@@ -95,6 +98,8 @@ export function Sidebar() {
           </span>
         </button>
       </div>
+
+      <GettingStarted open={guideOpen} onClose={() => setGuideOpen(false)} />
     </aside>
   );
 }
