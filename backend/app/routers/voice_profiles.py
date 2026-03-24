@@ -3,13 +3,14 @@
 import json
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.voice_profile import VoiceProfile
 from app.permissions import get_current_user
+from app.services.claude_client import call_claude
 
 router = APIRouter()
 
@@ -204,3 +205,120 @@ def delete_voice_profile(
     db.delete(profile)
     db.commit()
     return {"deleted": True}
+
+
+# ─── Markdown Import ─────────────────────────────────────────────────────────
+
+_PARSE_SYSTEM = (
+    "You are a voice-profile extraction assistant. Given a markdown document "
+    "containing voice rules, style guides, or prompt instructions, extract "
+    "structured voice profile fields. Respond ONLY with valid JSON — no "
+    "markdown fences, no commentary."
+)
+
+_PARSE_PROMPT = """\
+Analyze the following markdown document and extract voice profile fields.
+
+Return a JSON object with these keys:
+- "name" (string) — a suggested profile name based on the content
+- "description" (string) — a brief 1-2 sentence description of this voice
+- "tone_keywords" (list of strings) — tone descriptors, e.g. ["warm", "direct", "witty"]
+- "style_rules" (string) — writing style guidelines as a paragraph
+- "sentence_style" (string) — one of: "short_punchy", "long_flowing", "mixed", "varied"
+- "favorite_phrases" (list of strings) — signature phrases or expressions
+- "words_to_avoid" (list of strings) — words or phrases to never use
+- "words_to_use" (list of strings) — preferred words or phrases
+- "writing_samples" (list of strings) — example paragraphs showing the voice
+- "content_themes" (list of strings) — topics this voice typically covers
+
+If a field cannot be determined from the document, use an empty string for string
+fields and an empty list for list fields.
+
+---
+
+{markdown_content}
+"""
+
+
+async def _parse_markdown_to_profile(markdown_content: str) -> dict:
+    """Use Claude to extract voice profile fields from markdown text."""
+    prompt = _PARSE_PROMPT.format(markdown_content=markdown_content)
+    result = await call_claude(prompt, system=_PARSE_SYSTEM, max_tokens=4096)
+
+    raw = result["content"].strip()
+    # Strip markdown code fences if present
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+    if raw.endswith("```"):
+        raw = raw[: -3].rstrip()
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=502,
+            detail="Failed to parse AI response as JSON",
+        )
+
+    # Normalise to expected schema
+    return {
+        "name": parsed.get("name", ""),
+        "description": parsed.get("description", ""),
+        "tone_keywords": parsed.get("tone_keywords", []),
+        "style_rules": parsed.get("style_rules", ""),
+        "sentence_style": parsed.get("sentence_style", "mixed"),
+        "favorite_phrases": parsed.get("favorite_phrases", []),
+        "words_to_avoid": parsed.get("words_to_avoid", []),
+        "words_to_use": parsed.get("words_to_use", []),
+        "writing_samples": parsed.get("writing_samples", []),
+        "content_themes": parsed.get("content_themes", []),
+    }
+
+
+@router.post("/import-markdown")
+async def import_markdown_parse(
+    file: UploadFile,
+    user: dict = Depends(get_current_user),
+):
+    """Parse a .md file and return extracted voice profile fields for review."""
+    if not file.filename or not file.filename.lower().endswith(".md"):
+        raise HTTPException(status_code=400, detail="Only .md files are accepted")
+
+    content_bytes = await file.read()
+    markdown_content = content_bytes.decode("utf-8", errors="replace")
+
+    if not markdown_content.strip():
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    parsed = await _parse_markdown_to_profile(markdown_content)
+    return parsed
+
+
+@router.post("/import-markdown-and-create")
+async def import_markdown_and_create(
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Parse a .md file and immediately create a new voice profile."""
+    if not file.filename or not file.filename.lower().endswith(".md"):
+        raise HTTPException(status_code=400, detail="Only .md files are accepted")
+
+    content_bytes = await file.read()
+    markdown_content = content_bytes.decode("utf-8", errors="replace")
+
+    if not markdown_content.strip():
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    parsed = await _parse_markdown_to_profile(markdown_content)
+
+    # Ensure we have a name
+    if not parsed.get("name"):
+        parsed["name"] = file.filename.rsplit(".", 1)[0]
+
+    data = _serialize(parsed)
+    profile = VoiceProfile(user_id=user["id"], **data)
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    return _profile_to_dict(profile)
