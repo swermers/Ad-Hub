@@ -10,6 +10,7 @@ import {
   type AdVariation,
   type BulkGenerateStatus,
   type ResearchStatus,
+  API_BASE,
 } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
 import { AdPreviewCard } from "@/components/ad-templates/AdPreviewCard";
@@ -74,8 +75,7 @@ export default function BulkGeneratePage() {
           try {
             const shots: string[] = JSON.parse(p.screenshots);
             if (shots.length > 0) {
-              const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-              setScreenshotUrl(`${apiUrl}${shots[0]}`);
+              setScreenshotUrl(`${API_BASE}${shots[0]}`);
             }
           } catch { /* ignore parse errors */ }
         }

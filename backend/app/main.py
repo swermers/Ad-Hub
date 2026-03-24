@@ -39,6 +39,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if settings.auth_secret == "change-me-in-production":
+        logger.warning(
+            "AUTH_SECRET is still set to the default value 'change-me-in-production'. "
+            "Please set a secure AUTH_SECRET in your environment before deploying."
+        )
+
     create_tables()
 
     # Start background scheduler

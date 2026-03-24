@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, type Product, type BrandProfileData } from "@/lib/api";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { api, API_BASE, type Product, type BrandProfileData } from "@/lib/api";
 
 // Helper to parse JSON strings from the API
 function parseJson<T>(value: string | null, fallback: T): T {

@@ -52,12 +52,18 @@ export default function SeedBankPage() {
 
   useEffect(() => {
     if (!productId) return;
-    setLoading(true);
-    api
-      .listSeeds(productId, statusFilter || undefined)
-      .then(setSeeds)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    const fetchSeeds = async () => {
+      setLoading(true);
+      try {
+        const data = await api.listSeeds(productId, statusFilter || undefined);
+        setSeeds(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSeeds();
   }, [productId, statusFilter]);
 
   const handleCreate = async () => {
@@ -142,7 +148,7 @@ export default function SeedBankPage() {
         <select
           value={productId}
           onChange={(e) => setProductId(e.target.value)}
-          className="w-full max-w-xs border border-white/10 rounded-lg px-3 py-2 text-sm"
+          className="w-full max-w-xs bg-[#131315] border border-[#353437] rounded-xl px-4 py-2.5 text-sm text-[#E5E1E4] focus:outline-none focus:border-[#FF9500]/50 transition-all"
         >
           {products.map((p) => (
             <option key={p.id} value={p.id}>
@@ -154,9 +160,9 @@ export default function SeedBankPage() {
 
       {/* Add seed form */}
       {showAdd && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-4">
+        <div className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
+            <label className="block text-xs font-semibold text-[#FF9500] uppercase tracking-wider mb-1.5">
               Core Observation
             </label>
             <textarea
@@ -164,12 +170,12 @@ export default function SeedBankPage() {
               onChange={(e) => setNewSeed(e.target.value)}
               placeholder="The one-sentence insight..."
               rows={2}
-              className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm resize-none"
+              className="w-full bg-[#131315] border border-[#353437] rounded-xl px-4 py-3 text-sm text-[#E5E1E4] placeholder:text-[#E5E1E4]/25 focus:outline-none focus:border-[#FF9500]/50 focus:ring-1 focus:ring-[#FF9500]/20 resize-none transition-all"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
+              <label className="block text-xs font-semibold text-[#E5E1E4]/60 uppercase tracking-wider mb-1.5">
                 Audience Hook
               </label>
               <input
@@ -177,17 +183,17 @@ export default function SeedBankPage() {
                 value={newHook}
                 onChange={(e) => setNewHook(e.target.value)}
                 placeholder="Why someone would stop scrolling..."
-                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-[#131315] border border-[#353437] rounded-xl px-4 py-3 text-sm text-[#E5E1E4] placeholder:text-[#E5E1E4]/25 focus:outline-none focus:border-[#FF9500]/50 focus:ring-1 focus:ring-[#FF9500]/20 transition-all"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
+              <label className="block text-xs font-semibold text-[#E5E1E4]/60 uppercase tracking-wider mb-1.5">
                 Template Fit
               </label>
               <select
                 value={newTemplate}
                 onChange={(e) => setNewTemplate(e.target.value)}
-                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-[#131315] border border-[#353437] rounded-xl px-4 py-3 text-sm text-[#E5E1E4] focus:outline-none focus:border-[#FF9500]/50 focus:ring-1 focus:ring-[#FF9500]/20 transition-all"
               >
                 {Object.entries(TEMPLATE_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>
@@ -199,7 +205,7 @@ export default function SeedBankPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
+              <label className="block text-xs font-semibold text-[#E5E1E4]/60 uppercase tracking-wider mb-1.5">
                 Notes
               </label>
               <input
@@ -207,17 +213,17 @@ export default function SeedBankPage() {
                 value={newNotes}
                 onChange={(e) => setNewNotes(e.target.value)}
                 placeholder="Personal context..."
-                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-[#131315] border border-[#353437] rounded-xl px-4 py-3 text-sm text-[#E5E1E4] placeholder:text-[#E5E1E4]/25 focus:outline-none focus:border-[#FF9500]/50 focus:ring-1 focus:ring-[#FF9500]/20 transition-all"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#dbc2ad] mb-1">
+              <label className="block text-xs font-semibold text-[#E5E1E4]/60 uppercase tracking-wider mb-1.5">
                 Priority
               </label>
               <select
                 value={newPriority}
                 onChange={(e) => setNewPriority(Number(e.target.value))}
-                className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-[#131315] border border-[#353437] rounded-xl px-4 py-3 text-sm text-[#E5E1E4] focus:outline-none focus:border-[#FF9500]/50 focus:ring-1 focus:ring-[#FF9500]/20 transition-all"
               >
                 <option value={1}>High</option>
                 <option value={0}>Normal</option>
@@ -228,7 +234,7 @@ export default function SeedBankPage() {
           <button
             onClick={handleCreate}
             disabled={!newSeed.trim()}
-            className="px-4 py-2 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-40"
+            className="liquid-gradient px-5 py-2.5 rounded-xl text-sm font-bold text-[#2d1600] hover:shadow-[0_4px_24px_rgba(255,149,0,0.35)] transition-all disabled:opacity-40 disabled:shadow-none"
           >
             Plant Seed
           </button>

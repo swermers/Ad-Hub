@@ -6,6 +6,7 @@ import time
 import base64
 import uuid
 
+import bcrypt
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -70,10 +71,7 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.email == body.email).first()
         if not user:
             raise HTTPException(401, "Invalid credentials")
-        if not hmac.compare_digest(
-            hashlib.sha256(body.password.encode()).hexdigest(),
-            user.password_hash,
-        ):
+        if not bcrypt.checkpw(body.password.encode(), user.password_hash.encode()):
             raise HTTPException(401, "Invalid credentials")
         token = _sign({
             "user_id": user.id,
@@ -230,7 +228,7 @@ def seed_default_admin(db: Session):
     admin = User(
         id=str(uuid.uuid4()),
         email="admin@adhub.local",
-        password_hash=hashlib.sha256(settings.auth_password.encode()).hexdigest(),
+        password_hash=bcrypt.hashpw(settings.auth_password.encode(), bcrypt.gensalt()).decode(),
         display_name="Admin",
         role="admin",
     )

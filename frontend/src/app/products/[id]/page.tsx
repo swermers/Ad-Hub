@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
+  API_BASE,
   type Product,
   type CrawledPage,
   type CrawlStatus,
@@ -651,7 +652,7 @@ export default function ProductDetailPage() {
             {screenshots.map((path, i) => (
               <div key={i} className="relative group rounded-lg overflow-hidden border border-white/10">
                 <img
-                  src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${path}`}
+                  src={`${API_BASE}${path}`}
                   alt={`Screenshot ${i + 1}`}
                   className="w-full h-40 object-cover"
                 />
@@ -704,7 +705,7 @@ export default function ProductDetailPage() {
             {referenceImages.map((path, i) => (
               <div key={i} className="relative group rounded-lg overflow-hidden border border-white/10">
                 <img
-                  src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${path}`}
+                  src={`${API_BASE}${path}`}
                   alt={`Reference ${i + 1}`}
                   className="w-full h-40 object-cover"
                 />

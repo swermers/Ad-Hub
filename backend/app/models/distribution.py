@@ -68,11 +68,11 @@ class PerformanceMetric(Base):
     __tablename__ = "performance_metrics"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    scheduled_post_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("scheduled_posts.id", ondelete="CASCADE"), nullable=False
+    scheduled_post_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("scheduled_posts.id", ondelete="CASCADE"), nullable=True
     )
-    content_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("content_pieces.id", ondelete="CASCADE"), nullable=False
+    content_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("content_pieces.id", ondelete="CASCADE"), nullable=True
     )
     platform: Mapped[str] = mapped_column(String(50), nullable=False)
     impressions: Mapped[int] = mapped_column(Integer, default=0)
@@ -87,4 +87,4 @@ class PerformanceMetric(Base):
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
 
-    scheduled_post: Mapped["ScheduledPost"] = relationship(back_populates="metrics")
+    scheduled_post: Mapped["ScheduledPost | None"] = relationship(back_populates="metrics")

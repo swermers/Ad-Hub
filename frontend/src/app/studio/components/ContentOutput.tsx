@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import { api, type ContentPiece, type PipelineFinalizeResult } from "@/lib/api";
 
 const PLATFORM_META: Record<string, { icon: string; label: string; color: string }> = {
@@ -99,9 +100,9 @@ export default function ContentOutput({ result, productId }: ContentOutputProps)
         </span>
         <p className="text-sm text-[#E5E1E4]/50">
           {result.pieces_saved} piece{result.pieces_saved !== 1 ? "s" : ""} saved.{" "}
-          <a href="/content" className="text-[#FF9500] hover:underline">
+          <Link href="/content" className="text-[#FF9500] hover:underline">
             View in Content Library
-          </a>
+          </Link>
         </p>
       </motion.div>
     );
@@ -336,9 +337,9 @@ export default function ContentOutput({ result, productId }: ContentOutputProps)
           <span className="material-symbols-outlined text-[#FF9500] text-lg">database</span>
           <p className="text-xs text-[#E5E1E4]/50">
             Idea saved to{" "}
-            <a href="/seeds" className="text-[#FF9500] hover:underline">
+            <Link href="/seeds" className="text-[#FF9500] hover:underline">
               Seed Bank
-            </a>{" "}
+            </Link>{" "}
             for future reference
           </p>
         </motion.div>
