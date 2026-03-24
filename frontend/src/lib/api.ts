@@ -608,7 +608,7 @@ export const api = {
     request<IntelligenceBriefSummary[]>(`/api/products/${productId}/intelligence/briefs`),
   getBrief: (productId: string, briefId: string) =>
     request<IntelligenceBriefData>(`/api/products/${productId}/intelligence/briefs/${briefId}`),
-  generateBrief: (productId: string) =>
+  generateIntelligenceBrief: (productId: string) =>
     request<{ task_id: string }>(`/api/products/${productId}/intelligence/briefs/generate`, { method: "POST" }),
 
   // Full cycle

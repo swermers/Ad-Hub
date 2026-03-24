@@ -1,330 +1,424 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { api, CommandCenter } from "@/lib/api";
+import { motion } from "framer-motion";
+
+const fadeUp = (delay: number = 0) => ({
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
+});
+
+const stagger = {
+  animate: { transition: { staggerChildren: 0.08 } },
+};
+
+const barHeights = [45, 72, 58, 88, 65, 92, 78, 96];
+
+const insights = [
+  {
+    color: "#FF9500",
+    title: "Reallocate 18% of APAC social budget to programmatic.",
+    desc: "Predicted +3.2% conversion lift based on attribution modeling.",
+    time: "2h ago",
+  },
+  {
+    color: "#c6c4df",
+    title: "Email open rates declining in EMEA — subject line fatigue detected.",
+    desc: "A/B test new templates. Confidence: 94%.",
+    time: "5h ago",
+  },
+  {
+    color: "#ffbd7f",
+    title: "Organic search volume spike for branded terms in AMER.",
+    desc: "Capitalize with landing page refresh. Est. +12k sessions/week.",
+    time: "8h ago",
+  },
+];
+
+const campaigns = [
+  {
+    label: "Direct Traffic",
+    value: "142.8k",
+    change: "+2.4%",
+    positive: true,
+    progress: 68,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF9500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="3" />
+        <line x1="12" y1="2" x2="12" y2="6" />
+        <line x1="12" y1="18" x2="12" y2="22" />
+        <line x1="2" y1="12" x2="6" y2="12" />
+        <line x1="18" y1="12" x2="22" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    label: "Social Velocity",
+    value: "89.4k",
+    change: "+18.1%",
+    positive: true,
+    progress: 54,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF9500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+      </svg>
+    ),
+  },
+  {
+    label: "Email Engagement",
+    value: "12.1k",
+    change: "-0.4%",
+    positive: false,
+    progress: 22,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffb4ab" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="4" width="20" height="16" rx="2" />
+        <polyline points="22,4 12,13 2,4" />
+      </svg>
+    ),
+  },
+  {
+    label: "Organic Discovery",
+    value: "64.2k",
+    change: "+5.9%",
+    positive: true,
+    progress: 42,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF9500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+    ),
+  },
+];
+
+const avatarUrls = [
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuCbNzpxzeZ2KjsuEnH45MancHSVjFNK9MKBjchD8Q4MVo3vh0F-OQ7Y116nor0FJKjhF2nzvLVefITmJuxUk3XNuLnReGE4hGKXKkklKX-XIKcGqNb5_TskYnXpJJ-Z9Odc3Dtvzzt3Vji7-zUEnt68ADK4koXS71yFChTBlJp5Dq0VyBWFtWmK40XAWFRKllzQp_NO9RsQ9v-RRgyk_hfsUoZvOuLVG1j9J4Grk4x_1haxkw0RGnXVlPLs5V88y53-cc-uWWD3Lw5J",
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuBSpSijP6D9IRd__96UER5gEjwijypc8UKOWz2FrrS-4XmeD-8UCg5E0kB5OeBaoUmPUa_K5sng-p_1DQnp8bnJS5KtCfIEZ1blspkMqPyf54P7oEed_n6IBL5NQDu16KwXcCdUSpAfCiS548E6M41AvyEJ8I3yirJl0_k-7xbNDA_qOiSJVSN42HTfeA_xcXzS89QliCvuLSSibKiR5iyMpYVjxFV0jzqk0RGye5iSYm9Lbetmz0GlWB2cDS8AvUcHyq53cE1a33Xh",
+];
 
 export default function CommandCenterPage() {
-  const [data, setData] = useState<CommandCenter | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [aiLoading, setAiLoading] = useState(false);
-
-  const fetchData = useCallback(async (includeAi = false) => {
-    try {
-      if (includeAi) setAiLoading(true);
-      else setLoading(true);
-      const result = await api.getCommandCenter(includeAi);
-      setData(result);
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false);
-      setAiLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF9500]" />
-      </div>
-    );
-  }
-
-  if (!data) {
-    return <p className="text-[#E5E1E4]/50">Failed to load command center data.</p>;
-  }
-
-  const { summary, products, top_winners, worst_losers, ai_recommendations } = data;
-
   return (
-    <div className="space-y-8 max-w-6xl">
+    <motion.div
+      className="min-h-screen bg-[#131315] text-[#E5E1E4] px-4 md:px-8 py-8 pb-28"
+      initial="initial"
+      animate="animate"
+      variants={stagger}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <motion.header
+        className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 mb-10"
+        variants={stagger}
+      >
         <div>
-          <h1 className="text-2xl font-bold text-[#E5E1E4]">Command Center</h1>
-          <p className="text-[#E5E1E4]/50 text-sm mt-1">
-            Full snapshot of your ad performance across all products
+          <motion.p
+            className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-3"
+            {...fadeUp(0)}
+          >
+            Command Center
+          </motion.p>
+          <motion.h1
+            className="text-4xl md:text-7xl font-bold tracking-tighter leading-[0.95]"
+            {...fadeUp(0.05)}
+          >
+            Global Performance{" "}
+            <span className="text-[#E5E1E4]/30">Intelligence.</span>
+          </motion.h1>
+        </div>
+
+        <motion.div
+          className="flex flex-col items-start md:items-end gap-2 shrink-0"
+          {...fadeUp(0.1)}
+        >
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF9500] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF9500]" />
+            </span>
+            <span className="text-xs text-[#E5E1E4]/60 font-medium">
+              Live Precision Tracking
+            </span>
+          </div>
+          <span className="font-mono text-[10px] text-[#E5E1E4]/30 tracking-wider">
+            SERVER_STATUS: OPTIMAL [0.04ms]
+          </span>
+        </motion.div>
+      </motion.header>
+
+      {/* Bento Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        {/* ROI Card */}
+        <motion.div
+          className="glass-prism md:col-span-8 rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-6 md:p-8 overflow-hidden"
+          {...fadeUp(0.12)}
+        >
+          <p className="text-xs text-[#E5E1E4]/50 uppercase tracking-widest mb-1">
+            Annual Net ROI
           </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => fetchData(false)}
-            className="px-4 py-2 text-sm font-medium bg-[#201f21] border border-white/10 rounded-lg hover:bg-white/5"
-          >
-            Refresh
-          </button>
-          <button
-            onClick={() => fetchData(true)}
-            disabled={aiLoading}
-            className="px-4 py-2 text-sm font-medium bg-[#FF9500] text-[#2d1600] rounded-lg hover:opacity-90 disabled:opacity-50"
-          >
-            {aiLoading ? "Analyzing..." : "Get AI Recommendations"}
-          </button>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <SummaryCard label="Products" value={summary.total_products} />
-        <SummaryCard label="Active Ads" value={summary.total_active_ads} color="green" />
-        <SummaryCard label="Paused" value={summary.total_paused_ads} color="red" />
-        <SummaryCard label="Winners" value={summary.total_winners} color="blue" />
-        <SummaryCard label="Total Spend" value={`$${summary.total_spend.toFixed(2)}`} />
-      </div>
-
-      {/* AI Recommendations */}
-      {ai_recommendations && (
-        <div className="bg-gradient-to-r from-[#FF9500]/10 to-indigo-50 border border-[#FF9500]/20 rounded-xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-[#FF9500]">AI Strategy Brief</h2>
-          <p className="text-[#FF9500]">{ai_recommendations.executive_summary}</p>
-
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
-              <h3 className="text-sm font-semibold text-[#FF9500] mb-2">Immediate Actions</h3>
-              <ul className="space-y-1">
-                {ai_recommendations.immediate_actions.map((a, i) => (
-                  <li key={i} className="text-sm text-[#FF9500] flex gap-2">
-                    <span className="text-[#FF9500] shrink-0">&#x2022;</span>
-                    {a}
-                  </li>
-                ))}
-              </ul>
+              <span className="text-6xl md:text-9xl font-black text-[#FF9500] leading-none tracking-tighter">
+                +842%
+              </span>
+              <p className="text-sm text-[#E5E1E4]/50 mt-2">
+                <span className="text-[#FF9500]">&#9650; 12.4%</span> vs prev.
+                period
+              </p>
             </div>
-            <div>
-              <h3 className="text-sm font-semibold text-[#FF9500] mb-2">Budget Recs</h3>
-              <ul className="space-y-1">
-                {ai_recommendations.budget_recommendations.map((r, i) => (
-                  <li key={i} className="text-sm text-[#FF9500] flex gap-2">
-                    <span className="text-[#FF9500] shrink-0">&#x2022;</span>
-                    {r}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-[#FF9500] mb-2">Next Tests</h3>
-              <ul className="space-y-1">
-                {ai_recommendations.next_tests.map((t, i) => (
-                  <li key={i} className="text-sm text-[#FF9500] flex gap-2">
-                    <span className="text-[#FF9500] shrink-0">&#x2022;</span>
-                    {t}
-                  </li>
-                ))}
-              </ul>
+
+            {/* Animated Bar Chart */}
+            <div className="flex items-end gap-[6px] h-28 md:h-36">
+              {barHeights.map((h, i) => (
+                <motion.div
+                  key={i}
+                  className="w-5 md:w-7 rounded-t-md bg-gradient-to-t from-[#FF9500]/80 to-[#ffbd7f]/60 cursor-pointer"
+                  initial={{ height: 0 }}
+                  animate={{ height: `${h}%` }}
+                  transition={{
+                    duration: 0.7,
+                    delay: 0.3 + i * 0.07,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  whileHover={{
+                    height: "100%",
+                    backgroundColor: "#FF9500",
+                    transition: { duration: 0.25 },
+                  }}
+                />
+              ))}
             </div>
           </div>
-        </div>
-      )}
+        </motion.div>
 
-      {/* Product Breakdown */}
-      <div>
-        <h2 className="text-lg font-semibold text-[#E5E1E4] mb-4">Products</h2>
-        <div className="space-y-4">
-          {products.map((p) => (
-            <div
-              key={p.id}
-              className="bg-[#201f21] border border-white/10 rounded-xl p-5"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-semibold text-[#E5E1E4]">{p.name}</h3>
-                  <span className="text-xs bg-white/10 text-[#dbc2ad] px-2 py-0.5 rounded-full">
-                    {p.product_type}
+        {/* Conversion Donut Card */}
+        <motion.div
+          className="glass-prism md:col-span-4 rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-6 flex flex-col items-center justify-center gap-4"
+          {...fadeUp(0.18)}
+        >
+          <p className="text-xs text-[#E5E1E4]/50 uppercase tracking-widest self-start">
+            Conversion Rate
+          </p>
+          <div className="relative">
+            <svg viewBox="0 0 100 100" className="w-36 h-36 -rotate-90">
+              <defs>
+                <linearGradient
+                  id="donutGrad"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop offset="0%" stopColor="#ff9500" />
+                  <stop offset="100%" stopColor="#ffbd7f" />
+                </linearGradient>
+              </defs>
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="#353437"
+                strokeWidth="8"
+              />
+              <motion.circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="url(#donutGrad)"
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray="210 282"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 1.4, delay: 0.3, ease: "easeOut" }}
+                style={{ strokeDashoffset: 0 }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-3xl font-black text-[#FF9500]">24.8%</span>
+            </div>
+          </div>
+          <p className="text-xs text-[#E5E1E4]/40">
+            Benchmark <span className="text-[#E5E1E4]/60">18%</span>
+          </p>
+          <motion.button
+            className="mt-1 px-5 py-2 rounded-full text-xs font-semibold bg-[#FF9500]/10 text-[#FF9500] border border-[#FF9500]/20 hover:bg-[#FF9500]/20 transition-colors"
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            Analyze Segment
+          </motion.button>
+        </motion.div>
+
+        {/* Global Map */}
+        <motion.div
+          className="md:col-span-12 lg:col-span-7 rounded-2xl bg-[#1b1b1d] border border-[#554334]/20 overflow-hidden relative min-h-[320px]"
+          {...fadeUp(0.22)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6tkJN8qK3-bgCH40o1oCGwR50P9JZrFwnVkGpxJ9pvBmlY4RacYrPeOC-qOkAjY738aJVOc6B8GBMUBLAjzos5qN-erzmu9ZP2hznvi1XaPT99Gl-P2mWv6N_kI-czAyivyfSL-3bIj7rEaM51MNxsQIxEZqzgdYIUUJrC1c75t7uxCsVlljY8N8li2q-JJ49dXKQHIECSSOScIR9bGvzD0YrMv9J4g0tnKnxM2rQ40oDcAVEZvO7uSpYjNlCs-6u7TyK92ZEGw0f"
+            alt="Global reach map"
+            className="absolute inset-0 w-full h-full object-cover opacity-40 grayscale pointer-events-none"
+          />
+          <div className="relative z-10 p-6 md:p-8 flex flex-col justify-between h-full gap-6">
+            <div>
+              <h3 className="text-lg font-bold tracking-tight mb-3">
+                Expansion Pulse
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono bg-[#353437]/70 text-[#E5E1E4]/60 border border-[#554334]/30">
+                  LATENCY: 12ms
+                </span>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono bg-[#FF9500]/10 text-[#FF9500] border border-[#FF9500]/20 flex items-center gap-1.5">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF9500] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#FF9500]" />
                   </span>
-                </div>
-                <div className="text-right text-sm text-[#E5E1E4]/50">
-                  {p.total_variations} variations &middot; {p.pain_points_count} pain points
-                </div>
+                  LIVE
+                </span>
               </div>
+            </div>
+            <div className="flex flex-wrap gap-6">
+              {[
+                { region: "EMEA", value: "14.2M" },
+                { region: "APAC", value: "32.8M" },
+                { region: "AMER", value: "28.1M" },
+              ].map((r) => (
+                <div key={r.region}>
+                  <p className="text-[10px] text-[#E5E1E4]/40 font-mono uppercase tracking-wider">
+                    {r.region}
+                  </p>
+                  <p className="text-xl font-bold text-[#E5E1E4]">{r.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
 
-              {/* Status bar */}
-              <div className="flex gap-3 mb-3">
-                <StatusPill label="Active" count={p.active_ads} color="green" />
-                <StatusPill label="Paused" count={p.paused_ads} color="red" />
-                <StatusPill label="Winners" count={p.winners} color="blue" />
-                <StatusPill label="Draft" count={p.status_breakdown.draft || 0} color="gray" />
-              </div>
-
-              {p.total_spend > 0 && (
-                <p className="text-sm text-[#dbc2ad] mb-2">
-                  Spend: <span className="font-medium">${p.total_spend.toFixed(2)}</span>
+        {/* AI Insights */}
+        <motion.div
+          className="glass-prism md:col-span-12 lg:col-span-5 rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-6"
+          {...fadeUp(0.26)}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-lg font-bold tracking-tight">
+              AI Insights
+            </h3>
+            <div className="flex -space-x-2">
+              {avatarUrls.map((url, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={i}
+                  src={url}
+                  alt="Team member"
+                  className="w-7 h-7 rounded-full border-2 border-[#1b1b1d] object-cover"
+                />
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-3">
+            {insights.map((item, i) => (
+              <motion.div
+                key={i}
+                className="border-l-4 rounded-r-lg bg-[#353437]/30 p-4 cursor-pointer hover:bg-[#353437]/50 transition-colors"
+                style={{ borderColor: item.color }}
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 + i * 0.1 }}
+              >
+                <p className="text-sm font-semibold leading-snug mb-1">
+                  {item.title}
                 </p>
-              )}
-
-              {/* Top winner */}
-              {p.top_winner && (
-                <div className="bg-[#4ade80]/10 border border-[#4ade80]/20 rounded-lg px-3 py-2 text-sm mb-2">
-                  <span className="font-medium text-[#4ade80]">Top Winner:</span>{" "}
-                  <span className="text-[#4ade80]">&ldquo;{p.top_winner.headline}&rdquo;</span>
-                  <span className="text-[#4ade80] ml-2">
-                    CTR {p.top_winner.ctr.toFixed(2)}% &middot; {p.top_winner.impressions.toLocaleString()} impressions
-                  </span>
-                </div>
-              )}
-
-              {/* Recent actions */}
-              {p.recent_actions.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-xs text-[#E5E1E4]/50 mb-1">Recent optimizer actions:</p>
-                  <div className="space-y-1">
-                    {p.recent_actions.slice(0, 3).map((a, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs">
-                        <span
-                          className={`px-1.5 py-0.5 rounded font-medium ${
-                            a.action === "paused"
-                              ? "bg-[#ffb4ab]/10 text-[#ffb4ab]"
-                              : a.action === "promoted"
-                                ? "bg-[#4ade80]/10 text-[#4ade80]"
-                                : "bg-white/10 text-[#dbc2ad]"
-                          }`}
-                        >
-                          {a.action}
-                        </span>
-                        <span className="text-[#E5E1E4]/50 truncate">{a.reason}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-
-          {products.length === 0 && (
-            <p className="text-[#E5E1E4]/50 text-sm">
-              No products yet. Add a product and generate some bulk ads to see data here.
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Winners & Losers */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Winners */}
-        <div>
-          <h2 className="text-lg font-semibold text-[#E5E1E4] mb-3">Top Winners</h2>
-          {top_winners.length > 0 ? (
-            <div className="space-y-2">
-              {top_winners.map((w, i) => (
-                <div
-                  key={w.variation_id}
-                  className="bg-[#201f21] border border-[#4ade80]/20 rounded-lg px-4 py-3 flex items-center justify-between"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[#E5E1E4] truncate">
-                      {i + 1}. {w.headline}
-                    </p>
-                    <p className="text-xs text-[#E5E1E4]/50">
-                      {w.impressions.toLocaleString()} impressions &middot; ${w.spend.toFixed(2)} spend
-                    </p>
-                  </div>
-                  <div className="text-right ml-4 shrink-0">
-                    <p className="text-sm font-bold text-[#4ade80]">{w.ctr.toFixed(2)}% CTR</p>
-                    <p className="text-xs text-[#E5E1E4]/50">${w.cpm.toFixed(2)} CPM</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-[#E5E1E4]/50">No winners yet. Run some ads and the optimizer will find them.</p>
-          )}
-        </div>
-
-        {/* Losers */}
-        <div>
-          <h2 className="text-lg font-semibold text-[#E5E1E4] mb-3">Worst Performers</h2>
-          {worst_losers.length > 0 ? (
-            <div className="space-y-2">
-              {worst_losers.map((l, i) => (
-                <div
-                  key={l.variation_id}
-                  className="bg-[#201f21] border border-[#ffb4ab]/20 rounded-lg px-4 py-3 flex items-center justify-between"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[#E5E1E4] truncate">
-                      {i + 1}. {l.headline}
-                    </p>
-                    <p className="text-xs text-[#E5E1E4]/50">
-                      {l.impressions.toLocaleString()} impressions &middot; ${l.spend.toFixed(2)} spend
-                    </p>
-                  </div>
-                  <div className="text-right ml-4 shrink-0">
-                    <p className="text-sm font-bold text-[#ffb4ab]">${l.cpm.toFixed(2)} CPM</p>
-                    <p className="text-xs text-[#E5E1E4]/50">{l.ctr.toFixed(2)}% CTR</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-[#E5E1E4]/50">No losers paused yet. The optimizer will flag underperformers.</p>
-          )}
-        </div>
-      </div>
-
-      {/* Content Performance */}
-      {summary.content_performance.posts_tracked > 0 && (
-        <div className="bg-[#201f21] border border-white/10 rounded-xl p-5">
-          <h2 className="text-lg font-semibold text-[#E5E1E4] mb-3">
-            Content Performance (Last {summary.content_performance.period_days} Days)
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Stat label="Impressions" value={summary.content_performance.total_impressions.toLocaleString()} />
-            <Stat label="Clicks" value={summary.content_performance.total_clicks.toLocaleString()} />
-            <Stat label="Avg CTR" value={`${summary.content_performance.avg_ctr.toFixed(2)}%`} />
-            <Stat label="Spend" value={`$${summary.content_performance.total_spend.toFixed(2)}`} />
+                <p className="text-xs text-[#E5E1E4]/40 leading-relaxed">
+                  {item.desc}
+                </p>
+                <p className="text-[10px] text-[#E5E1E4]/25 mt-2 font-mono">
+                  {item.time}
+                </p>
+              </motion.div>
+            ))}
           </div>
+        </motion.div>
+      </div>
+
+      {/* Active Campaign Cluster */}
+      <motion.section className="mt-8" {...fadeUp(0.32)}>
+        <h2 className="text-lg font-bold tracking-tight mb-4">
+          Active Campaign Cluster
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {campaigns.map((c, i) => (
+            <motion.div
+              key={c.label}
+              className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-5"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.45 + i * 0.08 }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="p-2 rounded-lg bg-[#353437]/50">{c.icon}</span>
+                <span
+                  className={`text-xs font-semibold ${
+                    c.positive ? "text-[#FF9500]" : "text-[#ffb4ab]"
+                  }`}
+                >
+                  {c.change}
+                </span>
+              </div>
+              <p className="text-2xl font-bold mb-0.5">{c.value}</p>
+              <p className="text-xs text-[#E5E1E4]/40 mb-3">{c.label}</p>
+              <div className="w-full h-1.5 rounded-full bg-[#353437]/60 overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{
+                    background: c.positive
+                      ? "linear-gradient(90deg, #FF9500, #ffbd7f)"
+                      : "linear-gradient(90deg, #ffb4ab, #ff897a)",
+                  }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${c.progress}%` }}
+                  transition={{
+                    duration: 0.8,
+                    delay: 0.6 + i * 0.1,
+                    ease: "easeOut",
+                  }}
+                />
+              </div>
+            </motion.div>
+          ))}
         </div>
-      )}
-    </div>
-  );
-}
+      </motion.section>
 
-function SummaryCard({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string | number;
-  color?: "green" | "red" | "blue";
-}) {
-  const colorClasses = {
-    green: "text-[#4ade80]",
-    red: "text-[#ffb4ab]",
-    blue: "text-[#FF9500]",
-  };
-  return (
-    <div className="bg-[#201f21] border border-white/10 rounded-xl p-4">
-      <p className="text-sm text-[#E5E1E4]/50">{label}</p>
-      <p className={`text-2xl font-bold ${color ? colorClasses[color] : "text-[#E5E1E4]"}`}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function StatusPill({ label, count, color }: { label: string; count: number; color: string }) {
-  const colorMap: Record<string, string> = {
-    green: "bg-[#4ade80]/10 text-[#4ade80]",
-    red: "bg-[#ffb4ab]/10 text-[#ffb4ab]",
-    blue: "bg-[#FF9500]/10 text-[#FF9500]",
-    gray: "bg-white/10 text-[#dbc2ad]",
-  };
-  return (
-    <span className={`text-xs px-2 py-1 rounded-full font-medium ${colorMap[color] || colorMap.gray}`}>
-      {label}: {count}
-    </span>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-[#E5E1E4]/50">{label}</p>
-      <p className="text-lg font-semibold text-[#E5E1E4]">{value}</p>
-    </div>
+      {/* Floating Generate Report FAB */}
+      <motion.button
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-6 py-3.5 rounded-full bg-[#FF9500] text-[#2d1600] font-semibold text-sm shadow-lg shadow-[#FF9500]/20 hover:shadow-[#FF9500]/40 transition-shadow"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+          <polyline points="10 9 9 9 8 9" />
+        </svg>
+        Generate Report
+      </motion.button>
+    </motion.div>
   );
 }

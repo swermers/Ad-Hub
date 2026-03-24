@@ -270,6 +270,45 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* ========== LIQUID PRECISION (Stitch Design) ========== */
+.liquid-gradient {
+  background: linear-gradient(135deg, #ff9500 0%, #ffbd7f 100%);
+}
+
+.glass-prism {
+  background: rgba(53, 52, 55, 0.4);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(85, 67, 52, 0.15);
+}
+
+.solar-glow {
+  box-shadow: 0 0 20px rgba(255, 149, 0, 0.15);
+}
+
+.kinetic-hover {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kinetic-hover:hover {
+  transform: translateY(-4px) scale(1.01);
+}
+
+.scale-98:active {
+  transform: scale(0.98);
+}
+
+.text-display-lg {
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+@media (min-width: 768px) {
+  .text-display-lg {
+    font-size: 5rem;
+  }
+}
+
 /* ========== STATUS BADGES ========== */
 .badge-draft {
   background: rgba(198, 196, 223, 0.2);
