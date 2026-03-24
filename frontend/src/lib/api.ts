@@ -635,6 +635,25 @@ export const api = {
     }),
   deleteVoiceProfile: (id: string) =>
     request<{ deleted: boolean }>(`/api/voice-profiles/${id}`, { method: "DELETE" }),
+  importMarkdownVoiceProfile: async (file: File): Promise<VoiceProfileItem> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/voice-profiles/import-markdown-and-create`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) throw new Error("Import failed");
+    return res.json();
+  },
 
   parseVoiceMarkdown: async (file: File): Promise<VoiceProfileParsed> => {
     const formData = new FormData();

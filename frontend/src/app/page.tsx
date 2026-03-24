@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { api, type ContentPiece, type ScheduledPost } from "@/lib/api";
+import Link from "next/link";
+import { api, type ContentPiece, type ScheduledPost, type Product } from "@/lib/api";
 import { GettingStarted, GettingStartedBanner } from "@/components/GettingStarted";
 
 const fadeUp = {
@@ -18,42 +19,14 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.06 } },
 };
 
-const clusterData = [
-  { name: "NEURAL_ALPHA", status: "RUNNING", active: true },
-  { name: "FLUID_BETA", status: "STANDBY", active: false },
-  { name: "KINETIC_GAMMA", status: "RUNNING", active: true },
-];
-
-const assets = [
-  {
-    name: "Solar_Drift_01.png",
-    size: "4.2MB",
-    type: "Simulation",
-    typeColor: "#FF9500",
-    image: "/placeholder.svg",
-  },
-  {
-    name: "Obsidian_Flow.mov",
-    size: "128MB",
-    type: "Video",
-    typeColor: "#a0a0a0",
-    image: "/placeholder.svg",
-  },
-  {
-    name: "Ember_Field.svg",
-    size: "84KB",
-    type: "Vector",
-    typeColor: "#FF9500",
-    image: "/placeholder.svg",
-  },
-];
-
 interface WeekData {
   inReview: number;
   scheduled: number;
   published: number;
   seedsActive: number;
   recentContent: ContentPiece[];
+  products: Product[];
+  totalContent: number;
 }
 
 function useWeekData() {
@@ -63,20 +36,24 @@ function useWeekData() {
   useEffect(() => {
     (async () => {
       try {
-        const [contentRes, scheduleRes, seedsRes] = await Promise.all([
-          api.listContent().catch(() => ({ items: [] })),
+        const [contentRes, scheduleRes, seedsRes, productsRes] = await Promise.all([
+          api.listContent().catch(() => []),
           api.listScheduledPosts().catch(() => ({ items: [] })),
           api.listSeeds().catch(() => []),
+          api.listProducts().catch(() => []),
         ]);
-        const content = (contentRes as { items: ContentPiece[] }).items || [];
+        const content = Array.isArray(contentRes) ? contentRes : [];
         const scheduled = (scheduleRes as { items: ScheduledPost[] }).items || [];
         const seeds = Array.isArray(seedsRes) ? seedsRes : [];
+        const products = Array.isArray(productsRes) ? productsRes : [];
         setData({
           inReview: content.filter((c) => c.status === "review").length,
           scheduled: scheduled.filter((s) => s.status === "scheduled").length,
           published: content.filter((c) => c.status === "published").length,
           seedsActive: seeds.filter((s: { status?: string }) => s.status === "developing").length,
           recentContent: content.slice(0, 4),
+          products,
+          totalContent: content.length,
         });
       } catch {
         // Graceful degradation — section just won't show
@@ -95,6 +72,13 @@ const STATUS_STYLES: Record<string, string> = {
   approved: "text-[#4ade80] bg-[#4ade80]/10 border-[#4ade80]/20",
   published: "text-[#a4a7ff] bg-[#a4a7ff]/10 border-[#a4a7ff]/20",
   rejected: "text-[#ffb4ab] bg-[#ffb4ab]/10 border-[#ffb4ab]/20",
+};
+
+const CONTENT_TYPE_COLORS: Record<string, string> = {
+  newsletter: "#ffbd7f",
+  social_post: "#a4a7ff",
+  video: "#FF9500",
+  blog: "#4ade80",
 };
 
 export default function DashboardPage() {
@@ -120,7 +104,7 @@ export default function DashboardPage() {
           Kinetic <span className="text-[#554334]/50">Precision.</span>
         </h1>
         <p className="max-w-2xl text-base md:text-lg text-[#E5E1E4]/50 leading-relaxed font-medium">
-          The atelier is pressurized. Your digital assets are currently evolving through 14 active fluid states. Optimization is <span className="text-[#ffbd7f]">98.4%</span> complete.
+          Your content engine is running. <span className="text-[#ffbd7f]">{weekData?.totalContent ?? 0}</span> pieces created across <span className="text-[#ffbd7f]">{weekData?.products.length ?? 0}</span> active products.
         </p>
       </motion.section>
 
@@ -138,8 +122,8 @@ export default function DashboardPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.4, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                   className="text-4xl md:text-5xl font-black text-[#E5E1E4]"
-                >12.4</motion.span>
-                <span className="text-[#FF9500] text-sm font-bold uppercase">m/sec</span>
+                >{weekData?.totalContent ?? 0}</motion.span>
+                <span className="text-[#FF9500] text-sm font-bold uppercase">pieces</span>
               </div>
             </div>
             <div className="flex gap-2">
@@ -180,56 +164,69 @@ export default function DashboardPage() {
               <motion.circle cx="300" cy="150" r="3" fill="#ff9500" className="opacity-50" initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} transition={{ delay: 1.8, duration: 0.4 }} />
             </svg>
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.5 }} className="absolute top-4 left-1/4 glass-prism px-3 py-1 rounded-lg">
-              <span className="text-[10px] font-bold text-[#FF9500]">PEAK +14%</span>
+              <span className="text-[10px] font-bold text-[#FF9500]">{weekData?.scheduled ?? 0} SCHEDULED</span>
             </motion.div>
           </div>
         </motion.div>
 
-        {/* Precision Score */}
+        {/* Published Count */}
         <motion.div variants={fadeUp} custom={2} className="md:col-span-4 glass-prism rounded-2xl md:rounded-3xl p-6 md:p-8 flex flex-col justify-between group hover:bg-[#2a2a2c]/60 transition-all duration-500">
           <div>
-            <span className="material-symbols-outlined text-[#FF9500] mb-4" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#E5E1E4]/40 mb-4">Precision Score</h3>
-            <motion.div className="text-5xl md:text-6xl font-black text-[#E5E1E4]" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}>98</motion.div>
+            <span className="material-symbols-outlined text-[#FF9500] mb-4" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#E5E1E4]/40 mb-4">Published</h3>
+            <motion.div className="text-5xl md:text-6xl font-black text-[#E5E1E4]" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}>{weekData?.published ?? 0}</motion.div>
           </div>
           <div className="space-y-2 mt-6">
             <div className="h-1 w-full bg-[#353437] rounded-full overflow-hidden">
-              <motion.div className="h-full liquid-gradient" initial={{ width: 0 }} animate={{ width: "98%" }} transition={{ delay: 0.8, duration: 1.2, ease: [0.16, 1, 0.3, 1] }} />
+              <motion.div className="h-full liquid-gradient" initial={{ width: 0 }} animate={{ width: weekData && weekData.totalContent > 0 ? `${Math.round((weekData.published / weekData.totalContent) * 100)}%` : "0%" }} transition={{ delay: 0.8, duration: 1.2, ease: [0.16, 1, 0.3, 1] }} />
             </div>
-            <p className="text-[10px] font-bold text-[#E5E1E4]/40 uppercase tracking-widest">Global standard optimal</p>
+            <p className="text-[10px] font-bold text-[#E5E1E4]/40 uppercase tracking-widest">
+              {weekData && weekData.totalContent > 0 ? `${Math.round((weekData.published / weekData.totalContent) * 100)}% of total content` : "No content yet"}
+            </p>
           </div>
         </motion.div>
 
-        {/* Active Clusters */}
+        {/* Active Products */}
         <motion.div variants={fadeUp} custom={3} className="md:col-span-4 glass-prism rounded-2xl md:rounded-3xl p-6 md:p-8 group hover:bg-[#2a2a2c]/60 transition-all duration-500">
-          <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#E5E1E4]/40 mb-6">Active Clusters</h3>
+          <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#E5E1E4]/40 mb-6">Active Products</h3>
           <div className="space-y-4">
-            {clusterData.map((c, i) => (
-              <motion.div key={c.name} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 + i * 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="flex justify-between items-center">
-                <span className="text-sm font-medium">{c.name}</span>
-                <span className={`text-xs font-bold ${c.active ? "text-[#FF9500]" : "text-[#E5E1E4]/40"}`}>{c.status}</span>
-              </motion.div>
-            ))}
+            {weekData?.products && weekData.products.length > 0 ? (
+              weekData.products.slice(0, 5).map((p, i) => (
+                <motion.div key={p.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 + i * 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="flex justify-between items-center">
+                  <Link href={`/products/${p.id}`} className="text-sm font-medium truncate max-w-[160px] hover:text-[#FF9500] transition-colors">{p.name}</Link>
+                  <span className="text-xs font-bold text-[#FF9500]">ACTIVE</span>
+                </motion.div>
+              ))
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-[#E5E1E4]/40">No products yet</p>
+                <Link href="/products" className="text-xs font-bold text-[#FF9500] mt-2 inline-block hover:underline">Add a product</Link>
+              </div>
+            )}
           </div>
         </motion.div>
 
-        {/* Generate Fluid Assets */}
+        {/* Create Content */}
         <motion.div variants={fadeUp} custom={4} className="md:col-span-8 glass-prism rounded-2xl md:rounded-3xl p-[1px] bg-gradient-to-br from-[#554334]/30 to-transparent group">
           <div className="bg-[#0e0e10] h-full w-full rounded-[calc(1.5rem-1px)] p-6 md:p-8 relative overflow-hidden">
             <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center h-full">
               <div className="flex-1">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">Generate Fluid Assets</h2>
-                <p className="text-[#E5E1E4]/40 text-sm mb-6 max-w-sm">Use the Atelier&apos;s engine to create 3D liquid simulations for your next high-fashion campaign.</p>
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">Create Content</h2>
+                <p className="text-[#E5E1E4]/40 text-sm mb-6 max-w-sm">Use the content engine to create newsletters, social posts, and video scripts for your next campaign.</p>
                 <div className="flex gap-3 md:gap-4">
-                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 md:px-6 py-3 liquid-gradient text-[#2d1600] rounded-xl font-bold text-xs uppercase tracking-widest">Launch Engine</motion.button>
-                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 md:px-6 py-3 border border-[#554334]/40 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#353437] transition-colors">Presets</motion.button>
+                  <Link href="/studio">
+                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 md:px-6 py-3 liquid-gradient text-[#2d1600] rounded-xl font-bold text-xs uppercase tracking-widest">Launch Engine</motion.button>
+                  </Link>
+                  <Link href="/products">
+                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 md:px-6 py-3 border border-[#554334]/40 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#353437] transition-colors">Products</motion.button>
+                  </Link>
                 </div>
               </div>
-              <div className="w-full md:w-64 h-48 rounded-2xl overflow-hidden relative shadow-2xl">
-                <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src="/placeholder.svg" alt="Fluid asset preview" />
+              <div className="w-full md:w-64 h-48 rounded-2xl overflow-hidden relative shadow-2xl bg-gradient-to-br from-[#FF9500]/20 via-[#554334]/30 to-[#131315] flex items-center justify-center">
                 <div className="absolute inset-0 bg-gradient-to-t from-[#131315]/80 to-transparent" />
+                <span className="material-symbols-outlined text-6xl text-[#FF9500]/30" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="absolute bottom-3 left-3">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-[#FF9500]">Live Preview</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-[#FF9500]">Content Studio</span>
                 </motion.div>
               </div>
             </div>
@@ -347,43 +344,61 @@ export default function DashboardPage() {
         ) : null}
       </motion.section>
 
-      {/* Recent Studio Assets */}
+      {/* Recent Content Pieces */}
       <motion.section variants={fadeUp} custom={5}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
           <div>
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight">Recent Studio Assets</h2>
-            <p className="text-[#E5E1E4]/40 text-xs uppercase tracking-widest mt-1">Rendered in the last 12 hours</p>
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight">Recent Content</h2>
+            <p className="text-[#E5E1E4]/40 text-xs uppercase tracking-widest mt-1">Latest generated pieces</p>
           </div>
-          <button className="text-sm font-bold text-[#FF9500] border-b border-[#FF9500]/30 pb-1 hover:border-[#FF9500] transition-all">View All Assets</button>
+          <Link href="/content" className="text-sm font-bold text-[#FF9500] border-b border-[#FF9500]/30 pb-1 hover:border-[#FF9500] transition-all">View All Content</Link>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {assets.map((a, i) => (
-            <motion.div key={a.name} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 + i * 0.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }} className="group cursor-pointer">
-              <div className="aspect-square rounded-2xl md:rounded-3xl overflow-hidden mb-4 relative">
-                <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={a.image} alt={a.name} />
-                <div className="absolute inset-0 bg-[#FF9500]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="absolute top-4 right-4 glass-prism p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <span className="material-symbols-outlined text-white text-sm">download</span>
+        {weekData?.recentContent && weekData.recentContent.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {weekData.recentContent.map((item, i) => (
+              <motion.div key={item.id} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 + i * 0.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }} className="group cursor-pointer">
+                <Link href={`/content/${item.id}`}>
+                  <div className="aspect-square rounded-2xl md:rounded-3xl overflow-hidden mb-4 relative bg-gradient-to-br from-[#353437] to-[#1a1a1c] flex items-center justify-center">
+                    <span className="material-symbols-outlined text-4xl text-[#E5E1E4]/20" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      {item.content_type === "video" ? "movie" : item.content_type === "newsletter" ? "mail" : item.content_type === "social_post" ? "share" : "article"}
+                    </span>
+                    <div className="absolute inset-0 bg-[#FF9500]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="absolute top-4 right-4 glass-prism p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                      <span className="material-symbols-outlined text-white text-sm">open_in_new</span>
+                    </div>
+                  </div>
+                  <div className="px-2">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-bold text-sm truncate max-w-[180px]">{item.title || "Untitled"}</h4>
+                      <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-full border shrink-0 ${STATUS_STYLES[item.status] || STATUS_STYLES.draft}`}>{item.status}</span>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: CONTENT_TYPE_COLORS[item.content_type] || "#FF9500" }}>{item.content_type || "content"}</span>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1 }} className="group cursor-pointer">
+              <Link href="/studio">
+                <div className="aspect-square rounded-2xl md:rounded-3xl overflow-hidden mb-4 relative bg-[#353437] flex items-center justify-center border-2 border-dashed border-[#554334]/30 hover:border-[#FF9500]/50 transition-all duration-500">
+                  <div className="text-center">
+                    <span className="material-symbols-outlined text-3xl text-[#E5E1E4]/40 mb-2">add_circle</span>
+                    <p className="text-[10px] font-black uppercase tracking-widest">Create New</p>
+                  </div>
                 </div>
-              </div>
-              <div className="px-2">
-                <div className="flex justify-between items-start">
-                  <h4 className="font-bold text-sm">{a.name}</h4>
-                  <span className="text-[10px] font-bold text-[#E5E1E4]/40">{a.size}</span>
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: a.typeColor }}>{a.type}</span>
-              </div>
+              </Link>
             </motion.div>
-          ))}
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1 }} className="group cursor-pointer">
-            <div className="aspect-square rounded-2xl md:rounded-3xl overflow-hidden mb-4 relative bg-[#353437] flex items-center justify-center border-2 border-dashed border-[#554334]/30 hover:border-[#FF9500]/50 transition-all duration-500">
-              <div className="text-center">
-                <span className="material-symbols-outlined text-3xl text-[#E5E1E4]/40 mb-2">add_circle</span>
-                <p className="text-[10px] font-black uppercase tracking-widest">Upload New</p>
-              </div>
+          </div>
+        ) : (
+          <div className="text-center py-16 glass-prism rounded-2xl border border-[#554334]/30">
+            <div className="w-16 h-16 rounded-2xl bg-[#FF9500]/10 flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-2xl text-[#FF9500]">edit_note</span>
             </div>
-          </motion.div>
-        </div>
+            <p className="text-sm text-[#E5E1E4]/50 mb-4">No content created yet</p>
+            <Link href="/studio">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-6 py-3 liquid-gradient text-[#2d1600] rounded-xl font-bold text-xs uppercase tracking-widest">Create your first content</motion.button>
+            </Link>
+          </div>
+        )}
       </motion.section>
 
       {/* FAB */}
