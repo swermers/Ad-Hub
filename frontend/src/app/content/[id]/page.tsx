@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRef } from "react";
 import { api, API_BASE, type ContentPiece, type Product, type GenerateImageStatus } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
@@ -9,6 +9,104 @@ import { VideoPreview, VIDEO_STYLE_OPTIONS, type VideoStyle } from "@/components
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
 import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
+
+/** Tone presets that affect visual intensity */
+const TONE_PRESETS = [
+  { value: "bold", label: "Bold", desc: "High contrast, saturated accents" },
+  { value: "neutral", label: "Neutral", desc: "Balanced, brand-true colors" },
+  { value: "subtle", label: "Subtle", desc: "Muted, soft tones" },
+  { value: "dark", label: "Dark", desc: "Deep backgrounds, glowing accents" },
+  { value: "light", label: "Light", desc: "Light backgrounds, dark text" },
+] as const;
+
+type TonePreset = typeof TONE_PRESETS[number]["value"];
+
+/** Apply tone modifier to a color scheme */
+function applyTone(
+  bg: string, text: string, accent: string, tone: TonePreset
+): { bg: string; text: string; accent: string } {
+  if (tone === "neutral") return { bg, text, accent };
+  if (tone === "bold") {
+    // Boost saturation of accent, darken bg
+    return { bg: darkenHex(bg, 0.15), text, accent: saturateHex(accent, 0.2) };
+  }
+  if (tone === "subtle") {
+    return { bg, text, accent: desaturateHex(accent, 0.3) };
+  }
+  if (tone === "dark") {
+    return { bg: "#0a0a0c", text: "#ffffff", accent };
+  }
+  if (tone === "light") {
+    return { bg: "#f5f3f0", text: "#1a1a1d", accent: darkenHex(accent, 0.1) };
+  }
+  return { bg, text, accent };
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  hex = hex.replace("#", "");
+  if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  const n = parseInt(hex, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const cl = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  return `#${cl(r).toString(16).padStart(2,"0")}${cl(g).toString(16).padStart(2,"0")}${cl(b).toString(16).padStart(2,"0")}`;
+}
+
+function darkenHex(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return rgbToHex(r * (1 - amount), g * (1 - amount), b * (1 - amount));
+}
+
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0, s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+    else if (max === g) h = ((b - r) / d + 2) * 60;
+    else h = ((r - g) / d + 4) * 60;
+  }
+  return [h, s, l];
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  h /= 360;
+  let r: number, g: number, b: number;
+  if (s === 0) { r = g = b = l; } else {
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [r * 255, g * 255, b * 255];
+}
+
+function saturateHex(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  const [h, s, l] = rgbToHsl(r, g, b);
+  const [nr, ng, nb] = hslToRgb(h, Math.min(1, s + amount), l);
+  return rgbToHex(nr, ng, nb);
+}
+
+function desaturateHex(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  const [h, s, l] = rgbToHsl(r, g, b);
+  const [nr, ng, nb] = hslToRgb(h, Math.max(0, s - amount), l);
+  return rgbToHex(nr, ng, nb);
+}
 
 export default function ContentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +130,12 @@ export default function ContentDetailPage() {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [imageGenStatus, setImageGenStatus] = useState<GenerateImageStatus | null>(null);
   const imageGenPollRef = useRef<NodeJS.Timeout | null>(null);
+  // Color override state
+  const [colorOverride, setColorOverride] = useState<{ bg?: string; text?: string; accent?: string }>({});
+  const [showColorPanel, setShowColorPanel] = useState(false);
+  const [customColorInput, setCustomColorInput] = useState("");
+  const [tone, setTone] = useState<TonePreset>("neutral");
+  const [savingColors, setSavingColors] = useState(false);
 
   useEffect(() => {
     api
@@ -171,11 +275,44 @@ export default function ContentDetailPage() {
     } catch { /* */ }
   }
 
-  // Pick colors for the visual preview using smart color scheme
+  // Pick colors for the visual preview using smart color scheme + overrides + tone
   const colorScheme = buildColorSchemeFromSeed(brandColors, piece.product_id);
-  const bgColor = colorScheme.backgroundColor;
-  const accentColor = colorScheme.accentColor;
-  const textColor = colorScheme.textColor;
+  const toned = applyTone(
+    colorOverride.bg || colorScheme.backgroundColor,
+    colorOverride.text || colorScheme.textColor,
+    colorOverride.accent || colorScheme.accentColor,
+    tone,
+  );
+  const bgColor = toned.bg;
+  const accentColor = toned.accent;
+  const textColor = toned.text;
+
+  // Save brand colors back to product
+  const handleSaveColors = useCallback(async (colors: string[]) => {
+    if (!product) return;
+    setSavingColors(true);
+    try {
+      await api.updateProduct(product.id, { brand_colors: JSON.stringify(colors) });
+      setProduct({ ...product, brand_colors: JSON.stringify(colors) });
+    } catch {
+      setError("Failed to save brand colors");
+    } finally {
+      setSavingColors(false);
+    }
+  }, [product]);
+
+  const handleAddCustomColor = () => {
+    const c = customColorInput.trim();
+    if (!c.match(/^#[0-9a-fA-F]{6}$/)) return;
+    const updated = [...brandColors, c];
+    handleSaveColors(updated);
+    setCustomColorInput("");
+  };
+
+  const handleRemoveColor = (index: number) => {
+    const updated = brandColors.filter((_, i) => i !== index);
+    handleSaveColors(updated);
+  };
 
   // Extract headline for the visual — Swiss design demands brevity
   const rawHeadline = piece.hook || piece.title || piece.body.split("\n")[0];
@@ -433,23 +570,146 @@ export default function ContentDetailPage() {
               </div>
             )}
 
-            {/* Brand color swatches if available */}
-            {brandColors.length > 0 && (
-              <div className="flex items-center gap-2 mt-3">
+            {/* Color controls */}
+            <div className="mt-3 space-y-2">
+              {/* Brand color swatches — click to set as accent */}
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-[#E5E1E4]/40">Brand colors:</span>
-                {brandColors.slice(0, 5).map((c, i) => (
+                {brandColors.map((c, i) => (
+                  <div key={i} className="relative group">
+                    <button
+                      onClick={() => setColorOverride((prev) => ({ ...prev, accent: c }))}
+                      className={`w-6 h-6 rounded-full border-2 shadow-sm transition-all ${
+                        colorOverride.accent === c
+                          ? "border-[#FF9500] scale-110"
+                          : "border-white/10 hover:border-white/30"
+                      }`}
+                      style={{ backgroundColor: c }}
+                      title={`Use ${c} as accent`}
+                    />
+                    <button
+                      onClick={() => handleRemoveColor(i)}
+                      className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#ffb4ab] text-[#2d1600] text-[8px] font-bold hidden group-hover:flex items-center justify-center leading-none"
+                      title="Remove"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+                {brandColors.length === 0 && (
+                  <span className="text-xs text-[#E5E1E4]/30 italic">No colors extracted</span>
+                )}
+                <button
+                  onClick={() => setShowColorPanel(!showColorPanel)}
+                  className={`w-6 h-6 rounded-full border border-dashed flex items-center justify-center text-xs transition-all ${
+                    showColorPanel
+                      ? "border-[#FF9500] text-[#FF9500]"
+                      : "border-white/20 text-[#E5E1E4]/40 hover:border-white/40"
+                  }`}
+                  title="Edit colors"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* Expanded color editor panel */}
+              {showColorPanel && (
+                <div className="bg-[#1b1b1d] border border-white/10 rounded-lg p-3 space-y-3">
+                  {/* Add custom color */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={customColorInput || "#FF9500"}
+                      onChange={(e) => setCustomColorInput(e.target.value)}
+                      className="w-7 h-7 rounded cursor-pointer bg-transparent border-0"
+                    />
+                    <input
+                      type="text"
+                      value={customColorInput}
+                      onChange={(e) => setCustomColorInput(e.target.value)}
+                      placeholder="#FF9500"
+                      className="flex-1 px-2 py-1 bg-[#201f21] border border-white/10 rounded text-xs text-[#E5E1E4] font-mono placeholder:text-[#E5E1E4]/20"
+                    />
+                    <button
+                      onClick={handleAddCustomColor}
+                      disabled={savingColors || !customColorInput.match(/^#[0-9a-fA-F]{6}$/)}
+                      className="px-2.5 py-1 bg-[#FF9500] text-[#2d1600] rounded text-xs font-medium disabled:opacity-40"
+                    >
+                      {savingColors ? "..." : "Add"}
+                    </button>
+                  </div>
+
+                  {/* Override individual channels */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-[9px] uppercase tracking-wider text-[#E5E1E4]/30 mb-1 block">Background</label>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="color"
+                          value={colorOverride.bg || bgColor}
+                          onChange={(e) => setColorOverride((prev) => ({ ...prev, bg: e.target.value }))}
+                          className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
+                        />
+                        <span className="text-[10px] font-mono text-[#E5E1E4]/40">{colorOverride.bg || bgColor}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[9px] uppercase tracking-wider text-[#E5E1E4]/30 mb-1 block">Accent</label>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="color"
+                          value={colorOverride.accent || accentColor}
+                          onChange={(e) => setColorOverride((prev) => ({ ...prev, accent: e.target.value }))}
+                          className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
+                        />
+                        <span className="text-[10px] font-mono text-[#E5E1E4]/40">{colorOverride.accent || accentColor}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[9px] uppercase tracking-wider text-[#E5E1E4]/30 mb-1 block">Text</label>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="color"
+                          value={colorOverride.text || textColor}
+                          onChange={(e) => setColorOverride((prev) => ({ ...prev, text: e.target.value }))}
+                          className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
+                        />
+                        <span className="text-[10px] font-mono text-[#E5E1E4]/40">{colorOverride.text || textColor}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reset button */}
+                  {(colorOverride.bg || colorOverride.text || colorOverride.accent) && (
+                    <button
+                      onClick={() => setColorOverride({})}
+                      className="text-xs text-[#ffb4ab] hover:underline"
+                    >
+                      Reset to auto
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Tone selector */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-[#E5E1E4]/40 mr-1">Tone:</span>
+                {TONE_PRESETS.map((t) => (
                   <button
-                    key={i}
-                    onClick={() => {
-                      // Quick way to cycle accent color
-                    }}
-                    className="w-5 h-5 rounded-full border border-white/10 shadow-sm"
-                    style={{ backgroundColor: c }}
-                    title={c}
-                  />
+                    key={t.value}
+                    onClick={() => setTone(t.value)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium border transition-all ${
+                      tone === t.value
+                        ? "bg-[#FF9500]/15 text-[#FF9500] border-[#FF9500]/30"
+                        : "bg-transparent text-[#E5E1E4]/40 border-white/5 hover:border-white/15"
+                    }`}
+                    title={t.desc}
+                  >
+                    {t.label}
+                  </button>
                 ))}
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -538,8 +798,8 @@ export default function ContentDetailPage() {
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 mb-6">
+      {/* Actions — primary row */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
         {piece.status === "draft" && (
           <>
             <button
@@ -587,6 +847,36 @@ export default function ContentDetailPage() {
             Edit
           </button>
         )}
+        {/* Re-generate variation */}
+        <button
+          onClick={() => router.push(`/generate?product_id=${piece.product_id}`)}
+          className="px-4 py-2 bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
+        >
+          Re-generate
+        </button>
+        {/* Download copy as text */}
+        <button
+          onClick={() => {
+            const text = [
+              piece.title && `Title: ${piece.title}`,
+              piece.hook && `Hook: ${piece.hook}`,
+              "",
+              piece.body,
+              "",
+              piece.cta && `CTA: ${piece.cta}`,
+            ].filter(Boolean).join("\n");
+            const blob = new Blob([text], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${(piece.title || "ad-copy").replace(/\s+/g, "-").toLowerCase()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="px-4 py-2 bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
+        >
+          Download
+        </button>
         <div className="flex-1" />
         {confirmDelete ? (
           <div className="flex items-center gap-2">
@@ -612,6 +902,16 @@ export default function ContentDetailPage() {
             Delete
           </button>
         )}
+      </div>
+
+      {/* Production info strip */}
+      <div className="flex items-center gap-3 mb-6 text-[10px] text-[#E5E1E4]/30 font-mono flex-wrap">
+        <span>BG:{bgColor}</span>
+        <span>ACCENT:{accentColor}</span>
+        <span>TEXT:{textColor}</span>
+        {tone !== "neutral" && <span>TONE:{tone.toUpperCase()}</span>}
+        <span>RATIO:{previewAspect}</span>
+        <span>STYLE:{previewMode === "video" ? videoStyle : previewTemplate}</span>
       </div>
 
       {/* Generated Image */}

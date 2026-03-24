@@ -55,7 +55,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  updateProduct: (id: string, data: Partial<ProductCreate>) =>
+  updateProduct: (id: string, data: Partial<ProductCreate> & { brand_colors?: string }) =>
     request<Product>(`/api/products/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),

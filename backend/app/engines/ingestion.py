@@ -101,53 +101,118 @@ async def crawl_website(start_url: str, max_pages: int = 20) -> list[dict]:
     return results
 
 
+def _color_distance(c1: str, c2: str) -> float:
+    """Approximate perceptual distance between two hex colors (0-1 scale)."""
+    r1, g1, b1 = _hex_to_rgb(c1)
+    r2, g2, b2 = _hex_to_rgb(c2)
+    # Weighted Euclidean distance — human eyes are more sensitive to green
+    dr, dg, db = (r1 - r2) / 255.0, (g1 - g2) / 255.0, (b1 - b2) / 255.0
+    return (0.3 * dr * dr + 0.59 * dg * dg + 0.11 * db * db) ** 0.5
+
+
+def _dedup_similar_colors(colors: list[tuple[str, float]], threshold: float = 0.08) -> list[str]:
+    """Remove near-duplicate colors, keeping the one with higher priority score."""
+    # Sort by priority descending so the best-scored color survives
+    sorted_colors = sorted(colors, key=lambda x: x[1], reverse=True)
+    kept: list[str] = []
+    for color, _score in sorted_colors:
+        if all(_color_distance(color, k) > threshold for k in kept):
+            kept.append(color)
+    return kept
+
+
 def _extract_colors_from_html(html: str) -> set[str]:
     """Extract brand-relevant hex color values from HTML/CSS.
 
-    Extracts from:
-    - Hex colors (#rgb, #rrggbb)
-    - rgb()/rgba() functions
-    - CSS custom property definitions (--brand-color: ...)
-    - meta theme-color tags
+    Uses a priority-scoring system to surface true brand colors:
+    - CSS custom properties with brand-related names get highest priority
+    - Meta theme-color is a strong signal
+    - Button/link/accent colors are prioritized over generic CSS
+    - Deduplicates visually similar colors
 
     Filters out neutrals (blacks, whites, grays) using luminance + saturation.
     """
-    colors: set[str] = set()
+    # Collect colors with priority scores: (hex, score)
+    scored: list[tuple[str, float]] = []
 
-    # 1. Extract from meta theme-color (most reliable brand signal)
+    def _add(color: str, score: float):
+        normalized = _normalize_hex(color)
+        if _is_brand_color(normalized):
+            scored.append((normalized, score))
+
+    # 1. Meta theme-color — strongest signal (score: 10)
     theme_match = re.search(r'<meta[^>]*name=["\']theme-color["\'][^>]*content=["\'](#[0-9a-fA-F]{3,6})["\']', html, re.IGNORECASE)
     if not theme_match:
         theme_match = re.search(r'<meta[^>]*content=["\'](#[0-9a-fA-F]{3,6})["\'][^>]*name=["\']theme-color["\']', html, re.IGNORECASE)
     if theme_match:
-        colors.add(_normalize_hex(theme_match.group(1)))
+        _add(theme_match.group(1), 10.0)
 
-    # 2. Hex colors (#rgb, #rrggbb) from CSS properties (not from random attributes)
-    # Look specifically in style attributes and style/CSS blocks
-    hex_in_css = re.compile(r'(?:color|background|border|fill|stroke|--[\w-]+)\s*:\s*([^;]*?)(?:;|"|\'|})')
-    for css_match in hex_in_css.finditer(html):
-        value = css_match.group(1)
-        for hex_match in re.finditer(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', value):
-            colors.add(_normalize_hex(f"#{hex_match.group(1)}"))
+    # 2. CSS custom properties with brand-related names (score: 8)
+    brand_var_pattern = re.compile(
+        r'--(?:brand|primary|accent|main|theme|highlight|cta|action|link)[\w-]*\s*:\s*([^;}{]+)',
+        re.IGNORECASE,
+    )
+    for m in brand_var_pattern.finditer(html):
+        value = m.group(1).strip()
+        for hex_m in re.finditer(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', value):
+            _add(f"#{hex_m.group(1)}", 8.0)
+        for rgb_m in re.finditer(r'rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})', value):
+            r, g, b = int(rgb_m.group(1)), int(rgb_m.group(2)), int(rgb_m.group(3))
+            _add(f"#{r:02x}{g:02x}{b:02x}", 8.0)
 
-    # 3. Also catch standalone hex in common patterns (CSS variables, inline styles)
-    hex_pattern = re.compile(r'#([0-9a-fA-F]{6})\b')
-    for match in hex_pattern.finditer(html):
-        colors.add(_normalize_hex(f"#{match.group(1)}"))
+    # 3. Button / link / CTA styles — very likely brand colors (score: 7)
+    cta_pattern = re.compile(
+        r'(?:\.btn|\.button|\.cta|a\s*\{|\.link|button\s*\{|\.hero)[^}{]*\{([^}]+)\}',
+        re.IGNORECASE,
+    )
+    for m in cta_pattern.finditer(html):
+        block = m.group(1)
+        for hex_m in re.finditer(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', block):
+            _add(f"#{hex_m.group(1)}", 7.0)
 
-    # 4. rgb()/rgba() values
-    rgb_pattern = re.compile(r'rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})')
-    for match in rgb_pattern.finditer(html):
-        r, g, b = int(match.group(1)), int(match.group(2)), int(match.group(3))
-        hex_color = f"#{r:02x}{g:02x}{b:02x}"
-        colors.add(hex_color)
+    # 4. CSS color/background properties in style blocks and attributes (score: 4)
+    css_prop_pattern = re.compile(
+        r'(?:(?:background|accent|border)-color|(?<!-)color)\s*:\s*([^;}{]+?)(?:;|"|\'|})',
+        re.IGNORECASE,
+    )
+    for m in css_prop_pattern.finditer(html):
+        value = m.group(1).strip()
+        for hex_m in re.finditer(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', value):
+            _add(f"#{hex_m.group(1)}", 4.0)
+        for rgb_m in re.finditer(r'rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})', value):
+            r, g, b = int(rgb_m.group(1)), int(rgb_m.group(2)), int(rgb_m.group(3))
+            _add(f"#{r:02x}{g:02x}{b:02x}", 4.0)
 
-    # Filter out neutrals using luminance + saturation
-    filtered = set()
-    for c in colors:
-        if _is_brand_color(c):
-            filtered.add(c)
+    # 5. Gradient colors — often contain brand palette (score: 5)
+    gradient_pattern = re.compile(r'(?:linear|radial)-gradient\(([^)]+)\)', re.IGNORECASE)
+    for m in gradient_pattern.finditer(html):
+        value = m.group(1)
+        for hex_m in re.finditer(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', value):
+            _add(f"#{hex_m.group(1)}", 5.0)
 
-    return filtered
+    # 6. General CSS custom properties (score: 3)
+    general_var_pattern = re.compile(r'--[\w-]+\s*:\s*([^;}{]+)', re.IGNORECASE)
+    for m in general_var_pattern.finditer(html):
+        value = m.group(1).strip()
+        for hex_m in re.finditer(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', value):
+            _add(f"#{hex_m.group(1)}", 3.0)
+
+    # 7. fill/stroke in SVGs (often logo colors) (score: 6)
+    svg_color_pattern = re.compile(r'(?:fill|stroke)\s*[=:]\s*["\']?\s*#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b')
+    for m in svg_color_pattern.finditer(html):
+        _add(f"#{m.group(1)}", 6.0)
+
+    # 8. Background shorthand and other generic color declarations (score: 2)
+    bg_shorthand = re.compile(r'background\s*:\s*([^;}{]+?)(?:;|"|\'|})', re.IGNORECASE)
+    for m in bg_shorthand.finditer(html):
+        value = m.group(1)
+        for hex_m in re.finditer(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', value):
+            _add(f"#{hex_m.group(1)}", 2.0)
+
+    # Deduplicate similar colors, keeping highest-priority ones
+    deduped = _dedup_similar_colors(scored, threshold=0.08)
+
+    return set(deduped)
 
 
 # Generic font names to exclude — we only want real brand fonts
@@ -255,7 +320,11 @@ def _rgb_to_hsl(r: int, g: int, b: int) -> tuple[float, float, float]:
 
 
 def _is_brand_color(hex_color: str) -> bool:
-    """Return True if the color is likely a brand color (not a neutral)."""
+    """Return True if the color is likely a brand color (not a neutral).
+
+    Stricter filtering — requires meaningful saturation to reject
+    near-gray utility colors from CSS frameworks.
+    """
     try:
         r, g, b = _hex_to_rgb(hex_color)
     except (ValueError, IndexError):
@@ -263,14 +332,17 @@ def _is_brand_color(hex_color: str) -> bool:
 
     _, s, l = _rgb_to_hsl(r, g, b)
 
-    # Skip very dark (near-black) — lightness < 0.08
-    if l < 0.08:
+    # Skip very dark (near-black)
+    if l < 0.10:
         return False
-    # Skip very light (near-white) — lightness > 0.95
-    if l > 0.95:
+    # Skip very light (near-white)
+    if l > 0.92:
         return False
-    # Skip grays — low saturation AND mid-range lightness
-    if s < 0.10 and 0.08 <= l <= 0.95:
+    # Skip grays and near-grays — require meaningful saturation
+    if s < 0.20:
+        return False
+    # Skip extremely muted colors (low saturation + extreme lightness)
+    if s < 0.30 and (l < 0.15 or l > 0.85):
         return False
 
     return True
