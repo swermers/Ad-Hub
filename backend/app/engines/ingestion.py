@@ -121,6 +121,32 @@ def _dedup_similar_colors(colors: list[tuple[str, float]], threshold: float = 0.
     return kept
 
 
+def _is_framework_utility_block(css_text: str) -> bool:
+    """Detect Tailwind/Bootstrap utility class patterns in a CSS block.
+
+    These frameworks generate thousands of utility classes like:
+      .bg-blue-500{background-color:rgb(59 130 246)}
+      .text-emerald-600{color:#059669}
+    The colors in these blocks are framework defaults, NOT the brand's colors.
+    """
+    # Tailwind patterns: .bg-COLOR-N, .text-COLOR-N, .border-COLOR-N, etc.
+    tw_pattern = re.compile(
+        r'\.\!?(?:bg|text|border|ring|shadow|accent|outline|decoration|fill|stroke)'
+        r'-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|'
+        r'emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)'
+        r'-\d{2,3}\b',
+        re.IGNORECASE,
+    )
+    # Bootstrap patterns: .btn-primary, .bg-success, .text-danger etc.
+    bs_pattern = re.compile(
+        r'\.(?:btn|bg|text|border|alert|badge)-(?:primary|secondary|success|danger|warning|info|light|dark)\b',
+        re.IGNORECASE,
+    )
+    tw_hits = len(tw_pattern.findall(css_text[:50000]))
+    bs_hits = len(bs_pattern.findall(css_text[:50000]))
+    return tw_hits > 10 or bs_hits > 10
+
+
 def _extract_colors_from_html(html: str) -> set[str]:
     """Extract brand-relevant hex color values from HTML/CSS.
 
@@ -128,10 +154,19 @@ def _extract_colors_from_html(html: str) -> set[str]:
     - CSS custom properties with brand-related names get highest priority
     - Meta theme-color is a strong signal
     - Button/link/accent colors are prioritized over generic CSS
+    - Detects and deprioritizes CSS framework (Tailwind/Bootstrap) utility colors
     - Deduplicates visually similar colors
 
-    Filters out neutrals (blacks, whites, grays) using luminance + saturation.
+    Filters out pure neutrals (blacks, whites, grays) using luminance + saturation.
     """
+    # Detect if the page uses a CSS utility framework
+    has_framework = _is_framework_utility_block(html)
+
+    # If framework detected, extract only inline styles and CSS custom properties
+    # to avoid picking up the framework's palette instead of the brand's
+    if has_framework:
+        return _extract_colors_framework_aware(html)
+
     # Collect colors with priority scores: (hex, score)
     scored: list[tuple[str, float]] = []
 
@@ -212,6 +247,85 @@ def _extract_colors_from_html(html: str) -> set[str]:
     # Deduplicate similar colors, keeping highest-priority ones
     deduped = _dedup_similar_colors(scored, threshold=0.08)
 
+    return set(deduped)
+
+
+def _extract_colors_framework_aware(html: str) -> set[str]:
+    """Extract colors from a page that uses a CSS utility framework.
+
+    When Tailwind/Bootstrap is detected, we ignore <style> blocks entirely
+    (they're full of framework utility definitions) and focus only on:
+    1. Meta theme-color (strongest signal)
+    2. CSS custom properties (--brand-*, --primary-*, etc.) — intentionally set by devs
+    3. Inline style="" attributes — actually applied to elements
+    4. SVG fill/stroke — often logo colors
+    """
+    scored: list[tuple[str, float]] = []
+
+    def _add(color: str, score: float):
+        normalized = _normalize_hex(color)
+        if _is_brand_color(normalized):
+            scored.append((normalized, score))
+
+    # 1. Meta theme-color (score: 10)
+    theme_match = re.search(
+        r'<meta[^>]*name=["\']theme-color["\'][^>]*content=["\'](#[0-9a-fA-F]{3,6})["\']',
+        html, re.IGNORECASE,
+    )
+    if not theme_match:
+        theme_match = re.search(
+            r'<meta[^>]*content=["\'](#[0-9a-fA-F]{3,6})["\'][^>]*name=["\']theme-color["\']',
+            html, re.IGNORECASE,
+        )
+    if theme_match:
+        _add(theme_match.group(1), 10.0)
+
+    # 2. CSS custom properties — these are explicitly defined by the developer (score: 8)
+    # Look in :root, html, body blocks and data-theme attributes
+    root_block_pattern = re.compile(
+        r'(?::root|html|body|\[data-theme[^\]]*\])\s*\{([^}]+)\}',
+        re.IGNORECASE,
+    )
+    for m in root_block_pattern.finditer(html):
+        block = m.group(1)
+        for var_m in re.finditer(r'--[\w-]+\s*:\s*([^;]+)', block):
+            value = var_m.group(1).strip()
+            for hex_m in re.finditer(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', value):
+                _add(f"#{hex_m.group(1)}", 8.0)
+            for rgb_m in re.finditer(r'rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})', value):
+                r, g, b = int(rgb_m.group(1)), int(rgb_m.group(2)), int(rgb_m.group(3))
+                _add(f"#{r:02x}{g:02x}{b:02x}", 8.0)
+            # Handle Tailwind's space-separated RGB format: --color-primary: 34 197 94;
+            rgb_space_m = re.match(r'(\d{1,3})\s+(\d{1,3})\s+(\d{1,3})\s*$', value)
+            if rgb_space_m:
+                r, g, b = int(rgb_space_m.group(1)), int(rgb_space_m.group(2)), int(rgb_space_m.group(3))
+                _add(f"#{r:02x}{g:02x}{b:02x}", 8.0)
+
+    # 3. Inline style="" attributes — these are actually applied to elements (score: 7)
+    inline_style_pattern = re.compile(r'style\s*=\s*["\']([^"\']+)["\']', re.IGNORECASE)
+    for m in inline_style_pattern.finditer(html):
+        style = m.group(1)
+        for hex_m in re.finditer(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', style):
+            _add(f"#{hex_m.group(1)}", 7.0)
+        for rgb_m in re.finditer(r'rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})', style):
+            r, g, b = int(rgb_m.group(1)), int(rgb_m.group(2)), int(rgb_m.group(3))
+            _add(f"#{r:02x}{g:02x}{b:02x}", 7.0)
+
+    # 4. SVG fill/stroke attributes — often logo/icon colors (score: 6)
+    svg_color_pattern = re.compile(
+        r'(?:fill|stroke)\s*[=:]\s*["\']?\s*#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b'
+    )
+    for m in svg_color_pattern.finditer(html):
+        _add(f"#{m.group(1)}", 6.0)
+
+    # 5. Gradient colors in inline styles or CSS vars (score: 5)
+    gradient_pattern = re.compile(r'(?:linear|radial)-gradient\(([^)]+)\)', re.IGNORECASE)
+    for m in gradient_pattern.finditer(html):
+        value = m.group(1)
+        for hex_m in re.finditer(r'#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', value):
+            _add(f"#{hex_m.group(1)}", 5.0)
+
+    deduped = _dedup_similar_colors(scored, threshold=0.08)
     return set(deduped)
 
 
@@ -320,10 +434,10 @@ def _rgb_to_hsl(r: int, g: int, b: int) -> tuple[float, float, float]:
 
 
 def _is_brand_color(hex_color: str) -> bool:
-    """Return True if the color is likely a brand color (not a neutral).
+    """Return True if the color is likely a brand color (not a pure neutral).
 
-    Stricter filtering — requires meaningful saturation to reject
-    near-gray utility colors from CSS frameworks.
+    Allows dark and muted brand colors (common in modern design) while
+    rejecting true neutrals (pure black/white/gray with zero saturation).
     """
     try:
         r, g, b = _hex_to_rgb(hex_color)
@@ -332,17 +446,14 @@ def _is_brand_color(hex_color: str) -> bool:
 
     _, s, l = _rgb_to_hsl(r, g, b)
 
-    # Skip very dark (near-black)
-    if l < 0.10:
+    # Skip pure black (#000000 and very close)
+    if l < 0.02:
         return False
-    # Skip very light (near-white)
-    if l > 0.92:
+    # Skip pure white (#ffffff and very close)
+    if l > 0.97:
         return False
-    # Skip grays and near-grays — require meaningful saturation
-    if s < 0.20:
-        return False
-    # Skip extremely muted colors (low saturation + extreme lightness)
-    if s < 0.30 and (l < 0.15 or l > 0.85):
+    # Skip true grays — zero or near-zero saturation with no chromatic value
+    if s < 0.05:
         return False
 
     return True
