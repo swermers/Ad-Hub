@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api, type Product, type GenerateStatus } from "@/lib/api";
+import { INDUSTRY_THEMES, getTheme } from "@/components/ad-templates/industryThemes";
 
 const fadeUp = (delay: number = 0) => ({
   initial: { opacity: 0, y: 24 },
@@ -28,6 +29,11 @@ const TEMPLATE_CHOICES = [
   { value: "story_vertical", label: "Story / Reel" },
   { value: "carousel_card", label: "Carousel Card" },
   { value: "ugc_style", label: "UGC / Native" },
+  { value: "editorial_stack", label: "Editorial Stack" },
+  { value: "brand_hero", label: "Brand Hero" },
+  { value: "status_card", label: "Status Card" },
+  { value: "handwritten_quote", label: "Handwritten Quote" },
+  { value: "billboard", label: "Billboard" },
 ];
 
 const ASPECT_CHOICES = [
@@ -182,6 +188,8 @@ function GenerateForm() {
   const [instructions, setInstructions] = useState("");
   const [templateType, setTemplateType] = useState("");
   const [aspectRatio, setAspectRatio] = useState("");
+  const [industryVertical, setIndustryVertical] = useState("");
+  const [logoFile, setLogoFile] = useState<string>("");
 
   useEffect(() => {
     api
@@ -208,6 +216,7 @@ function GenerateForm() {
         instructions: instructions || undefined,
         template_type: templateType || undefined,
         aspect_ratio: aspectRatio || undefined,
+        industry_vertical: industryVertical || undefined,
       });
       setStatus(result);
 
@@ -472,8 +481,59 @@ function GenerateForm() {
           </div>
         </motion.div>
 
-        {/* Visual Template */}
+        {/* Industry Vertical */}
         <motion.div {...fadeUp(0.22)}>
+          <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
+            Industry Vertical
+          </p>
+          <p className="text-xs text-[#E5E1E4]/30 mb-3 font-mono">
+            Auto-recommends templates &amp; color palettes for your industry
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <ChipButton
+              active={industryVertical === ""}
+              onClick={() => setIndustryVertical("")}
+            >
+              Auto
+            </ChipButton>
+            {INDUSTRY_THEMES.map((theme) => (
+              <ChipButton
+                key={theme.id}
+                active={industryVertical === theme.id}
+                onClick={() => setIndustryVertical(theme.id)}
+              >
+                {theme.label}
+              </ChipButton>
+            ))}
+          </div>
+          {industryVertical && (() => {
+            const theme = getTheme(industryVertical);
+            if (!theme) return null;
+            const templateLabels = theme.recommendedTemplates.slice(0, 3).map((t) => {
+              const match = TEMPLATE_CHOICES.find((c) => c.value === t);
+              return match ? match.label : t;
+            });
+            return (
+              <div className="mt-3 flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  {[theme.colors.background, theme.colors.text, theme.colors.accent, theme.colors.accentSecondary].map((color, i) => (
+                    <span
+                      key={i}
+                      className="inline-block w-4 h-4 rounded-full border border-[#E5E1E4]/10"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+                <span className="font-mono text-[10px] text-[#E5E1E4]/30">
+                  Recommended: {templateLabels.join(", ")}
+                </span>
+              </div>
+            );
+          })()}
+        </motion.div>
+
+        {/* Visual Template */}
+        <motion.div {...fadeUp(0.26)}>
           <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
             Visual Template
           </p>
@@ -505,7 +565,7 @@ function GenerateForm() {
         </motion.div>
 
         {/* Aspect Ratio */}
-        <motion.div {...fadeUp(0.26)}>
+        <motion.div {...fadeUp(0.30)}>
           <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-3">
             Aspect Ratio
           </p>
@@ -523,7 +583,7 @@ function GenerateForm() {
         </motion.div>
 
         {/* Count Slider */}
-        <motion.div {...fadeUp(0.3)}>
+        <motion.div {...fadeUp(0.34)}>
           <div className="flex items-baseline justify-between mb-3">
             <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em]">
               Variations per type/platform
@@ -575,8 +635,54 @@ function GenerateForm() {
           </p>
         </motion.div>
 
+        {/* Brand Assets — Logo upload */}
+        <motion.div {...fadeUp(0.38)}>
+          <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
+            Brand Logo
+          </p>
+          <p className="text-xs text-[#E5E1E4]/30 mb-3 font-mono">
+            Optional — appears in templates that support a logo slot
+          </p>
+          <div className="flex items-center gap-3">
+            <label className="cursor-pointer">
+              <div className="flex items-center gap-2 px-4 py-2.5 glass-prism rounded-xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl text-sm text-[#E5E1E4]/60 hover:border-[#FF9500]/30 transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                {logoFile ? "Logo uploaded" : "Upload logo"}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => setLogoFile(ev.target?.result as string);
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+            </label>
+            {logoFile && (
+              <div className="flex items-center gap-2">
+                <img src={logoFile} alt="Logo" className="h-8 w-8 object-contain rounded" />
+                <button
+                  onClick={() => setLogoFile("")}
+                  className="text-[#ffb4ab] text-xs hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
         {/* Instructions */}
-        <motion.div {...fadeUp(0.34)}>
+        <motion.div {...fadeUp(0.42)}>
           <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-3">
             Additional Instructions
             <span className="text-[#E5E1E4]/20 font-medium normal-case tracking-normal ml-2">
@@ -625,7 +731,7 @@ function GenerateForm() {
         )}
 
         {/* Generate Button */}
-        <motion.div {...fadeUp(0.38)}>
+        <motion.div {...fadeUp(0.46)}>
           <motion.button
             whileHover={{ scale: 1.015 }}
             whileTap={{ scale: 0.985 }}

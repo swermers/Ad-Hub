@@ -785,6 +785,7 @@ export interface GenerateRequest {
   instructions?: string;
   template_type?: string;
   aspect_ratio?: string;
+  industry_vertical?: string;
 }
 
 export interface GenerateStatus {

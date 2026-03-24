@@ -12,6 +12,12 @@ import { SplitImageTemplate } from "./SplitImageTemplate";
 import { StoryVerticalTemplate } from "./StoryVerticalTemplate";
 import { CarouselCardTemplate } from "./CarouselCardTemplate";
 import { UGCStyleTemplate } from "./UGCStyleTemplate";
+import { ImageFrameOverlayTemplate } from "./ImageFrameOverlayTemplate";
+import { EditorialStackTemplate } from "./EditorialStackTemplate";
+import { BrandHeroTemplate } from "./BrandHeroTemplate";
+import { StatusCardTemplate } from "./StatusCardTemplate";
+import { HandwrittenQuoteTemplate } from "./HandwrittenQuoteTemplate";
+import { BillboardTemplate } from "./BillboardTemplate";
 
 interface TemplateRendererProps extends AdTemplateProps {
   templateType: string;
@@ -29,6 +35,12 @@ const TEMPLATES: Record<string, React.ComponentType<AdTemplateProps>> = {
   story_vertical: StoryVerticalTemplate,
   carousel_card: CarouselCardTemplate,
   ugc_style: UGCStyleTemplate,
+  image_frame_overlay: ImageFrameOverlayTemplate,
+  editorial_stack: EditorialStackTemplate,
+  brand_hero: BrandHeroTemplate,
+  status_card: StatusCardTemplate,
+  handwritten_quote: HandwrittenQuoteTemplate,
+  billboard: BillboardTemplate,
 };
 
 export function TemplateRenderer({ templateType, ...props }: TemplateRendererProps) {
@@ -123,5 +135,48 @@ export const TEMPLATE_OPTIONS: {
     description: "Looks like native social content with caption overlay and engagement icons",
     bestFor: ["stories", "reels", "tiktok"],
     defaultAspect: "9:16",
+  },
+  {
+    value: "image_frame_overlay",
+    label: "Image Frame Overlay",
+    description: "Product photo with promotional badge overlay — great for sales and launches",
+    bestFor: ["feed", "stories", "carousel"],
+    defaultAspect: "1:1",
+  },
+  // --- Typography-Heavy Templates ---
+  {
+    value: "editorial_stack",
+    label: "Editorial Stack",
+    description: "Bold stacked typography like CPG billboard ads — text-dominant with optional product image",
+    bestFor: ["feed", "billboard", "carousel"],
+    defaultAspect: "1:1",
+  },
+  {
+    value: "brand_hero",
+    label: "Brand Hero",
+    description: "Clean white background with centered graphic, tagline with bold keyword, and brand footer",
+    bestFor: ["feed", "billboard"],
+    defaultAspect: "4:5",
+  },
+  {
+    value: "status_card",
+    label: "Status Card",
+    description: "Simple, friendly card with large title, optional illustration, and descriptive body text",
+    bestFor: ["feed", "carousel"],
+    defaultAspect: "1:1",
+  },
+  {
+    value: "handwritten_quote",
+    label: "Handwritten Quote",
+    description: "Casual warm text-only layout that looks like handwritten notes — great for thought leadership",
+    bestFor: ["feed", "stories"],
+    defaultAspect: "1:1",
+  },
+  {
+    value: "billboard",
+    label: "Billboard",
+    description: "Bold headline + centered illustration + brand footer with QR code — outdoor ad style",
+    bestFor: ["billboard", "feed"],
+    defaultAspect: "4:5",
   },
 ];

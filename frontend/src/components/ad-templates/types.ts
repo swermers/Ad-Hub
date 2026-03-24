@@ -15,6 +15,8 @@ export interface AdTemplateProps {
   accentColor?: string;
   logoUrl?: string;
   screenshotUrl?: string;
+  /** URL to encode as a QR code in templates that support it */
+  qrUrl?: string;
   aspectRatio?: AspectRatio;
   scale?: number;
 }
