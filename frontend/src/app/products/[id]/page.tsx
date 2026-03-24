@@ -261,6 +261,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
+    website_url: "",
     target_audience: "",
     pain_points: "",
     differentiators: "",
@@ -403,6 +404,7 @@ export default function ProductDetailPage() {
   const startEditing = () => {
     if (!product) return;
     setEditForm({
+      website_url: product.website_url || "",
       target_audience: product.target_audience || "",
       pain_points: product.pain_points || "",
       differentiators: product.differentiators || "",
@@ -544,9 +546,19 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="text-[#E5E1E4]/50">Website:</span>{" "}
-            <span className="text-[#E5E1E4]">
-              {product.website_url || "Not set"}
-            </span>
+            {editing ? (
+              <input
+                type="url"
+                value={editForm.website_url}
+                onChange={(e) => setEditForm({ ...editForm, website_url: e.target.value })}
+                className="w-full mt-1 px-3 py-2 bg-transparent border border-white/10 rounded-lg text-sm text-[#E5E1E4] focus:ring-1 focus:ring-[#FF9500]/50 focus:border-[#FF9500]/50"
+                placeholder="https://your-website.com"
+              />
+            ) : (
+              <span className="text-[#E5E1E4]">
+                {product.website_url || "Not set"}
+              </span>
+            )}
           </div>
           <div>
             <span className="text-[#E5E1E4]/50">Status:</span>{" "}
@@ -758,7 +770,7 @@ export default function ProductDetailPage() {
             disabled={crawling || !product.website_url}
             className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
           >
-            {crawling ? "Crawling..." : "Crawl Website"}
+            {crawling ? "Crawling..." : pages.length > 0 ? "Re-crawl Website" : "Crawl Website"}
           </button>
         </div>
 
@@ -815,7 +827,7 @@ export default function ProductDetailPage() {
             disabled={generatingBrief}
             className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
           >
-            {generatingBrief ? "Generating..." : "Generate Brief"}
+            {generatingBrief ? "Generating..." : product.brand_brief ? "Re-generate Brief" : "Generate Brief"}
           </button>
         </div>
 

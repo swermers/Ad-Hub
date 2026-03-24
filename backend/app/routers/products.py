@@ -156,6 +156,18 @@ async def upload_screenshot(product_id: str, file: UploadFile, db: Session = Dep
     db.commit()
     db.refresh(product)
 
+    # Re-extract brand colors from screenshots using vision in background
+    import threading
+    from app.routers.ingestion import _extract_colors_from_screenshots_vision
+    from app.database import SessionLocal
+    def _bg_extract():
+        bg_db = SessionLocal()
+        try:
+            _extract_colors_from_screenshots_vision(product_id, bg_db)
+        finally:
+            bg_db.close()
+    threading.Thread(target=_bg_extract, daemon=True).start()
+
     return {"path": screenshot_path, "screenshots": existing}
 
 
