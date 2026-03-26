@@ -60,6 +60,18 @@ async def lifespan(app: FastAPI):
         except Exception:
             logger.exception("Failed to start scheduler")
 
+    # Auto-register Telegram webhook if configured
+    if settings.telegram_bot_token and settings.telegram_chat_id and settings.app_url:
+        try:
+            from app.services.telegram_bot import ClawdBot
+
+            bot = ClawdBot(token=settings.telegram_bot_token, chat_id=settings.telegram_chat_id)
+            webhook_url = f"{settings.app_url}/api/dispatch/telegram/webhook"
+            result = await bot.set_webhook(webhook_url)
+            logger.info("Telegram webhook registered: %s → %s", webhook_url, result)
+        except Exception:
+            logger.exception("Failed to register Telegram webhook")
+
     yield
 
     # Shutdown scheduler
