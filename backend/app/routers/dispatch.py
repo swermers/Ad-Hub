@@ -58,12 +58,30 @@ async def telegram_webhook(update: dict, db: Session = Depends(get_db)):
     if callback_query:
         return await _handle_telegram_callback(callback_query, db)
 
-    # Handle text messages (idea submissions)
+    # Handle all message types
     message = update.get("message", {})
-    text = message.get("text", "").strip()
     from_chat = str(message.get("chat", {}).get("id", ""))
 
-    if not text or from_chat != settings.telegram_chat_id:
+    if from_chat != settings.telegram_chat_id:
+        return {"ok": True}
+
+    # Voice memo → transcribe → treat as text idea
+    voice = message.get("voice") or message.get("audio")
+    if voice:
+        text = await _handle_telegram_voice(voice, message, db)
+        if not text:
+            return {"ok": True}
+        # Check if this voice reply is to a content preview (refinement)
+        reply_to = message.get("reply_to_message")
+        if reply_to:
+            content_id = _extract_content_id_from_message(reply_to)
+            if content_id:
+                return await _handle_telegram_refinement(content_id, text, db)
+        # Fall through to idea processing with transcribed text
+    else:
+        text = message.get("text", "").strip()
+
+    if not text:
         return {"ok": True}
 
     # Commands
@@ -176,6 +194,91 @@ async def telegram_webhook(update: dict, db: Session = Depends(get_db)):
             await bot.send_notification(f"Pipeline failed: {str(e)[:200]}")
 
     return {"ok": True}
+
+
+async def _handle_telegram_voice(voice: dict, message: dict, db) -> str | None:
+    """Download and transcribe a Telegram voice memo.
+
+    Returns the transcribed text, or None if transcription fails.
+    """
+    import io
+    import httpx
+
+    bot = _get_bot()
+    if not bot:
+        return None
+
+    # Notify user we're transcribing
+    caption = message.get("caption", "")
+    if bot:
+        await bot.send_notification("Transcribing your voice memo...")
+
+    try:
+        file_id = voice.get("file_id")
+        if not file_id:
+            return None
+
+        # Step 1: Get the file path from Telegram
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://api.telegram.org/bot{settings.telegram_bot_token}/getFile",
+                params={"file_id": file_id},
+            )
+            resp.raise_for_status()
+            file_path = resp.json().get("result", {}).get("file_path")
+            if not file_path:
+                return None
+
+            # Step 2: Download the audio file
+            audio_resp = await client.get(
+                f"https://api.telegram.org/file/bot{settings.telegram_bot_token}/{file_path}",
+            )
+            audio_resp.raise_for_status()
+            audio_bytes = audio_resp.content
+
+        # Step 3: Transcribe with Whisper
+        import openai
+        from app.config import settings as app_settings
+
+        if not app_settings.openai_api_key:
+            if bot:
+                await bot.send_notification("OpenAI API key not configured — can't transcribe voice memos.")
+            return None
+
+        openai_client = openai.OpenAI(api_key=app_settings.openai_api_key)
+        audio_file = io.BytesIO(audio_bytes)
+        audio_file.name = "voice.ogg"
+
+        transcription = openai_client.audio.transcriptions.create(
+            model=app_settings.whisper_model,
+            file=audio_file,
+            response_format="text",
+        )
+
+        transcript = transcription.strip() if isinstance(transcription, str) else str(transcription).strip()
+
+        if not transcript:
+            if bot:
+                await bot.send_notification("Couldn't make out the audio. Try again?")
+            return None
+
+        # Show the transcript + any caption
+        display = transcript
+        if caption:
+            display = f"{caption}\n\n{transcript}"
+        if bot:
+            await bot.send_notification(f"Transcribed:\n\n<i>{display[:500]}</i>")
+
+        # Prepend caption as additional context if present
+        if caption:
+            return f"{caption}\n\n{transcript}"
+        return transcript
+
+    except Exception as e:
+        logger.error("Voice transcription failed: %s", e)
+        if bot:
+            await bot.send_notification(f"Transcription failed: {str(e)[:200]}")
+        return None
 
 
 def _extract_content_id_from_message(reply_msg: dict) -> str | None:
