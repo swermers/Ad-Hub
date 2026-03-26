@@ -97,14 +97,14 @@ export default function DashboardPage() {
       {/* Hero Header */}
       <motion.section variants={fadeUp} custom={0} className="mb-12 md:mb-16">
         <div className="flex items-baseline space-x-4 mb-2">
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#FF9500]">System Overview</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#FF9500]">Content Engine</span>
           <div className="h-px flex-grow bg-[#554334]/20" />
         </div>
         <h1 className="text-5xl sm:text-6xl md:text-8xl font-black tracking-[-0.04em] text-[#E5E1E4] mb-4">
-          Kinetic <span className="text-[#554334]/50">Precision.</span>
+          Every version<span className="text-[#554334]/50"> better.</span>
         </h1>
         <p className="max-w-2xl text-base md:text-lg text-[#E5E1E4]/50 leading-relaxed font-medium">
-          Your content engine is running. <span className="text-[#ffbd7f]">{weekData?.totalContent ?? 0}</span> pieces created across <span className="text-[#ffbd7f]">{weekData?.products.length ?? 0}</span> active products.
+          <span className="text-[#ffbd7f]">{weekData?.totalContent ?? 0}</span> pieces created across <span className="text-[#ffbd7f]">{weekData?.products.length ?? 0}</span> products. Drop an idea in the Studio or text it to Telegram.
         </p>
       </motion.section>
 
@@ -211,14 +211,14 @@ export default function DashboardPage() {
           <div className="bg-[#0e0e10] h-full w-full rounded-[calc(1.5rem-1px)] p-6 md:p-8 relative overflow-hidden">
             <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center h-full">
               <div className="flex-1">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">Create Content</h2>
-                <p className="text-[#E5E1E4]/40 text-sm mb-6 max-w-sm">Use the content engine to create newsletters, social posts, and video scripts for your next campaign.</p>
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">Start Creating</h2>
+                <p className="text-[#E5E1E4]/40 text-sm mb-6 max-w-sm">Drop a raw idea, voice memo, or concept — get back a full content package: newsletters, X threads, social posts, and video scripts.</p>
                 <div className="flex gap-3 md:gap-4">
                   <Link href="/studio">
-                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 md:px-6 py-3 liquid-gradient text-[#2d1600] rounded-xl font-bold text-xs uppercase tracking-widest">Launch Engine</motion.button>
+                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 md:px-6 py-3 liquid-gradient text-[#2d1600] rounded-xl font-bold text-xs uppercase tracking-widest">Content Studio</motion.button>
                   </Link>
-                  <Link href="/products">
-                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 md:px-6 py-3 border border-[#554334]/40 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#353437] transition-colors">Products</motion.button>
+                  <Link href="/seeds">
+                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 md:px-6 py-3 border border-[#554334]/40 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#353437] transition-colors">Seed Bank</motion.button>
                   </Link>
                 </div>
               </div>
