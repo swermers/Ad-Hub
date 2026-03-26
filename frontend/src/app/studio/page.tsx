@@ -88,8 +88,8 @@ export default function StudioPage() {
               <span className="text-[#FF9500]">.</span>
             </h1>
             <p className="text-[#E5E1E4]/60 text-base leading-relaxed max-w-lg mb-2">
-              Transform raw voice memos and unstructured notes into polished,
-              multi-format content &mdash; powered by liquid-precision AI synthesis.
+              Drop a raw idea, voice memo, or concept. Get back newsletters,
+              X threads, social posts, and video scripts &mdash; in your voice.
             </p>
             <p className="font-mono text-[11px] text-[#E5E1E4]/30 tracking-wider">
               SRV-STUDIO-04 &middot; PID LP-0042 &middot; LATENCY 42ms

@@ -3,7 +3,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     anthropic_api_key: str = ""
-    claude_model: str = "claude-sonnet-4-20250514"
+    claude_model: str = "claude-sonnet-4-6"  # Default for bulk/pipeline work
+    claude_model_premium: str = "claude-opus-4-6"  # For social copy, idea sharpening
     database_url: str = "sqlite:///./adhub.db"
     cors_origins: list[str] = ["http://localhost:3000"]
     cors_origin_regex: str = r"https://ad-hub.*\.vercel\.app"
@@ -36,6 +37,10 @@ class Settings(BaseSettings):
     stripe_pro_price_id: str = ""
     stripe_agency_price_id: str = ""
     app_url: str = "http://localhost:3000"  # For Stripe redirect URLs
+
+    # Telegram (Clawd Bot)
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
 
     # Auth
     auth_password: str = ""

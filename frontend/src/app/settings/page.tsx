@@ -615,6 +615,133 @@ export default function SettingsPage() {
           })}
         </div>
       )}
+
+      {/* ── AI Model Settings ── */}
+      <ModelSettings />
+    </motion.div>
+  );
+}
+
+/** AI Model selector */
+function ModelSettings() {
+  const [models, setModels] = useState<{
+    default_model: string;
+    premium_model: string;
+    available_models: { id: string; name: string; tier: string; desc: string }[];
+  } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings/models", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("adhub_token") || ""}` },
+    })
+      .then((r) => r.json())
+      .then(setModels)
+      .catch(() => {});
+  }, []);
+
+  async function updateModel(field: "default_model" | "premium_model", value: string) {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/settings/models", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("adhub_token") || ""}`,
+        },
+        body: JSON.stringify({ [field]: value }),
+      });
+      const data = await res.json();
+      setModels((prev) => prev ? { ...prev, ...data } : prev);
+    } catch {
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!models) return null;
+
+  const tierColors: Record<string, string> = {
+    premium: "text-[#a78bfa]",
+    standard: "text-[#FF9500]",
+    fast: "text-[#4ade80]",
+  };
+
+  return (
+    <motion.div
+      {...fadeUp(0.4)}
+      className="mt-10 glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-6"
+    >
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50 mb-1">
+        AI Model Configuration
+      </h3>
+      <p className="text-[10px] text-[#E5E1E4]/30 mb-5">
+        Default model runs bulk pipeline tasks. Premium model runs idea sharpening, social copy, and targeted Telegram generation.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Default Model */}
+        <div>
+          <label className="block text-xs font-medium text-[#E5E1E4]/60 mb-2">
+            Default Model <span className="text-[#E5E1E4]/30">(pipeline, newsletters, bulk)</span>
+          </label>
+          <div className="space-y-1.5">
+            {models.available_models.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => updateModel("default_model", m.id)}
+                disabled={saving}
+                className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                  models.default_model === m.id
+                    ? "bg-[#FF9500]/10 border border-[#FF9500]/30"
+                    : "border border-transparent hover:bg-[#1b1b1d]"
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-medium ${models.default_model === m.id ? "text-[#FF9500]" : "text-[#E5E1E4]/60"}`}>
+                    {m.name}
+                  </p>
+                  <p className="text-[10px] text-[#E5E1E4]/30">{m.desc}</p>
+                </div>
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${tierColors[m.tier] || "text-[#E5E1E4]/40"}`}>
+                  {m.tier}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Premium Model */}
+        <div>
+          <label className="block text-xs font-medium text-[#E5E1E4]/60 mb-2">
+            Premium Model <span className="text-[#E5E1E4]/30">(social posts, threads, sharpening)</span>
+          </label>
+          <div className="space-y-1.5">
+            {models.available_models.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => updateModel("premium_model", m.id)}
+                disabled={saving}
+                className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                  models.premium_model === m.id
+                    ? "bg-[#a78bfa]/10 border border-[#a78bfa]/30"
+                    : "border border-transparent hover:bg-[#1b1b1d]"
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-medium ${models.premium_model === m.id ? "text-[#a78bfa]" : "text-[#E5E1E4]/60"}`}>
+                    {m.name}
+                  </p>
+                  <p className="text-[10px] text-[#E5E1E4]/30">{m.desc}</p>
+                </div>
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${tierColors[m.tier] || "text-[#E5E1E4]/40"}`}>
+                  {m.tier}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 }

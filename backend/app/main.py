@@ -22,6 +22,7 @@ from app.routers import (
     content,
     content_pipeline,
     content_prompts,
+    dispatch,
     generation,
     image_gen,
     ingestion,
@@ -58,6 +59,18 @@ async def lifespan(app: FastAPI):
             logger.info("Background scheduler started")
         except Exception:
             logger.exception("Failed to start scheduler")
+
+    # Auto-register Telegram webhook if configured
+    if settings.telegram_bot_token and settings.telegram_chat_id and settings.app_url:
+        try:
+            from app.services.telegram_bot import ClawdBot
+
+            bot = ClawdBot(token=settings.telegram_bot_token, chat_id=settings.telegram_chat_id)
+            webhook_url = f"{settings.app_url}/api/dispatch/telegram/webhook"
+            result = await bot.set_webhook(webhook_url)
+            logger.info("Telegram webhook registered: %s → %s", webhook_url, result)
+        except Exception:
+            logger.exception("Failed to register Telegram webhook")
 
     yield
 
@@ -102,6 +115,7 @@ app.include_router(intelligence.router, prefix="/api/products", tags=["intellige
 app.include_router(voice_profiles.router, prefix="/api/voice-profiles", tags=["voice-profiles"])
 app.include_router(content_pipeline.router, prefix="/api/pipeline", tags=["content-pipeline"])
 app.include_router(content_prompts.router, prefix="/api/products", tags=["content-prompts"])
+app.include_router(dispatch.router, prefix="/api/dispatch", tags=["dispatch"])
 
 
 # Serve uploaded files (screenshots, references, generated images, etc.)
@@ -113,3 +127,58 @@ app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "version": "0.2.0"}
+
+
+# ─── Model Settings (in-app model selector) ─────────────────────────────────
+
+AVAILABLE_MODELS = [
+    {"id": "claude-opus-4-6", "name": "Opus 4.6", "tier": "premium", "desc": "Best nuance, slower, higher cost"},
+    {"id": "claude-sonnet-4-6", "name": "Sonnet 4.6", "tier": "standard", "desc": "Fast, good quality, lower cost"},
+    {"id": "claude-haiku-4-5-20251001", "name": "Haiku 4.5", "tier": "fast", "desc": "Fastest, cheapest, lighter output"},
+]
+
+
+@app.get("/api/settings/models")
+def get_model_settings():
+    """Get current model configuration and available models."""
+    return {
+        "default_model": settings.claude_model,
+        "premium_model": settings.claude_model_premium,
+        "available_models": AVAILABLE_MODELS,
+    }
+
+
+from pydantic import BaseModel as _BaseModel  # noqa: E402
+
+
+class _ModelSettingsUpdate(_BaseModel):
+    default_model: str | None = None
+    premium_model: str | None = None
+
+
+@app.put("/api/settings/models")
+def update_model_settings(data: _ModelSettingsUpdate):
+    """Update which models are used for default and premium tasks.
+
+    Changes take effect immediately (in-memory) and persist until restart.
+    For permanent changes, set CLAUDE_MODEL and CLAUDE_MODEL_PREMIUM env vars.
+    """
+    valid_ids = {m["id"] for m in AVAILABLE_MODELS}
+
+    if data.default_model:
+        if data.default_model not in valid_ids:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=f"Unknown model: {data.default_model}")
+        settings.claude_model = data.default_model
+
+    if data.premium_model:
+        if data.premium_model not in valid_ids:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=f"Unknown model: {data.premium_model}")
+        settings.claude_model_premium = data.premium_model
+
+    return {
+        "default_model": settings.claude_model,
+        "premium_model": settings.claude_model_premium,
+        "message": "Model settings updated. Changes persist until server restart.",
+    }

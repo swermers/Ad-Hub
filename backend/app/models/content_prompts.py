@@ -20,8 +20,11 @@ class ContentPromptSet(Base):
     __tablename__ = "content_prompt_sets"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    product_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("products.id", ondelete="CASCADE"), unique=True, nullable=False
+    product_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("products.id", ondelete="CASCADE"), unique=True, nullable=True
+    )
+    voice_profile_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("voice_profiles.id", ondelete="CASCADE"), unique=True, nullable=True
     )
 
     # ── Voice Rules ──────────────────────────────────────────────────────

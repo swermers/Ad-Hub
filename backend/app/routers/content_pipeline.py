@@ -216,7 +216,7 @@ async def sharpen_idea(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    prompt_set = load_prompt_set(data.product_id, db)
+    prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
     brand_context = _get_brand_context(product, db)
 
@@ -240,7 +240,7 @@ Target Audience: {product.target_audience or "General audience"}
 
 {prompt_set["idea_sharpener_prompt"]}"""
 
-    result = await call_claude(user_prompt, system=system_prompt)
+    result = await call_claude(user_prompt, system=system_prompt, premium=True)
 
     try:
         text = result["content"].strip()
@@ -277,7 +277,7 @@ async def create_draft(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    prompt_set = load_prompt_set(data.product_id, db)
+    prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
     brand_context = _get_brand_context(product, db)
     template = data.template_override or data.seed.get("template_fit", "A")
@@ -366,7 +366,7 @@ async def expand_to_platforms(
 
     pieces_spec = "\n".join([f"- {p['content_type']} for {p['platform']}" for p in pieces_to_gen])
 
-    prompt_set = load_prompt_set(data.product_id, db)
+    prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
 
     system_prompt = f"""You are a content creator expanding a newsletter into platform-specific content.
 
@@ -416,7 +416,7 @@ Return ONLY a JSON array:
 
 Return ONLY the JSON array."""
 
-    result = await call_claude(user_prompt, system=system_prompt, max_tokens=6144)
+    result = await call_claude(user_prompt, system=system_prompt, max_tokens=6144, premium=True)
 
     try:
         text = result["content"].strip()

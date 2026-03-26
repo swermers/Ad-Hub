@@ -15,6 +15,7 @@ const DynamicThumbnail = dynamic(
   { ssr: false }
 );
 import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
+import ContentEditor from "@/components/content-editors";
 
 /** Tone presets that affect visual intensity */
 const TONE_PRESETS = [
@@ -760,68 +761,107 @@ export default function ContentDetailPage() {
             </button>
           )}
 
-          {/* Hook callout */}
-          {piece.hook && (
-            <div className="bg-[#FF9500]/10 border border-[#FF9500]/20 rounded-lg px-4 py-3 mb-4">
-              <p className="text-xs font-semibold text-[#FF9500] uppercase tracking-wide mb-1">Hook</p>
-              <p className="text-sm font-medium text-[#FF9500]">{piece.hook}</p>
+          {/* Format-aware editor for content types with structured metadata */}
+          {metadata && (metadata.tweets || metadata.blocks || metadata.source || metadata.template_used) ? (
+            <div className="bg-[#201f21] rounded-xl border border-white/10 overflow-hidden mb-4 p-5">
+              <ContentEditor
+                contentType={piece.content_type}
+                platform={piece.platform}
+                body={piece.body}
+                title={piece.title || ""}
+                hook={piece.hook}
+                cta={piece.cta}
+                metadata={metadata as Record<string, unknown>}
+                onChange={async (updates) => {
+                  const newBody = (updates.body as string) ?? piece.body;
+                  const newTitle = (updates.title as string) ?? piece.title;
+                  const newHook = (updates.hook as string) ?? piece.hook;
+                  const newCta = (updates.cta as string) ?? piece.cta;
+                  const newMeta = (updates.metadata as Record<string, unknown>) ?? metadata;
+                  try {
+                    const updated = await api.updateContent(piece.id, {
+                      title: newTitle,
+                      body: newBody,
+                      hook: newHook,
+                      cta: newCta,
+                      generation_metadata: JSON.stringify(newMeta),
+                    });
+                    setPiece(updated);
+                    setEditBody(newBody);
+                    setEditTitle(newTitle || "");
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Failed to save");
+                  }
+                }}
+                disabled={false}
+              />
             </div>
+          ) : (
+            <>
+              {/* Hook callout (legacy editor) */}
+              {piece.hook && !editing && (
+                <div className="bg-[#FF9500]/10 border border-[#FF9500]/20 rounded-lg px-4 py-3 mb-4">
+                  <p className="text-xs font-semibold text-[#FF9500] uppercase tracking-wide mb-1">Hook</p>
+                  <p className="text-sm font-medium text-[#FF9500]">{piece.hook}</p>
+                </div>
+              )}
+
+              {/* Content body (legacy textarea editor for ad copy etc.) */}
+              <div className="bg-[#201f21] rounded-xl border border-white/10 overflow-hidden mb-4">
+                {editing ? (
+                  <div className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[#dbc2ad] mb-1">Title</label>
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#dbc2ad] mb-1">Body</label>
+                      <textarea
+                        value={editBody}
+                        onChange={(e) => setEditBody(e.target.value)}
+                        rows={12}
+                        className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm font-mono"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                      >
+                        {saving ? "Saving..." : "Save Changes"}
+                      </button>
+                      <button
+                        onClick={() => setEditing(false)}
+                        className="px-4 py-2 bg-white/10 text-[#dbc2ad] rounded-lg text-sm font-medium hover:bg-white/10"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-6">
+                    <div className="prose prose-sm max-w-none text-[#E5E1E4] leading-relaxed whitespace-pre-wrap">
+                      {piece.body}
+                    </div>
+                  </div>
+                )}
+
+                {/* CTA inside card */}
+                {piece.cta && !editing && (
+                  <div className="border-t border-white/5 bg-white/5 px-6 py-3">
+                    <p className="text-xs font-semibold text-[#E5E1E4]/40 uppercase tracking-wide mb-1">Call to Action</p>
+                    <p className="text-sm font-medium text-[#E5E1E4]">{piece.cta}</p>
+                  </div>
+                )}
+              </div>
+            </>
           )}
-
-          {/* Content body */}
-          <div className="bg-[#201f21] rounded-xl border border-white/10 overflow-hidden mb-4">
-            {editing ? (
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#dbc2ad] mb-1">Body</label>
-                  <textarea
-                    value={editBody}
-                    onChange={(e) => setEditBody(e.target.value)}
-                    rows={12}
-                    className="w-full px-3 py-2 border border-white/10 rounded-lg text-sm font-mono"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
-                  >
-                    {saving ? "Saving..." : "Save Changes"}
-                  </button>
-                  <button
-                    onClick={() => setEditing(false)}
-                    className="px-4 py-2 bg-white/10 text-[#dbc2ad] rounded-lg text-sm font-medium hover:bg-white/10"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="p-6">
-                <div className="prose prose-sm max-w-none text-[#E5E1E4] leading-relaxed whitespace-pre-wrap">
-                  {piece.body}
-                </div>
-              </div>
-            )}
-
-            {/* CTA inside card */}
-            {piece.cta && !editing && (
-              <div className="border-t border-white/5 bg-white/5 px-6 py-3">
-                <p className="text-xs font-semibold text-[#E5E1E4]/40 uppercase tracking-wide mb-1">Call to Action</p>
-                <p className="text-sm font-medium text-[#E5E1E4]">{piece.cta}</p>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 

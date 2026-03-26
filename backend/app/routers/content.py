@@ -36,6 +36,7 @@ class ContentUpdate(BaseModel):
     body: str | None = None
     hook: str | None = None
     cta: str | None = None
+    generation_metadata: str | None = None
 
 
 class ContentStatusUpdate(BaseModel):

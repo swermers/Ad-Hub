@@ -20,11 +20,65 @@ class MetaClient:
         return {"Authorization": f"Bearer {self.access_token}"}
 
     async def post_to_page(self, page_id: str, message: str, link: str | None = None) -> dict:
-        """Post to a Facebook page."""
+        """Post to a Facebook page (published immediately)."""
+        return await self._create_page_post(page_id, message, link=link, published=True)
+
+    async def create_draft_post(
+        self,
+        page_id: str,
+        message: str,
+        link: str | None = None,
+        scheduled_publish_time: int | None = None,
+    ) -> dict:
+        """Create an unpublished draft on a Facebook page.
+
+        The post appears in Creator Studio / Meta Business Suite as a draft.
+        When the human publishes it from the native UI, Meta treats it as
+        organic — no API-posted reach penalty.
+
+        If scheduled_publish_time is provided (unix timestamp), Meta will
+        auto-publish at that time. Otherwise it stays as a draft until
+        manually published.
+        """
+        return await self._create_page_post(
+            page_id,
+            message,
+            link=link,
+            published=False,
+            scheduled_publish_time=scheduled_publish_time,
+        )
+
+    async def publish_draft(self, post_id: str) -> dict:
+        """Publish a previously created unpublished/draft post."""
         async with httpx.AsyncClient() as client:
-            data: dict = {"message": message}
+            resp = await client.post(
+                f"{META_GRAPH_URL}/{post_id}",
+                headers=self._headers(),
+                json={"is_published": True},
+            )
+            resp.raise_for_status()
+            logger.info("Published draft post %s", post_id)
+            return {
+                "platform_post_id": post_id,
+                "url": f"https://facebook.com/{post_id}",
+                "published": True,
+            }
+
+    async def _create_page_post(
+        self,
+        page_id: str,
+        message: str,
+        link: str | None = None,
+        published: bool = True,
+        scheduled_publish_time: int | None = None,
+    ) -> dict:
+        """Internal helper to create a page post (published or draft)."""
+        async with httpx.AsyncClient() as client:
+            data: dict = {"message": message, "published": str(published).lower()}
             if link:
                 data["link"] = link
+            if not published and scheduled_publish_time:
+                data["scheduled_publish_time"] = str(scheduled_publish_time)
 
             resp = await client.post(
                 f"{META_GRAPH_URL}/{page_id}/feed",
@@ -34,10 +88,16 @@ class MetaClient:
             resp.raise_for_status()
             result = resp.json()
             post_id = result.get("id", "")
-            logger.info("Posted to Meta page %s: %s", page_id, post_id)
+            logger.info(
+                "%s post on Meta page %s: %s",
+                "Published" if published else "Draft",
+                page_id,
+                post_id,
+            )
             return {
                 "platform_post_id": post_id,
                 "url": f"https://facebook.com/{post_id}",
+                "published": published,
             }
 
     async def create_ad_campaign(self, name: str, objective: str = "OUTCOME_TRAFFIC") -> dict:
