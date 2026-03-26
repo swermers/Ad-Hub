@@ -44,27 +44,128 @@ class TelegramWebhookSetup(BaseModel):
 
 @router.post("/telegram/webhook")
 async def telegram_webhook(update: dict, db: Session = Depends(get_db)):
-    """Process incoming Telegram updates (callback queries from inline buttons).
+    """Process incoming Telegram updates.
 
-    This endpoint is called by Telegram when a user taps an inline button.
+    Handles two types of updates:
+    1. Callback queries (inline button taps) — approve/reject/sharpen/publish
+    2. Text messages — treated as idea submissions, run through the pipeline
+
     No auth required — Telegram sends updates directly. We validate by
     checking the chat_id matches our configured chat.
     """
+    # Handle callback queries (button taps)
     callback_query = update.get("callback_query")
-    if not callback_query:
+    if callback_query:
+        return await _handle_telegram_callback(callback_query, db)
+
+    # Handle text messages (idea submissions)
+    message = update.get("message", {})
+    text = message.get("text", "").strip()
+    from_chat = str(message.get("chat", {}).get("id", ""))
+
+    if not text or from_chat != settings.telegram_chat_id:
         return {"ok": True}
 
+    # Commands
+    if text.startswith("/"):
+        return await _handle_telegram_command(text, from_chat, db)
+
+    # Regular text = idea submission
+    # Use the first active product as default context
+    from app.models import Product
+    product = db.query(Product).filter(Product.status == "active").first()
+    if not product:
+        bot = _get_bot()
+        if bot:
+            await bot.send_notification("No active products configured. Add a product first.")
+        return {"ok": True}
+
+    bot = _get_bot()
+    if bot:
+        await bot.send_notification(f"Running your idea through the pipeline...\n\n<i>{text[:200]}</i>")
+
+    # Create a fake user context for the pipeline
+    # (Telegram webhook bypasses auth — we use a system context)
+    from app.engines.prompt_defaults import load_prompt_set
+    from app.engines.content_pipeline import extract_content_brief, generate_weekly_content
+    from app.models.brand_profile import BrandProfile
+
+    prompt_set = load_prompt_set(product.id, db)
+    brand_profile = db.query(BrandProfile).filter(BrandProfile.product_id == product.id).first()
+
+    try:
+        content_brief = await extract_content_brief(text, product, prompt_set=prompt_set)
+
+        pieces = await generate_weekly_content(
+            product=product,
+            transcript=text,
+            content_brief=content_brief,
+            brand_profile=brand_profile,
+            prompt_set=prompt_set,
+        )
+
+        # Save and send for approval
+        for piece_data in pieces:
+            ct = piece_data.get("content_type", "social_post")
+            content_type_map = {"newsletter": "blog_draft", "video_script": "blog_draft", "x_thread": "social_post"}
+
+            piece = ContentPiece(
+                product_id=product.id,
+                content_type=content_type_map.get(ct, ct),
+                platform=piece_data.get("platform", "general"),
+                title=piece_data.get("title", ""),
+                body=piece_data.get("body", ""),
+                hook=piece_data.get("hook"),
+                cta=piece_data.get("cta"),
+                funnel_stage=piece_data.get("funnel_stage", "awareness"),
+                status="pending_approval",
+                generation_metadata=piece_data.get("metadata"),
+            )
+            db.add(piece)
+            db.flush()
+
+            if bot:
+                try:
+                    await bot.send_approval_request(
+                        content_id=piece.id,
+                        scheduled_post_id=None,
+                        platform=piece.platform,
+                        title=piece.title,
+                        body=piece.body,
+                        hook=piece.hook,
+                        cta=piece.cta,
+                        content_type=piece.content_type,
+                    )
+                except Exception as e:
+                    logger.warning("Failed to send piece to Telegram: %s", e)
+
+        db.commit()
+
+        _log_dispatch(db, "telegram_idea_submitted", product.id, "telegram", {
+            "idea": text[:200],
+            "pieces_generated": len(pieces),
+            "seed": content_brief.get("seed", ""),
+        })
+
+    except Exception as e:
+        logger.error("Telegram idea pipeline failed: %s", e)
+        if bot:
+            await bot.send_notification(f"Pipeline failed: {str(e)[:200]}")
+
+    return {"ok": True}
+
+
+async def _handle_telegram_callback(callback_query: dict, db: Session) -> dict:
+    """Handle inline button taps."""
     callback_data = callback_query.get("data", "")
     from_chat = str(callback_query.get("message", {}).get("chat", {}).get("id", ""))
     callback_id = callback_query.get("id", "")
     message_id = callback_query.get("message", {}).get("message_id")
 
-    # Verify the callback is from our authorized chat
     if from_chat != settings.telegram_chat_id:
         logger.warning("Telegram callback from unauthorized chat: %s", from_chat)
         return {"ok": True}
 
-    # Parse callback data: action:content_id:scheduled_post_id
     parts = callback_data.split(":")
     if len(parts) < 3:
         return {"ok": True}
@@ -80,7 +181,6 @@ async def telegram_webhook(update: dict, db: Session = Depends(get_db)):
         source="telegram",
     )
 
-    # Acknowledge the callback and update the message
     bot = _get_bot()
     if bot:
         status_emoji = {"approve": "Approved", "reject": "Rejected", "sharpen": "Sharpening...", "publish": "Published"}.get(action, action)
@@ -95,6 +195,54 @@ async def telegram_webhook(update: dict, db: Session = Depends(get_db)):
             )
 
     return {"ok": True, "result": result}
+
+
+async def _handle_telegram_command(text: str, chat_id: str, db: Session) -> dict:
+    """Handle /commands from Telegram."""
+    bot = _get_bot()
+    if not bot:
+        return {"ok": True}
+
+    cmd = text.split()[0].lower()
+
+    if cmd == "/queue":
+        pending = (
+            db.query(ContentPiece)
+            .filter(ContentPiece.status.in_(["pending_approval", "draft_injected"]))
+            .order_by(ContentPiece.created_at.desc())
+            .limit(5)
+            .all()
+        )
+        if not pending:
+            await bot.send_notification("No pending content in the queue.")
+        else:
+            lines = [f"<b>{len(pending)} pending items:</b>\n"]
+            for p in pending:
+                title = p.title or p.body[:40]
+                lines.append(f"- <i>{title}</i> ({p.platform}, {p.status})")
+            await bot.send_notification("\n".join(lines))
+
+    elif cmd == "/kill":
+        from app.models.campaign import Campaign
+        campaigns = db.query(Campaign).filter(Campaign.status == "active").all()
+        for c in campaigns:
+            c.status = "paused"
+        db.commit()
+        await bot.send_notification(f"Kill switch activated. {len(campaigns)} campaigns paused.")
+
+    elif cmd in ("/help", "/start"):
+        await bot.send_notification(
+            "<b>Clawd Bot Commands</b>\n\n"
+            "Just text me an idea and I'll run it through the content pipeline.\n\n"
+            "/queue — View pending approval items\n"
+            "/kill — Emergency pause all campaigns\n"
+            "/help — This message"
+        )
+
+    else:
+        await bot.send_notification(f"Unknown command: {cmd}\nSend /help for available commands.")
+
+    return {"ok": True}
 
 
 # ─── Dashboard Dispatch (manual approval from web UI) ─────────────────────────
@@ -232,6 +380,136 @@ async def setup_telegram_webhook(data: TelegramWebhookSetup):
 
     result = await bot.set_webhook(data.webhook_url)
     return result
+
+
+# ─── Telegram Idea Submission (text an idea → pipeline → approval) ────────────
+
+
+class IdeaSubmission(BaseModel):
+    """Submit an idea from Telegram or dashboard to run through the pipeline."""
+    product_id: str
+    idea: str  # The raw idea / concept / thought
+    voice_profile_id: str | None = None
+    content_types: list[str] | None = None  # ["x_thread", "social_post"] — defaults to all
+    template_override: str | None = None
+
+
+@router.post("/submit-idea")
+async def submit_idea(
+    data: IdeaSubmission,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Submit a raw idea and run it through the full content pipeline.
+
+    This is the endpoint Telegram messages route to: you text an idea,
+    the system runs Idea Sharpener → Drafter → Expand → saves as drafts,
+    then sends each piece back to Telegram for approval.
+    """
+    from app.models import Product
+
+    product = db.query(Product).filter(Product.id == data.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Run the pipeline (reuses existing pipeline logic)
+    from app.engines.prompt_defaults import load_prompt_set
+    from app.engines.content_pipeline import extract_content_brief, generate_weekly_content
+    from app.models.brand_profile import BrandProfile
+
+    prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
+    brand_profile = db.query(BrandProfile).filter(BrandProfile.product_id == data.product_id).first()
+
+    # Step 1: Sharpen the idea
+    content_brief = await extract_content_brief(data.idea, product, prompt_set=prompt_set)
+
+    # Step 2+3: Generate content (optionally filter weekly mix by requested types)
+    weekly_mix = prompt_set.get("weekly_mix")
+    if data.content_types:
+        type_map = {
+            "social_post": "social_post",
+            "social": "social_post",
+            "newsletter": "newsletter",
+            "video_script": "video_script",
+            "video": "video_script",
+            "x_thread": "x_thread",
+            "thread": "x_thread",
+        }
+        requested = {type_map.get(t, t) for t in data.content_types}
+        weekly_mix = [item for item in (weekly_mix or []) if item.get("content_type") in requested]
+        if not weekly_mix:
+            # Build a simple mix from requested types
+            weekly_mix = [
+                {"day": "Today", "content_type": ct, "platform": "twitter" if ct == "x_thread" else "general", "purpose": f"Generated from idea"}
+                for ct in requested
+            ]
+
+    if data.template_override:
+        content_brief["template_fit"] = data.template_override
+
+    pieces = await generate_weekly_content(
+        product=product,
+        transcript=data.idea,
+        content_brief=content_brief,
+        weekly_mix=weekly_mix,
+        brand_profile=brand_profile,
+        prompt_set=prompt_set,
+    )
+
+    # Save pieces and send to Telegram for approval
+    saved_ids = []
+    bot = _get_bot()
+
+    for piece_data in pieces:
+        ct = piece_data.get("content_type", "social_post")
+        content_type_map = {"newsletter": "blog_draft", "video_script": "blog_draft", "x_thread": "social_post"}
+
+        piece = ContentPiece(
+            product_id=data.product_id,
+            content_type=content_type_map.get(ct, ct),
+            platform=piece_data.get("platform", "general"),
+            title=piece_data.get("title", ""),
+            body=piece_data.get("body", ""),
+            hook=piece_data.get("hook"),
+            cta=piece_data.get("cta"),
+            funnel_stage=piece_data.get("funnel_stage", "awareness"),
+            status="pending_approval",
+            generation_metadata=piece_data.get("metadata"),
+        )
+        db.add(piece)
+        db.flush()
+        saved_ids.append(piece.id)
+
+        # Send to Telegram if configured
+        if bot:
+            try:
+                await bot.send_approval_request(
+                    content_id=piece.id,
+                    scheduled_post_id=None,
+                    platform=piece.platform,
+                    title=piece.title,
+                    body=piece.body,
+                    hook=piece.hook,
+                    cta=piece.cta,
+                    content_type=piece.content_type,
+                )
+            except Exception as e:
+                logger.warning("Failed to send piece %s to Telegram: %s", piece.id, e)
+
+    _log_dispatch(db, "idea_submitted", saved_ids[0] if saved_ids else "", "telegram" if bot else "dashboard", {
+        "idea": data.idea[:200],
+        "pieces_generated": len(saved_ids),
+        "content_types": data.content_types,
+        "seed": content_brief.get("seed", ""),
+    })
+
+    return {
+        "pieces_generated": len(saved_ids),
+        "content_ids": saved_ids,
+        "seed": content_brief.get("seed", ""),
+        "verdict": content_brief.get("verdict", ""),
+        "sent_to_telegram": bot is not None,
+    }
 
 
 # ─── Approval Queue (read-only, for dashboard) ───────────────────────────────

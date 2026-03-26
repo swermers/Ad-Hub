@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { api, type Product } from "@/lib/api";
+import { api, type Product, type VoiceProfileItem } from "@/lib/api";
 
 const OUTPUT_TYPES = [
   { id: "newsletter", label: "Newsletter", icon: "mail" },
@@ -17,6 +17,8 @@ const TEMPLATE_OPTIONS = [
   { id: "C", label: "Personal Story", desc: "Anecdote + lesson + reflection" },
   { id: "D", label: "Quick Hit", desc: "Observation + reframe + question" },
 ];
+
+type ContextMode = "product" | "profile";
 
 interface StudioParametersProps {
   productId: string;
@@ -50,7 +52,10 @@ export default function StudioParameters({
   isRunning,
 }: StudioParametersProps) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [profiles, setProfiles] = useState<VoiceProfileItem[]>([]);
+  const [contextMode, setContextMode] = useState<ContextMode>("product");
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
 
   useEffect(() => {
     api
@@ -61,6 +66,12 @@ export default function StudioParameters({
       })
       .catch(() => {})
       .finally(() => setLoadingProducts(false));
+
+    api
+      .listVoiceProfiles()
+      .then((p) => setProfiles(p))
+      .catch(() => {})
+      .finally(() => setLoadingProfiles(false));
   }, []);
 
   const toggleOutput = (id: string) => {
@@ -73,35 +84,140 @@ export default function StudioParameters({
 
   return (
     <div className="space-y-5">
-      {/* Product Selector */}
+      {/* Context Source Selector: Product vs Profile */}
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.32, ease: [0.22, 1, 0.36, 1] }}
         className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-5"
       >
-        <label className="block text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50 mb-3">
-          Product
-        </label>
-        {loadingProducts ? (
-          <div className="h-10 rounded-xl bg-[#353437]/30 animate-pulse" />
-        ) : (
-          <select
-            value={productId}
-            onChange={(e) => onProductChange(e.target.value)}
-            className="w-full bg-[#131315]/60 border border-[#353437] rounded-xl px-4 py-2.5 text-sm text-[#E5E1E4] focus:outline-none focus:border-[#FF9500]/50 focus:ring-1 focus:ring-[#FF9500]/20 transition-all appearance-none"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%23E5E1E4' stroke-width='1.5'/%3E%3C/svg%3E")`,
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 12px center",
-            }}
+        {/* Mode Toggle */}
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => setContextMode("product")}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+              contextMode === "product"
+                ? "bg-[#FF9500]/15 border border-[#FF9500]/40 text-[#FF9500]"
+                : "border border-[#353437] text-[#E5E1E4]/40 hover:border-[#554334]"
+            }`}
           >
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            <span className="flex items-center justify-center gap-1.5">
+              <span className="material-symbols-outlined text-sm">inventory_2</span>
+              Product
+            </span>
+          </button>
+          <button
+            onClick={() => setContextMode("profile")}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+              contextMode === "profile"
+                ? "bg-[#FF9500]/15 border border-[#FF9500]/40 text-[#FF9500]"
+                : "border border-[#353437] text-[#E5E1E4]/40 hover:border-[#554334]"
+            }`}
+          >
+            <span className="flex items-center justify-center gap-1.5">
+              <span className="material-symbols-outlined text-sm">person</span>
+              Profile
+            </span>
+          </button>
+        </div>
+
+        {/* Product Dropdown */}
+        {contextMode === "product" && (
+          <>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50 mb-2">
+              Product
+            </label>
+            {loadingProducts ? (
+              <div className="h-10 rounded-xl bg-[#353437]/30 animate-pulse" />
+            ) : (
+              <select
+                value={productId}
+                onChange={(e) => onProductChange(e.target.value)}
+                className="w-full bg-[#131315]/60 border border-[#353437] rounded-xl px-4 py-2.5 text-sm text-[#E5E1E4] focus:outline-none focus:border-[#FF9500]/50 focus:ring-1 focus:ring-[#FF9500]/20 transition-all appearance-none"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%23E5E1E4' stroke-width='1.5'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 12px center",
+                }}
+              >
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </>
+        )}
+
+        {/* Profile Dropdown */}
+        {contextMode === "profile" && (
+          <>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50 mb-2">
+              Voice Profile
+            </label>
+            {loadingProfiles ? (
+              <div className="h-10 rounded-xl bg-[#353437]/30 animate-pulse" />
+            ) : profiles.length === 0 ? (
+              <div className="p-3 rounded-xl border border-[#353437]/50 bg-[#131315]/40">
+                <p className="text-xs text-[#E5E1E4]/40 text-center">
+                  No voice profiles yet.{" "}
+                  <a href="/brand-profile" className="text-[#FF9500] hover:underline">
+                    Create one
+                  </a>
+                </p>
+              </div>
+            ) : (
+              <>
+                <select
+                  value={productId}
+                  onChange={(e) => onProductChange(e.target.value)}
+                  className="w-full bg-[#131315]/60 border border-[#353437] rounded-xl px-4 py-2.5 text-sm text-[#E5E1E4] focus:outline-none focus:border-[#FF9500]/50 focus:ring-1 focus:ring-[#FF9500]/20 transition-all appearance-none mb-2"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%23E5E1E4' stroke-width='1.5'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 12px center",
+                  }}
+                >
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                      {p.is_default ? " (default)" : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-[#E5E1E4]/30">
+                  Profile prompts override product prompts for voice and tone.
+                  Still select a product below to ground content in product context.
+                </p>
+
+                {/* Secondary product selector in profile mode */}
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50 mt-3 mb-2">
+                  Product Context
+                </label>
+                {loadingProducts ? (
+                  <div className="h-10 rounded-xl bg-[#353437]/30 animate-pulse" />
+                ) : (
+                  <select
+                    value={productId}
+                    onChange={(e) => onProductChange(e.target.value)}
+                    className="w-full bg-[#131315]/60 border border-[#353437] rounded-xl px-4 py-2.5 text-sm text-[#E5E1E4]/60 focus:outline-none focus:border-[#FF9500]/50 focus:ring-1 focus:ring-[#FF9500]/20 transition-all appearance-none"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%23E5E1E4' stroke-width='1.5'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                    }}
+                  >
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </>
+            )}
+          </>
         )}
       </motion.div>
 

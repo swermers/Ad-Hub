@@ -151,33 +151,49 @@ that connects with your audience. Your writing is clear, specific, and human."""
 
 # ─── Loader ──────────────────────────────────────────────────────────────────
 
-def load_prompt_set(product_id: str, db_session) -> dict:
-    """Load prompts for a product: custom overrides if they exist, generic defaults otherwise.
+def load_prompt_set(product_id: str | None, db_session, voice_profile_id: str | None = None) -> dict:
+    """Load prompts for a product and/or voice profile.
 
-    Returns a dict with all prompt fields ready to use in the pipeline.
+    Resolution order (per field):
+    1. Voice profile prompt set override (if voice_profile_id provided)
+    2. Product prompt set override (if product_id provided)
+    3. Generic defaults
+
+    This lets a voice profile customize prompts independently of any product,
+    and a product can have its own prompts too. Profile wins over product
+    when both exist, since profile represents the creator's personal voice.
     """
     from app.models.content_prompts import ContentPromptSet
 
-    custom = db_session.query(ContentPromptSet).filter_by(product_id=product_id).first()
+    product_custom = None
+    profile_custom = None
+
+    if product_id:
+        product_custom = db_session.query(ContentPromptSet).filter_by(product_id=product_id).first()
+    if voice_profile_id:
+        profile_custom = db_session.query(ContentPromptSet).filter_by(voice_profile_id=voice_profile_id).first()
 
     def _get(field: str, default):
-        if custom is None:
-            return default
-        val = getattr(custom, field, None)
-        if val is None or val.strip() == "":
-            return default
-        return val
+        # Profile overrides take priority over product overrides
+        for custom in (profile_custom, product_custom):
+            if custom is None:
+                continue
+            val = getattr(custom, field, None)
+            if val is not None and val.strip() != "":
+                return val
+        return default
 
     def _get_json(field: str, default):
-        if custom is None:
-            return default
-        val = getattr(custom, field, None)
-        if val is None or val.strip() == "":
-            return default
-        try:
-            return json.loads(val)
-        except (json.JSONDecodeError, TypeError):
-            return default
+        for custom in (profile_custom, product_custom):
+            if custom is None:
+                continue
+            val = getattr(custom, field, None)
+            if val is not None and val.strip() != "":
+                try:
+                    return json.loads(val)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+        return default
 
     return {
         "voice_rules": _get("voice_rules", DEFAULT_VOICE_RULES),
