@@ -125,7 +125,7 @@ def run_content_loop(db: Session, product_id: str, config: AutonomousLoopConfig)
             db.flush()  # Get the ID
             saved_count += 1
 
-            # Decide: auto-schedule or queue for approval
+            # Decide: auto-schedule (as draft) or queue for Telegram approval
             should_auto = config.auto_publish_social and piece_data["content_type"] == "social_post"
 
             if should_auto:
@@ -136,6 +136,8 @@ def run_content_loop(db: Session, product_id: str, config: AutonomousLoopConfig)
             else:
                 piece.status = "pending_approval"
                 approval_count += 1
+                # Send to Telegram for approval if configured
+                _queue_telegram_approval(db, piece)
 
         # Update seed status
         seed.status = "used"
@@ -582,6 +584,47 @@ def run_all_autonomous_loops():
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
+
+def _queue_telegram_approval(db: Session, piece: ContentPiece):
+    """Send a content piece to Telegram for approval (fire-and-forget).
+
+    This is called from the synchronous autonomous loop, so we schedule
+    the async Telegram call as a background task via a simple thread.
+    """
+    import asyncio
+    import threading
+
+    from app.config import settings
+
+    if not settings.telegram_bot_token or not settings.telegram_chat_id:
+        return  # Telegram not configured — content stays in dashboard queue
+
+    scheduled_post = (
+        db.query(ScheduledPost)
+        .filter(ScheduledPost.content_id == piece.id)
+        .first()
+    )
+
+    def _send():
+        try:
+            from app.services.telegram_bot import ClawdBot
+
+            bot = ClawdBot(token=settings.telegram_bot_token, chat_id=settings.telegram_chat_id)
+            asyncio.run(bot.send_approval_request(
+                content_id=piece.id,
+                scheduled_post_id=scheduled_post.id if scheduled_post else None,
+                platform=piece.platform,
+                title=piece.title,
+                body=piece.body,
+                hook=piece.hook,
+                cta=piece.cta,
+                content_type=piece.content_type,
+            ))
+        except Exception as e:
+            logger.warning("Failed to send Telegram approval for %s: %s", piece.id, e)
+
+    threading.Thread(target=_send, daemon=True).start()
+
 
 def _log_action(db: Session, action_type: str, resource_type: str, product_id: str, details: dict):
     """Log an autonomous action for the audit trail."""

@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     stripe_agency_price_id: str = ""
     app_url: str = "http://localhost:3000"  # For Stripe redirect URLs
 
+    # Telegram (Clawd Bot)
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+
     # Auth
     auth_password: str = ""
     auth_secret: str = "change-me-in-production"
