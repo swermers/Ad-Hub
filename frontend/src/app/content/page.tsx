@@ -432,7 +432,7 @@ function GridCard({
 
   const { colorScheme, screenshotUrl } = useProductVisuals(product, piece.product_id);
 
-  const rawHL = piece.hook || piece.title || piece.body.split("\n")[0];
+  const rawHL = piece.hook || piece.title || piece.body.split("\n")[0] || "";
   const headline = rawHL.length > 30 ? rawHL.slice(0, 27) + "..." : rawHL;
   const rawBody = piece.hook
     ? piece.body.replace(piece.hook, "").trim()
@@ -444,6 +444,9 @@ function GridCard({
   const aspectRatio: AspectRatio = (piece.aspect_ratio as AspectRatio) || "1:1";
 
   const thumbSize = 240;
+
+  // Detect broken/empty content
+  const hasContent = headline.trim().length > 0 || bodyText.trim().length > 0;
 
   return (
     <motion.div
@@ -457,7 +460,7 @@ function GridCard({
           className="glass-prism rounded-2xl overflow-hidden border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl transition-all"
         >
           {/* Visual thumbnail */}
-          {isVisual ? (
+          {isVisual && hasContent ? (
             <div
               style={{
                 width: "100%",
@@ -492,10 +495,26 @@ function GridCard({
             </div>
           ) : (
             <div
-              className="flex items-center justify-center text-[#E5E1E4]/20 bg-[#1b1b1d]/40"
+              className="flex flex-col items-center justify-center text-[#E5E1E4]/20 bg-[#1b1b1d]/40 gap-2"
               style={{ width: "100%", aspectRatio: "1/1" }}
             >
-              <span className="text-4xl font-light">T</span>
+              {isVisual && !hasContent ? (
+                <>
+                  <span className="text-2xl text-[#ffb4ab]/40">{"\u26A0"}</span>
+                  <span className="text-[10px] uppercase tracking-wider text-[#ffb4ab]/40 font-medium">
+                    Empty Content
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-2xl">
+                    {piece.content_type === "email" ? "\u2709" : piece.content_type === "blog_draft" ? "\u270E" : "\u25A1"}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider text-[#E5E1E4]/30 font-medium">
+                    {piece.content_type === "email" ? "Email" : piece.content_type === "blog_draft" ? "Blog Draft" : "Text Content"}
+                  </span>
+                </>
+              )}
             </div>
           )}
 

@@ -1,7 +1,35 @@
 import json
+import random
 
 from app.engines.vectorstore import get_vectorstore
 from app.services.claude_client import call_claude
+
+
+# Templates suitable for auto-assignment during batch generation
+VISUAL_TEMPLATES = [
+    "bold_hook",
+    "pain_solution",
+    "before_after",
+    "stat_proof",
+    "testimonial",
+    "gradient_card",
+    "minimal_clean",
+    "editorial_stack",
+    "brand_hero",
+    "status_card",
+    "billboard",
+    "handwritten_quote",
+]
+
+
+def _assign_diverse_templates(count: int, preferred: str | None = None) -> list[str]:
+    """Assign diverse template types across a batch to avoid visual monotony."""
+    if preferred:
+        return [preferred] * count
+    # Shuffle and cycle through templates so no two adjacent pieces look the same
+    pool = VISUAL_TEMPLATES.copy()
+    random.shuffle(pool)
+    return [pool[i % len(pool)] for i in range(count)]
 
 # Template text constraints — max character counts per field.
 # Used to instruct Claude to generate copy that fits each template's layout.
@@ -276,7 +304,14 @@ Write punchy, concise copy that fits these limits exactly. Count your characters
             user_prompt = f"""{type_instruction}
 {platform_rules}
 
-Generate {count} unique variations. Each should take a different angle or hook.
+Generate {count} unique variations.
+
+CRITICAL — DIVERSITY REQUIREMENTS:
+- Each variation MUST take a completely different angle, metaphor, or emotional hook.
+- Do NOT repeat the same core idea with different wording. Each piece should feel like it came from a different creative brief.
+- Vary the rhetorical strategy: use questions, bold claims, storytelling, social proof, contrarian takes, "you" statements, or data-driven hooks.
+- If one variation uses a metaphor (e.g., furniture rearranging), the others must NOT reuse that metaphor.
+- Avoid starting multiple headlines with the same word or structure.
 
 {f"Additional instructions: {instructions}" if instructions else ""}
 
@@ -319,7 +354,11 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                     }
                 ]
 
-            for piece in pieces:
+            # Assign diverse templates across the batch
+            templates = _assign_diverse_templates(len(pieces), template_type)
+
+            for idx, piece in enumerate(pieces):
+                assigned_template = templates[idx]
                 piece_meta = {
                     "model": result["model"],
                     "input_tokens": result["input_tokens"],
@@ -336,10 +375,11 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                     "body": piece.get("body", ""),
                     "hook": piece.get("hook"),
                     "cta": piece.get("cta"),
+                    "template_type": assigned_template,
                     "metadata": json.dumps(piece_meta),
                 }
                 # Enforce template character limits as safety net
-                _enforce_template_limits(piece_dict, template_type)
+                _enforce_template_limits(piece_dict, assigned_template)
                 all_pieces.append(piece_dict)
 
     return all_pieces
@@ -421,7 +461,14 @@ Write punchy, concise copy that fits these limits exactly. Count your characters
             user_prompt = f"""{type_instruction}
 {platform_rules}
 
-Generate {count} unique variations. Each should take a different angle or hook.
+Generate {count} unique variations.
+
+CRITICAL — DIVERSITY REQUIREMENTS:
+- Each variation MUST take a completely different angle, metaphor, or emotional hook.
+- Do NOT repeat the same core idea with different wording. Each piece should feel like it came from a different creative brief.
+- Vary the rhetorical strategy: use questions, bold claims, storytelling, social proof, contrarian takes, "you" statements, or data-driven hooks.
+- If one variation uses a metaphor (e.g., furniture rearranging), the others must NOT reuse that metaphor.
+- Avoid starting multiple headlines with the same word or structure.
 
 {f"Additional instructions: {instructions}" if instructions else ""}
 
@@ -463,7 +510,11 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                     }
                 ]
 
-            for piece in pieces:
+            # Assign diverse templates across the batch
+            templates = _assign_diverse_templates(len(pieces), template_type)
+
+            for idx, piece in enumerate(pieces):
+                assigned_template = templates[idx]
                 piece_meta = {
                     "model": result["model"],
                     "input_tokens": result["input_tokens"],
@@ -479,10 +530,11 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                     "body": piece.get("body", ""),
                     "hook": piece.get("hook"),
                     "cta": piece.get("cta"),
+                    "template_type": assigned_template,
                     "metadata": json.dumps(piece_meta),
                 }
                 # Enforce template character limits as safety net
-                _enforce_template_limits(piece_dict, template_type)
+                _enforce_template_limits(piece_dict, assigned_template)
                 all_pieces.append(piece_dict)
 
     return all_pieces

@@ -6,10 +6,14 @@ import { useRef } from "react";
 import { api, API_BASE, type ContentPiece, type Product, type GenerateImageStatus } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
 import { VideoPreview, VIDEO_STYLE_OPTIONS, STYLE_CONFIG, FPS, type VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
-import { Thumbnail } from "@remotion/player";
-import { toPng } from "html-to-image";
+import dynamic from "next/dynamic";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
+
+const DynamicThumbnail = dynamic(
+  () => import("@remotion/player").then((mod) => mod.Thumbnail),
+  { ssr: false }
+);
 import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
 
 /** Tone presets that affect visual intensity */
@@ -376,6 +380,7 @@ export default function ContentDetailPage() {
       const config = STYLE_CONFIG[videoStyle];
       const effectiveAspect = config.forceAspect || previewAspect;
       const dims = ASPECT_DIMENSIONS[effectiveAspect];
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(el, {
         width: dims.width,
         height: dims.height,
@@ -1012,7 +1017,7 @@ export default function ContentDetailPage() {
           style={{ position: "absolute", left: "-9999px", top: 0 }}
         >
           {previewMode === "video" ? (
-            <Thumbnail
+            <DynamicThumbnail
               component={STYLE_CONFIG[videoStyle].component}
               inputProps={{
                 headline,

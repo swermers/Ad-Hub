@@ -98,7 +98,7 @@ def _run_generation(
                 hook=piece_data.get("hook"),
                 cta=piece_data.get("cta"),
                 funnel_stage=funnel_stage,
-                template_type=template_type,
+                template_type=piece_data.get("template_type") or template_type,
                 aspect_ratio=aspect_ratio,
                 status="draft",
                 generation_metadata=piece_data.get("metadata"),
