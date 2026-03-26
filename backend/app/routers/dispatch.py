@@ -70,7 +70,16 @@ async def telegram_webhook(update: dict, db: Session = Depends(get_db)):
     if text.startswith("/"):
         return await _handle_telegram_command(text, from_chat, db)
 
-    # Regular text = idea submission
+    # Parse content type prefix if present
+    # Supported formats:
+    #   "x thread: my idea here"
+    #   "thread: my idea"
+    #   "post: my idea"
+    #   "video: my idea"
+    #   "newsletter: my idea"
+    #   "my idea" (no prefix = generate all types)
+    content_types, idea_text = _parse_telegram_message(text)
+
     # Use the first active product as default context
     from app.models import Product
     product = db.query(Product).filter(Product.status == "active").first()
@@ -81,28 +90,35 @@ async def telegram_webhook(update: dict, db: Session = Depends(get_db)):
         return {"ok": True}
 
     bot = _get_bot()
+    type_label = ", ".join(content_types) if content_types else "full pipeline"
     if bot:
-        await bot.send_notification(f"Running your idea through the pipeline...\n\n<i>{text[:200]}</i>")
+        await bot.send_notification(
+            f"Generating <b>{type_label}</b>...\n\n<i>{idea_text[:200]}</i>"
+        )
 
-    # Create a fake user context for the pipeline
-    # (Telegram webhook bypasses auth — we use a system context)
     from app.engines.prompt_defaults import load_prompt_set
-    from app.engines.content_pipeline import extract_content_brief, generate_weekly_content
     from app.models.brand_profile import BrandProfile
 
     prompt_set = load_prompt_set(product.id, db)
     brand_profile = db.query(BrandProfile).filter(BrandProfile.product_id == product.id).first()
 
     try:
-        content_brief = await extract_content_brief(text, product, prompt_set=prompt_set)
-
-        pieces = await generate_weekly_content(
-            product=product,
-            transcript=text,
-            content_brief=content_brief,
-            brand_profile=brand_profile,
-            prompt_set=prompt_set,
-        )
+        # If specific content types requested, use targeted generation
+        if content_types:
+            pieces = await _generate_targeted_content(
+                idea_text, product, content_types, prompt_set, brand_profile
+            )
+        else:
+            # Full pipeline: sharpener → drafter → expand to all formats
+            from app.engines.content_pipeline import extract_content_brief, generate_weekly_content
+            content_brief = await extract_content_brief(idea_text, product, prompt_set=prompt_set)
+            pieces = await generate_weekly_content(
+                product=product,
+                transcript=idea_text,
+                content_brief=content_brief,
+                brand_profile=brand_profile,
+                prompt_set=prompt_set,
+            )
 
         # Save and send for approval
         for piece_data in pieces:
@@ -142,9 +158,9 @@ async def telegram_webhook(update: dict, db: Session = Depends(get_db)):
         db.commit()
 
         _log_dispatch(db, "telegram_idea_submitted", product.id, "telegram", {
-            "idea": text[:200],
+            "idea": idea_text[:200],
             "pieces_generated": len(pieces),
-            "seed": content_brief.get("seed", ""),
+            "content_types": content_types,
         })
 
     except Exception as e:
@@ -153,6 +169,165 @@ async def telegram_webhook(update: dict, db: Session = Depends(get_db)):
             await bot.send_notification(f"Pipeline failed: {str(e)[:200]}")
 
     return {"ok": True}
+
+
+def _parse_telegram_message(text: str) -> tuple[list[str] | None, str]:
+    """Parse a Telegram message for content type prefix.
+
+    Returns (content_types, idea_text).
+    If no prefix detected, returns (None, original_text) for full pipeline.
+
+    Supported prefixes:
+        "x thread: ..."   → ["x_thread"]
+        "thread: ..."     → ["x_thread"]
+        "post: ..."       → ["social_post"]
+        "x post: ..."     → ["social_post"] (platform=twitter)
+        "tweet: ..."      → ["social_post"] (platform=twitter)
+        "video: ..."      → ["video_script"]
+        "newsletter: ..."  → ["newsletter"]
+        "all: ..."         → None (full pipeline)
+    """
+    prefix_map = {
+        "x thread": ["x_thread"],
+        "thread": ["x_thread"],
+        "x post": ["social_post"],
+        "tweet": ["social_post"],
+        "post": ["social_post"],
+        "social": ["social_post"],
+        "video": ["video_script"],
+        "video script": ["video_script"],
+        "newsletter": ["newsletter"],
+        "all": None,
+    }
+
+    lower = text.lower()
+    for prefix, types in sorted(prefix_map.items(), key=lambda x: -len(x[0])):
+        if lower.startswith(prefix + ":"):
+            idea = text[len(prefix) + 1:].strip()
+            return types, idea
+        if lower.startswith(prefix + " :"):
+            idea = text[len(prefix) + 2:].strip()
+            return types, idea
+
+    return None, text
+
+
+async def _generate_targeted_content(
+    idea: str,
+    product,
+    content_types: list[str],
+    prompt_set: dict,
+    brand_profile=None,
+) -> list[dict]:
+    """Generate only the requested content types — skip the full pipeline.
+
+    Instead of going through idea sharpener → newsletter draft → expand,
+    this directly generates the requested format from the raw idea.
+    Much faster for single-format requests like 'x thread: my idea'.
+    """
+    from app.services.claude_client import call_claude
+
+    voice_rules = prompt_set.get("voice_rules", "")
+    social_rules = prompt_set.get("social_post_rules", "")
+    video_rules = prompt_set.get("video_script_rules", "")
+    x_thread_rules = prompt_set.get("x_thread_rules", "")
+    system_intro = prompt_set.get("system_prompt_intro", "You are a content creator.")
+
+    # Build type-specific rules
+    type_rules = []
+    for ct in content_types:
+        if ct == "x_thread":
+            type_rules.append(f"X THREAD RULES:\n{x_thread_rules}")
+        elif ct == "social_post":
+            type_rules.append(f"SOCIAL POST RULES:\n{social_rules}")
+        elif ct == "video_script":
+            type_rules.append(f"VIDEO SCRIPT RULES:\n{video_rules}")
+
+    # Build brand constraints
+    brand_constraints = ""
+    if brand_profile:
+        from app.engines.generation import _build_brand_constraints
+        brand_constraints = _build_brand_constraints(brand_profile)
+
+    system_prompt = f"""{system_intro}
+
+Product: {product.name}
+Description: {product.description}
+Target Audience: {product.target_audience or "General audience"}
+Brand Voice: {product.brand_voice or "Authentic and conversational."}
+
+{brand_constraints}
+
+{voice_rules}
+
+{chr(10).join(type_rules)}"""
+
+    # Build format spec per type
+    format_specs = []
+    for ct in content_types:
+        if ct == "x_thread":
+            format_specs.append("""Generate an X thread (5-8 tweets).
+Return: {"content_type": "x_thread", "platform": "twitter", "title": "thread topic", "body": "tweet 1\\n\\ntweet 2\\n\\ntweet 3...", "hook": "the first tweet", "cta": "closing question", "tweets": ["tweet 1", "tweet 2", ...]}""")
+        elif ct == "social_post":
+            format_specs.append("""Generate a social post (Twitter-length, under 280 chars).
+Return: {"content_type": "social_post", "platform": "twitter", "title": "post topic", "body": "the post text", "hook": "opening line", "cta": null, "specificity_check": "what the reader sees", "tension_check": "what pulls against what", "stealable_line": "the quotable phrase"}""")
+        elif ct == "video_script":
+            format_specs.append("""Generate a video script with breath blocks.
+Return: {"content_type": "video_script", "platform": "general", "title": "video topic", "body": "full script as paragraphs", "hook": "opening hook", "cta": "closing CTA", "blocks": ["block 1", "block 2", ...]}""")
+        elif ct == "newsletter":
+            format_specs.append("""Generate a newsletter draft.
+Return: {"content_type": "newsletter", "platform": "general", "title": "newsletter title", "body": "full newsletter in markdown", "hook": "subject line", "cta": "closing question", "subject": "email subject", "preview": "preview text under 10 words"}""")
+
+    user_prompt = f"""Here's a raw idea from the creator:
+
+---
+{idea}
+---
+
+Generate ONLY the following content from this idea:
+{chr(10).join(format_specs)}
+
+Return a JSON array with one object per piece. Return ONLY the JSON array."""
+
+    result = await call_claude(user_prompt, system=system_prompt, max_tokens=4096)
+
+    try:
+        text = result["content"].strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+        pieces_raw = json.loads(text)
+    except (json.JSONDecodeError, IndexError):
+        pieces_raw = []
+
+    # Wrap single object in array
+    if isinstance(pieces_raw, dict):
+        pieces_raw = [pieces_raw]
+
+    pieces = []
+    for p in pieces_raw:
+        meta = {
+            "model": result["model"],
+            "input_tokens": result["input_tokens"],
+            "output_tokens": result["output_tokens"],
+            "source": "telegram_targeted",
+        }
+        # Preserve structured data
+        for key in ("tweets", "blocks", "subject", "preview", "specificity_check", "tension_check", "stealable_line"):
+            if p.get(key):
+                meta[key] = p[key]
+
+        pieces.append({
+            "content_type": p.get("content_type", content_types[0]),
+            "platform": p.get("platform", "twitter" if content_types[0] in ("x_thread", "social_post") else "general"),
+            "title": p.get("title", ""),
+            "body": p.get("body", ""),
+            "hook": p.get("hook"),
+            "cta": p.get("cta"),
+            "funnel_stage": p.get("funnel_stage", "awareness"),
+            "metadata": json.dumps(meta),
+        })
+
+    return pieces
 
 
 async def _handle_telegram_callback(callback_query: dict, db: Session) -> dict:
@@ -232,8 +407,17 @@ async def _handle_telegram_command(text: str, chat_id: str, db: Session) -> dict
 
     elif cmd in ("/help", "/start"):
         await bot.send_notification(
-            "<b>Clawd Bot Commands</b>\n\n"
-            "Just text me an idea and I'll run it through the content pipeline.\n\n"
+            "<b>Clawd Bot</b>\n\n"
+            "<b>Quick generate:</b>\n"
+            "<code>x thread: your idea here</code>\n"
+            "<code>thread: your idea here</code>\n"
+            "<code>post: your idea here</code>\n"
+            "<code>tweet: your idea here</code>\n"
+            "<code>video: your idea here</code>\n"
+            "<code>newsletter: your idea here</code>\n\n"
+            "<b>Full pipeline:</b>\n"
+            "Just text your idea with no prefix — generates all formats.\n\n"
+            "<b>Commands:</b>\n"
             "/queue — View pending approval items\n"
             "/kill — Emergency pause all campaigns\n"
             "/help — This message"
