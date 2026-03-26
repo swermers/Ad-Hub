@@ -70,6 +70,13 @@ async def telegram_webhook(update: dict, db: Session = Depends(get_db)):
     if text.startswith("/"):
         return await _handle_telegram_command(text, from_chat, db)
 
+    # Reply to a content preview = refinement feedback
+    reply_to = message.get("reply_to_message")
+    if reply_to:
+        content_id = _extract_content_id_from_message(reply_to)
+        if content_id:
+            return await _handle_telegram_refinement(content_id, text, db)
+
     # Parse content type prefix if present
     # Supported formats:
     #   "x thread: my idea here"
@@ -167,6 +174,169 @@ async def telegram_webhook(update: dict, db: Session = Depends(get_db)):
         logger.error("Telegram idea pipeline failed: %s", e)
         if bot:
             await bot.send_notification(f"Pipeline failed: {str(e)[:200]}")
+
+    return {"ok": True}
+
+
+def _extract_content_id_from_message(reply_msg: dict) -> str | None:
+    """Extract content_id from a bot message the user is replying to.
+
+    We embed a hidden link (adhub://content/{id}) in approval messages,
+    and also check callback_data in inline keyboards.
+    """
+    import re
+
+    # Check message text for hidden adhub:// link
+    msg_text = reply_msg.get("text", "") or ""
+    # Also check entities for URL type
+    for entity in reply_msg.get("entities", []):
+        if entity.get("type") == "text_link":
+            url = entity.get("url", "")
+            match = re.search(r"adhub://content/([a-f0-9-]+)", url)
+            if match:
+                return match.group(1)
+
+    # Check inline keyboard callback data
+    markup = reply_msg.get("reply_markup", {})
+    for row in markup.get("inline_keyboard", []):
+        for btn in row:
+            cb = btn.get("callback_data", "")
+            # Format: action:content_id:scheduled_post_id
+            parts = cb.split(":")
+            if len(parts) >= 2 and parts[1] and parts[1] != "none":
+                return parts[1]
+
+    return None
+
+
+async def _handle_telegram_refinement(content_id: str, feedback: str, db) -> dict:
+    """Refine a content piece based on reply feedback.
+
+    User replies to a bot message with something like:
+    - "make the hook stronger"
+    - "rewrite tweet 3 to be punchier"
+    - "too long, cut it in half"
+    - "add more tension"
+
+    We send the existing content + feedback to Claude and replace it.
+    """
+    piece = db.query(ContentPiece).filter(ContentPiece.id == content_id).first()
+    if not piece:
+        bot = _get_bot()
+        if bot:
+            await bot.send_notification("Content not found — it may have been deleted.")
+        return {"ok": True}
+
+    bot = _get_bot()
+    if bot:
+        await bot.send_notification(f"Refining...\n\n<i>{feedback[:150]}</i>")
+
+    # Load context
+    from app.services.claude_client import call_claude
+
+    # Parse existing metadata
+    meta = {}
+    if piece.generation_metadata:
+        try:
+            meta = json.loads(piece.generation_metadata)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Determine content format for the prompt
+    content_type_label = "content"
+    format_instruction = ""
+
+    if meta.get("tweets"):
+        content_type_label = "X thread"
+        tweets = meta["tweets"]
+        format_instruction = f"""This is an X thread with {len(tweets)} tweets.
+Current tweets:
+{chr(10).join(f"Tweet {i+1}: {t}" for i, t in enumerate(tweets))}
+
+Return the refined version as a JSON object:
+{{"body": "all tweets joined by double newlines", "hook": "first tweet text", "tweets": ["tweet 1", "tweet 2", ...]}}"""
+
+    elif meta.get("blocks"):
+        content_type_label = "video script"
+        blocks = meta["blocks"]
+        format_instruction = f"""This is a video script with {len(blocks)} breath blocks.
+Current blocks:
+{chr(10).join(f"Block {i+1}: {b}" for i, b in enumerate(blocks))}
+
+Return the refined version as a JSON object:
+{{"body": "all blocks joined by double newlines", "hook": "{piece.hook or ''}", "cta": "{piece.cta or ''}", "blocks": ["block 1", "block 2", ...]}}"""
+
+    else:
+        content_type_label = "social post" if piece.content_type == "social_post" else "content"
+        format_instruction = f"""Return the refined version as a JSON object:
+{{"body": "the refined content", "hook": "opening hook or null", "cta": "call to action or null"}}"""
+
+    system_prompt = f"""You are a content editor. Refine the {content_type_label} based on the creator's feedback.
+Keep the same voice and core idea. Apply the feedback precisely — don't over-edit or change things that weren't mentioned.
+Platform: {piece.platform}
+Return ONLY the JSON object, no markdown fences."""
+
+    user_prompt = f"""Current {content_type_label}:
+
+Title: {piece.title or ""}
+Hook: {piece.hook or ""}
+---
+{piece.body}
+---
+CTA: {piece.cta or ""}
+
+Creator feedback: {feedback}
+
+{format_instruction}"""
+
+    try:
+        result = await call_claude(user_prompt, system=system_prompt, premium=True)
+
+        raw = result["content"].strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
+        refined = json.loads(raw)
+
+        # Update the piece
+        piece.body = refined.get("body", piece.body)
+        if refined.get("hook"):
+            piece.hook = refined["hook"]
+        if refined.get("cta"):
+            piece.cta = refined["cta"]
+
+        # Update structured metadata
+        if refined.get("tweets"):
+            meta["tweets"] = refined["tweets"]
+        if refined.get("blocks"):
+            meta["blocks"] = refined["blocks"]
+        meta["last_refinement"] = feedback
+        meta["refinement_model"] = result.get("model", "")
+        piece.generation_metadata = json.dumps(meta)
+
+        db.commit()
+
+        # Send the refined version back
+        if bot:
+            await bot.send_approval_request(
+                content_id=piece.id,
+                scheduled_post_id=None,
+                platform=piece.platform,
+                title=piece.title,
+                body=piece.body,
+                hook=piece.hook,
+                cta=piece.cta,
+                content_type=piece.content_type,
+            )
+
+        _log_dispatch(db, "content_refined", content_id, "telegram", {
+            "feedback": feedback[:200],
+            "model": result.get("model", ""),
+        })
+
+    except Exception as e:
+        logger.error("Refinement failed for %s: %s", content_id, e)
+        if bot:
+            await bot.send_notification(f"Refinement failed: {str(e)[:200]}")
 
     return {"ok": True}
 
@@ -410,16 +580,20 @@ async def _handle_telegram_command(text: str, chat_id: str, db: Session) -> dict
         await bot.send_notification(
             "<b>Clawd Bot</b>\n\n"
             "<b>Quick generate:</b>\n"
-            "<code>x thread: your idea here</code>\n"
             "<code>thread: your idea here</code>\n"
             "<code>post: your idea here</code>\n"
             "<code>tweet: your idea here</code>\n"
             "<code>video: your idea here</code>\n"
             "<code>newsletter: your idea here</code>\n\n"
             "<b>Full pipeline:</b>\n"
-            "Just text your idea with no prefix — generates all formats.\n\n"
+            "Text your idea with no prefix — generates all formats.\n\n"
+            "<b>Refine:</b>\n"
+            "Reply to any content preview with feedback:\n"
+            "<i>\"make the hook stronger\"</i>\n"
+            "<i>\"rewrite tweet 3\"</i>\n"
+            "<i>\"too long, cut it in half\"</i>\n\n"
             "<b>Commands:</b>\n"
-            "/queue — View pending approval items\n"
+            "/queue — View pending items\n"
             "/kill — Emergency pause all campaigns\n"
             "/help — This message"
         )

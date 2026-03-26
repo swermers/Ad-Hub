@@ -71,6 +71,10 @@ class ClawdBot:
             lines.append("")
             lines.append(f"<b>CTA:</b> {cta}")
 
+        # Hidden content ID tag for reply-based refinement
+        lines.append("")
+        lines.append(f'<a href="adhub://content/{content_id}"> </a>')
+
         text = "\n".join(lines)
 
         # Callback data format: action:content_id:scheduled_post_id
