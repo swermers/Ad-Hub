@@ -289,7 +289,8 @@ Generate ONLY the following content from this idea:
 
 Return a JSON array with one object per piece. Return ONLY the JSON array."""
 
-    result = await call_claude(user_prompt, system=system_prompt, max_tokens=4096)
+    # Targeted generation uses premium model — these are the posts you'll publish
+    result = await call_claude(user_prompt, system=system_prompt, max_tokens=4096, premium=True)
 
     try:
         text = result["content"].strip()

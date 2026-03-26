@@ -240,7 +240,7 @@ Target Audience: {product.target_audience or "General audience"}
 
 {prompt_set["idea_sharpener_prompt"]}"""
 
-    result = await call_claude(user_prompt, system=system_prompt)
+    result = await call_claude(user_prompt, system=system_prompt, premium=True)
 
     try:
         text = result["content"].strip()
@@ -416,7 +416,7 @@ Return ONLY a JSON array:
 
 Return ONLY the JSON array."""
 
-    result = await call_claude(user_prompt, system=system_prompt, max_tokens=6144)
+    result = await call_claude(user_prompt, system=system_prompt, max_tokens=6144, premium=True)
 
     try:
         text = result["content"].strip()
