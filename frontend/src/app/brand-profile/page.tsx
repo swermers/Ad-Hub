@@ -13,7 +13,7 @@ function parseJson<T>(value: string | null, fallback: T): T {
   }
 }
 
-type Section = "voice" | "visual" | "content" | "platforms" | "pauses";
+type Section = "voice" | "visual" | "content" | "platforms" | "pauses" | "guide";
 
 export default function BrandProfilePage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -23,8 +23,13 @@ export default function BrandProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [openSections, setOpenSections] = useState<Set<Section>>(
-    new Set(["voice"])
+    new Set(["guide", "voice"])
   );
+  const [extracting, setExtracting] = useState(false);
+  const [extractResult, setExtractResult] = useState<{
+    fields: number;
+    summary: string;
+  } | null>(null);
 
   // Editable state for all fields
   const [writingSamples, setWritingSamples] = useState<string[]>([]);
@@ -154,6 +159,30 @@ export default function BrandProfilePage() {
     }
   }
 
+  async function handleBrandGuideUpload(file: File) {
+    if (!selectedProductId) return;
+    setExtracting(true);
+    setExtractResult(null);
+    try {
+      const result = await api.extractBrandGuide(selectedProductId, file);
+      // Refresh the form with the extracted data
+      populateForm(result.profile);
+      setProfile(result.profile);
+      setExtractResult({
+        fields: result.extracted_fields,
+        summary: result.summary,
+      });
+    } catch (err) {
+      alert(
+        err instanceof Error
+          ? err.message
+          : "Failed to extract brand guide. Try a clearer image."
+      );
+    } finally {
+      setExtracting(false);
+    }
+  }
+
   function toggleSection(s: Section) {
     setOpenSections((prev) => {
       const next = new Set(prev);
@@ -204,6 +233,105 @@ export default function BrandProfilePage() {
         <div className="text-gray-500">Loading profile...</div>
       ) : (
         <div className="space-y-4">
+          {/* Brand Guide Upload */}
+          <CollapsibleSection
+            title="Upload Brand Guide"
+            description="Upload a PDF or image of your brand guide — AI will extract colors, fonts, voice, and rules automatically"
+            section="guide"
+            open={openSections.has("guide")}
+            onToggle={toggleSection}
+          >
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
+                {extracting ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                    <p className="text-sm font-medium text-gray-700">
+                      Analyzing brand guide with AI...
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Extracting colors, fonts, voice guidelines, and content
+                      rules
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="12" y1="18" x2="12" y2="12" />
+                        <line x1="9" y1="15" x2="15" y2="15" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-medium text-gray-700 mb-1">
+                      Drop your brand guide here
+                    </p>
+                    <p className="text-xs text-gray-400 mb-4">
+                      PDF, PNG, JPG, or WEBP — we&apos;ll extract everything
+                      automatically
+                    </p>
+                    <label className="inline-flex px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer transition-colors">
+                      Choose File
+                      <input
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleBrandGuideUpload(file);
+                        }}
+                      />
+                    </label>
+                  </>
+                )}
+              </div>
+
+              {extractResult && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#16a34a"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-green-800">
+                        Extracted {extractResult.fields} fields from your brand
+                        guide
+                      </p>
+                      <p className="text-xs text-green-700 mt-1">
+                        {extractResult.summary}
+                      </p>
+                      <p className="text-xs text-green-600 mt-2">
+                        Review the extracted data below, make any adjustments,
+                        then click &quot;Save Profile&quot;.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+
           {/* Voice & Tone */}
           <CollapsibleSection
             title="Voice & Tone"

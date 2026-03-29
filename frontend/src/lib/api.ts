@@ -508,6 +508,28 @@ export const api = {
     if (!res.ok) throw new Error("Upload failed");
     return res.json();
   },
+  extractBrandGuide: async (productId: string, file: File): Promise<BrandGuideExtractResult> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/products/${productId}/brand-profile/extract-guide`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+      throw new Error(err.detail || "Upload failed");
+    }
+    return res.json();
+  },
   listRejectionFeedback: (productId: string, limit: number = 50) =>
     request<RejectionFeedbackItem[]>(`/api/products/${productId}/rejection-feedback?limit=${limit}`),
   createRejectionFeedback: (productId: string, data: RejectionFeedbackCreate) =>
@@ -1364,6 +1386,15 @@ export interface BrollSearchResult {
   media_type: string;
   total_results: number;
   results: (BrollPhoto | BrollVideo)[];
+}
+
+// Brand Guide Extraction
+
+export interface BrandGuideExtractResult {
+  status: string;
+  extracted_fields: number;
+  summary: string;
+  profile: BrandProfileData;
 }
 
 // Brand Profile types

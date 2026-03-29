@@ -20,6 +20,9 @@ WRITING_SAMPLES_DIR = os.path.join(
 LOGO_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "logos"
 )
+BRAND_GUIDES_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "brand-guides"
+)
 
 
 # ── Pydantic models ──────────────────────────────────────────────────────────
@@ -207,6 +210,192 @@ async def upload_logo(product_id: str, file: UploadFile, db: Session = Depends(g
     db.commit()
     db.refresh(profile)
     return {"path": logo_path}
+
+
+# ── Brand Guide Upload & AI Extraction ────────────────────────────────────────
+
+
+BRAND_GUIDE_EXTRACTION_PROMPT = """You are analyzing a brand guide / style guide document. Extract all brand identity information you can find.
+
+Look for and extract:
+
+1. **Colors** — hex codes, RGB values, or named colors. Categorize as primary, secondary, or accent.
+2. **Fonts/Typography** — font family names, weights, and usage rules.
+3. **Voice & Tone** — any descriptors of how the brand sounds (e.g., "warm", "professional", "playful").
+4. **Words to always use** — preferred terminology, brand-specific language.
+5. **Words to never use** — banned words, competitor names, terms to avoid.
+6. **Sentence style** — short and punchy, long and flowing, or mixed.
+7. **Logo usage rules** — minimum sizes, clear space, do's and don'ts.
+8. **Photography style** — candid, posed, lifestyle, product-focused, etc.
+9. **Content rules** — approved topics, off-limit topics, regulatory constraints.
+10. **Emoji usage** — encouraged, limited, or forbidden.
+11. **CTA style** — how calls-to-action should feel (e.g., "action-oriented but warm").
+12. **Platform-specific rules** — any per-platform guidelines (LinkedIn, Instagram, etc.).
+
+Return ONLY a JSON object with this exact structure (use null for fields you can't find):
+{
+    "primary_colors": ["#hex1", "#hex2"],
+    "secondary_colors": ["#hex1"],
+    "accent_colors": ["#hex1"],
+    "approved_fonts": ["Font Name 1", "Font Name 2"],
+    "tone_descriptors": ["warm", "professional"],
+    "always_use_words": ["preferred term 1"],
+    "never_use_words": ["banned term 1"],
+    "sentence_style": "short_punchy|long_flowing|mixed",
+    "logo_usage_rules": "free text summary of logo rules",
+    "photography_style": "free text description",
+    "approved_topics": ["topic 1"],
+    "off_limit_topics": ["topic 1"],
+    "emoji_usage": "yes|limited|no",
+    "cta_style": "free text description of CTA approach",
+    "hashtag_strategy": "free text",
+    "regulatory_notes": "any compliance or legal notes",
+    "linkedin_rules": "platform-specific rules or null",
+    "instagram_rules": "platform-specific rules or null",
+    "x_rules": "platform-specific rules or null",
+    "meta_ads_rules": "platform-specific rules or null",
+    "summary": "2-3 sentence summary of the brand identity"
+}
+
+Be thorough. Extract every hex color you see. Extract every font name mentioned. If the guide uses color names instead of hex codes, convert common colors to hex (e.g., "Navy" → "#1a2744", "Gold" → "#d4a537").
+
+Return ONLY the JSON object, no additional text."""
+
+
+class BrandGuideExtractResponse(BaseModel):
+    status: str
+    extracted_fields: int
+    summary: str
+    profile: BrandProfileResponse
+
+
+@router.post("/{product_id}/brand-profile/extract-guide", response_model=BrandGuideExtractResponse)
+async def extract_brand_guide(product_id: str, file: UploadFile, db: Session = Depends(get_db)):
+    """Upload a brand guide (PDF or image) and use Claude Vision to extract brand profile data."""
+    import base64
+
+    from app.services.claude_client import call_claude_sync
+
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Validate file type
+    filename = file.filename or "guide.pdf"
+    ext = os.path.splitext(filename)[1].lower()
+    allowed_extensions = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
+    if ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '{ext}'. Upload a PDF or image (PNG, JPG, WEBP).",
+        )
+
+    content = await file.read()
+
+    # Save the uploaded file
+    os.makedirs(BRAND_GUIDES_DIR, exist_ok=True)
+    saved_filename = f"{uuid_mod.uuid4()}{ext}"
+    filepath = os.path.join(BRAND_GUIDES_DIR, saved_filename)
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    # Determine media type
+    media_type_map = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
+        ".pdf": "application/pdf",
+    }
+    media_type = media_type_map.get(ext, "application/octet-stream")
+
+    # Encode as base64 for Claude Vision
+    b64_data = base64.b64encode(content).decode("utf-8")
+
+    # Call Claude with vision to extract brand details
+    images = [{"media_type": media_type, "data": b64_data}]
+
+    result = call_claude_sync(
+        BRAND_GUIDE_EXTRACTION_PROMPT,
+        system="You are a brand identity expert. Analyze brand guides and extract structured data with precision.",
+        images=images,
+        premium=True,
+    )
+
+    # Parse the extraction result
+    try:
+        text = result["content"].strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+        extracted = json.loads(text)
+    except (json.JSONDecodeError, IndexError):
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to parse brand guide. Try uploading a clearer image or a different page.",
+        )
+
+    # Get or create brand profile
+    profile = db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first()
+    if not profile:
+        profile = BrandProfile(product_id=product_id)
+        db.add(profile)
+        db.flush()
+
+    # Apply extracted data to brand profile (only overwrite non-null extracted fields)
+    fields_updated = 0
+
+    json_field_map = {
+        "primary_colors": "primary_colors",
+        "secondary_colors": "secondary_colors",
+        "accent_colors": "accent_colors",
+        "approved_fonts": "approved_fonts",
+        "tone_descriptors": "tone_descriptors",
+        "always_use_words": "always_use_words",
+        "never_use_words": "never_use_words",
+        "approved_topics": "approved_topics",
+        "off_limit_topics": "off_limit_topics",
+    }
+
+    text_field_map = {
+        "sentence_style": "sentence_style",
+        "logo_usage_rules": "logo_usage_rules",
+        "photography_style": "photography_style",
+        "emoji_usage": "emoji_usage",
+        "cta_style": "cta_style",
+        "hashtag_strategy": "hashtag_strategy",
+        "regulatory_notes": "regulatory_notes",
+        "linkedin_rules": "linkedin_rules",
+        "instagram_rules": "instagram_rules",
+        "x_rules": "x_rules",
+        "meta_ads_rules": "meta_ads_rules",
+    }
+
+    for extract_key, profile_field in json_field_map.items():
+        value = extracted.get(extract_key)
+        if value and isinstance(value, list) and len(value) > 0:
+            setattr(profile, profile_field, json.dumps(value))
+            fields_updated += 1
+
+    for extract_key, profile_field in text_field_map.items():
+        value = extracted.get(extract_key)
+        if value and isinstance(value, str) and value.strip() and value.strip().lower() != "null":
+            setattr(profile, profile_field, value.strip())
+            fields_updated += 1
+
+    profile.updated_at = datetime.now(timezone.utc)
+    profile.version += 1
+    db.commit()
+    db.refresh(profile)
+
+    summary = extracted.get("summary", "Brand guide processed successfully.")
+
+    return BrandGuideExtractResponse(
+        status="success",
+        extracted_fields=fields_updated,
+        summary=summary,
+        profile=BrandProfileResponse.model_validate(profile),
+    )
 
 
 # ── Rejection Feedback ────────────────────────────────────────────────────────
