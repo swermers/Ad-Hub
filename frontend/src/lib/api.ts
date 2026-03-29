@@ -786,6 +786,10 @@ export interface GenerateRequest {
   template_type?: string;
   aspect_ratio?: string;
   industry_vertical?: string;
+  creative_preset?: string;
+  image_url?: string;
+  industry_colors?: Record<string, string>;
+  use_premium_model?: boolean;
 }
 
 export interface GenerateStatus {
