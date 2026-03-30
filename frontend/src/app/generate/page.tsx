@@ -587,7 +587,7 @@ function GenerateForm() {
                 // Show "None" always, plus presets that match selected industry or have no bestFor
                 if (p.value === "") return true;
                 if (!industryVertical) return true;
-                return p.bestFor.length === 0 || p.bestFor.includes(industryVertical);
+                return (p.bestFor?.length ?? 0) === 0 || p.bestFor?.includes(industryVertical);
               })
               .map((preset) => (
                 <ChipButton
