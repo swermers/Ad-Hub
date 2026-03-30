@@ -410,7 +410,7 @@ export default function PipelineView({
         <AnimatePresence>
           {stepStatuses.sharpen !== "pending" && (
             <StepCard
-              step={FULL_STEPS[0]}
+              step={STEPS[0]}
               status={stepStatuses.sharpen}
               isEditing={editingStep === "sharpen"}
               onApprove={() => handleApprove("sharpen")}

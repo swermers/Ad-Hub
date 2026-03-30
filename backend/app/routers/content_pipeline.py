@@ -482,6 +482,8 @@ async def quick_expand(
 
     pieces_spec = "\n".join([f"- {p['content_type']} for {p['platform']}" for p in pieces_to_gen])
 
+    brand_context = _get_brand_context(product, db)
+
     system_prompt = f"""You are a content creator generating platform-specific content directly from a content seed.
 
 Product: {product.name}
@@ -489,6 +491,8 @@ Description: {product.description}
 Target Audience: {product.target_audience or "General audience"}
 
 {voice_context}
+
+{brand_context}
 
 {prompt_set["voice_rules"]}
 
