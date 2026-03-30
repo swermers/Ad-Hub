@@ -340,8 +340,6 @@ export default function QueuePage() {
                   : "bg-transparent"
               }`}
               style={{
-                ringColor: isOver ? col.color : undefined,
-                // Use CSS custom property for ring color
                 ...(isOver
                   ? ({ "--tw-ring-color": col.color } as React.CSSProperties)
                   : {}),
