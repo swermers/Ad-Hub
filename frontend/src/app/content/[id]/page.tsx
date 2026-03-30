@@ -143,6 +143,7 @@ export default function ContentDetailPage() {
   const [refining, setRefining] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
   const [refineInstructions, setRefineInstructions] = useState("");
+  const [refineSuccess, setRefineSuccess] = useState(false);
   // Color override state
   const [colorOverride, setColorOverride] = useState<{ bg?: string; text?: string; accent?: string }>({});
   const [showColorPanel, setShowColorPanel] = useState(false);
@@ -423,6 +424,8 @@ export default function ContentDetailPage() {
       setEditTitle(result.title);
       setRefineOpen(false);
       setRefineInstructions("");
+      setRefineSuccess(true);
+      setTimeout(() => setRefineSuccess(false), 4000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Refinement failed");
     } finally {
@@ -905,15 +908,52 @@ export default function ContentDetailPage() {
         </div>
       )}
 
+      {/* Refine success toast */}
+      {refineSuccess && (
+        <div className="bg-[#4ade80]/10 border border-[#4ade80]/20 rounded-lg px-4 py-3 mb-4 flex items-center gap-3">
+          <span className="material-symbols-outlined text-[#4ade80] text-lg">check_circle</span>
+          <p className="text-sm text-[#4ade80]">Content refined successfully. Changes saved.</p>
+          <button onClick={() => setRefineSuccess(false)} className="ml-auto text-[#4ade80]/70 hover:text-[#4ade80] text-xs">Dismiss</button>
+        </div>
+      )}
+
       {/* Actions — primary row */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         {piece.status === "draft" && (
+          <>
+            <button
+              onClick={() => handleStatusChange("review")}
+              className="px-4 py-2 bg-[#FF9500]/20 text-[#FF9500] rounded-lg text-sm font-medium hover:bg-[#FF9500]/30 transition-colors"
+            >
+              Submit for Review
+            </button>
+            <button
+              onClick={() => handleStatusChange("approved")}
+              className="px-4 py-2 bg-[#4ade80]/20 text-[#4ade80] rounded-lg text-sm font-medium hover:bg-[#4ade80]/30 transition-colors"
+            >
+              Approve
+            </button>
+            <button
+              onClick={() => handleStatusChange("rejected")}
+              className="px-4 py-2 bg-[#201f21] text-[#ffb4ab] border border-[#ffb4ab]/20 rounded-lg text-sm font-medium hover:bg-[#ffb4ab]/10 transition-colors"
+            >
+              Reject
+            </button>
+          </>
+        )}
+        {piece.status === "review" && (
           <>
             <button
               onClick={() => handleStatusChange("approved")}
               className="px-4 py-2 bg-[#4ade80]/20 text-[#4ade80] rounded-lg text-sm font-medium hover:bg-[#4ade80]/30 transition-colors"
             >
               Approve
+            </button>
+            <button
+              onClick={() => handleStatusChange("draft")}
+              className="px-4 py-2 bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
+            >
+              Back to Draft
             </button>
             <button
               onClick={() => handleStatusChange("rejected")}
@@ -1197,8 +1237,9 @@ export default function ContentDetailPage() {
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { bg: string; dot: string }> = {
     draft: { bg: "bg-[#ffbd7f]/10 text-[#ffbd7f] border-[#ffbd7f]/20", dot: "bg-[#ffbd7f]" },
+    review: { bg: "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20", dot: "bg-[#FF9500]" },
     approved: { bg: "bg-[#4ade80]/10 text-[#4ade80] border-[#4ade80]/20", dot: "bg-[#4ade80]" },
-    posted: { bg: "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20", dot: "bg-[#FF9500]" },
+    posted: { bg: "bg-[#818cf8]/10 text-[#818cf8] border-[#818cf8]/20", dot: "bg-[#818cf8]" },
     rejected: { bg: "bg-[#ffb4ab]/10 text-[#ffb4ab] border-[#ffb4ab]/20", dot: "bg-[#ffb4ab]" },
   };
   const c = config[status] || { bg: "bg-white/5 text-[#dbc2ad] border-white/10", dot: "bg-[#E5E1E4]/40" };
