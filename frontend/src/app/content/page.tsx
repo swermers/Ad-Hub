@@ -239,6 +239,7 @@ export default function ContentPage() {
           <option value="">All Types</option>
           <option value="social_post">Social Post</option>
           <option value="ad_copy">Ad Copy</option>
+          <option value="video_ad">Video Ad</option>
           <option value="carousel">Carousel</option>
           <option value="story">Story / Reel</option>
           <option value="email">Email</option>
@@ -428,6 +429,7 @@ function GridCard({
   const isVisual =
     piece.content_type === "ad_copy" ||
     piece.content_type === "social_post" ||
+    piece.content_type === "video_ad" ||
     piece.content_type === "carousel" ||
     piece.content_type === "story";
 
@@ -552,6 +554,7 @@ function ListCard({
   const isVisual =
     piece.content_type === "ad_copy" ||
     piece.content_type === "social_post" ||
+    piece.content_type === "video_ad" ||
     piece.content_type === "carousel" ||
     piece.content_type === "story";
 
@@ -571,6 +574,7 @@ function ListCard({
   const typeLabel: Record<string, string> = {
     social_post: "Social Post",
     ad_copy: "Ad Copy",
+    video_ad: "Video Ad",
     carousel: "Carousel",
     story: "Story / Reel",
     email: "Email",
