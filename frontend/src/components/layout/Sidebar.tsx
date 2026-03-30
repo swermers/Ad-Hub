@@ -12,6 +12,7 @@ const navSections = [
       { href: "/studio", label: "Content Studio", icon: "auto_awesome" },
       { href: "/seeds", label: "Seed Bank", icon: "database" },
       { href: "/content", label: "Content Library", icon: "library_books" },
+      { href: "/queue", label: "Content Queue", icon: "view_kanban" },
       { href: "/generate", label: "Quick Generate", icon: "bolt" },
     ],
   },

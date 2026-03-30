@@ -105,7 +105,7 @@ def update_content_status(
     if not piece:
         raise HTTPException(status_code=404, detail="Content not found")
 
-    if data.status not in ("draft", "approved", "posted", "rejected"):
+    if data.status not in ("draft", "review", "approved", "posted", "rejected"):
         raise HTTPException(status_code=400, detail="Invalid status")
 
     piece.status = data.status

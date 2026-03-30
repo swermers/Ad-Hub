@@ -745,6 +745,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  pipelineQuickExpand: (data: PipelineQuickExpandRequest) =>
+    request<PipelineExpandResult>("/api/pipeline/quick-expand", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  pipelineRefine: (data: PipelineRefineRequest) =>
+    request<PipelineRefineResult>("/api/pipeline/refine", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
 
 // Types
@@ -1768,4 +1778,27 @@ export interface PipelineFinalizeResult {
   content_ids: string[];
   seed_id: string | null;
   pieces_saved: number;
+}
+
+export interface PipelineQuickExpandRequest {
+  product_id: string;
+  seed: PipelineSharpenResult;
+  voice_profile_id?: string;
+  platforms?: string[];
+  content_types?: string[];
+  include_video_script?: boolean;
+  include_thread?: boolean;
+}
+
+export interface PipelineRefineRequest {
+  content_id: string;
+  instructions?: string;
+  voice_profile_id?: string;
+}
+
+export interface PipelineRefineResult {
+  title: string;
+  body: string;
+  hook: string | null;
+  cta: string | null;
 }
