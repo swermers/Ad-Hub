@@ -223,6 +223,7 @@ export default function ContentPage() {
         >
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>
+          <option value="review">In Review</option>
           <option value="approved">Approved</option>
           <option value="posted">Posted</option>
           <option value="rejected">Rejected</option>
@@ -718,6 +719,7 @@ function StatusBadge({ status }: { status: string }) {
 function StatusDot({ status }: { status: string }) {
   const colors: Record<string, string> = {
     draft: "bg-[#ffbd7f]",
+    review: "bg-[#FF9500]",
     approved: "bg-[#4ade80]",
     posted: "bg-[#a4a7ff]",
     rejected: "bg-[#ffb4ab]",

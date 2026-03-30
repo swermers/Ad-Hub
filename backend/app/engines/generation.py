@@ -5,6 +5,163 @@ from app.engines.vectorstore import get_vectorstore
 from app.services.claude_client import call_claude
 
 
+# ─── Creative Presets ───────────────────────────────────────────────────────
+# Pre-built creative direction prompts that guide the AI toward specific
+# visual and copywriting styles. Users pick one from the UI instead of
+# writing a prompt from scratch.
+
+CREATIVE_PRESETS = {
+    "high_end_minimal": {
+        "label": "High-End Minimal",
+        "prompt": """CREATIVE DIRECTION — High-End Minimal:
+- Write like a luxury brand. Every word must earn its place.
+- Prefer single powerful statements over explanations.
+- Headlines should feel like magazine covers — sharp, aspirational, confident.
+- Body copy: one sentence max. If it needs two sentences, the first one wasn't good enough.
+- CTA: understated elegance. "Explore" not "Click Here Now!!!"
+- Avoid exclamation marks, ALL CAPS, and urgency language like "hurry" or "limited time".
+- Think Apple, Aesop, Porsche — premium restraint.""",
+    },
+    "bold_disruptor": {
+        "label": "Bold Disruptor",
+        "prompt": """CREATIVE DIRECTION — Bold Disruptor:
+- Write like a confident challenger brand. Break conventions.
+- Headlines should stop the scroll — contrarian takes, unexpected angles, bold claims.
+- Use tension: "Everyone does X. That's the problem." or "What if Y was a lie?"
+- Short, punchy sentences. Let white space do the work.
+- CTA should feel like a dare or invitation, not a request.
+- Think Oatly, Liquid Death, Cards Against Humanity — brave and memorable.""",
+    },
+    "warm_trust": {
+        "label": "Warm & Trustworthy",
+        "prompt": """CREATIVE DIRECTION — Warm & Trustworthy:
+- Write like a knowledgeable friend who genuinely wants to help.
+- Headlines should feel personal and relatable — "you" language, shared experiences.
+- Body copy should build confidence without being pushy.
+- Use social proof naturally: "Join 10,000+ families who..."
+- CTA should feel like the natural next step, not a sales push.
+- Think Airbnb, Warby Parker, Patagonia — authentic and approachable.""",
+    },
+    "data_driven": {
+        "label": "Data-Driven Impact",
+        "prompt": """CREATIVE DIRECTION — Data-Driven Impact:
+- Lead with numbers, stats, and concrete proof.
+- Headlines should feature a compelling metric: "2.4x faster", "$47K saved", "97% satisfaction".
+- Body copy: translate the stat into what it means for the reader.
+- Avoid vague claims. Every benefit should be quantified or specific.
+- CTA should feel like a logical next step after seeing the evidence.
+- Think Bloomberg, Stripe, HubSpot — credible and results-oriented.""",
+    },
+    "storyteller": {
+        "label": "Story-Driven",
+        "prompt": """CREATIVE DIRECTION — Story-Driven:
+- Open with a scene, moment, or mini-narrative the audience recognizes.
+- Headlines should create curiosity: start in the middle of the story.
+- Body copy should paint a picture — sensory details, specific moments.
+- Focus on transformation: before/after, the moment everything changed.
+- CTA should feel like "your turn" — an invitation to start their own story.
+- Think Nike, Dove, Humans of New York — emotional and memorable.""",
+    },
+    "real_estate_listing": {
+        "label": "Real Estate Listing",
+        "prompt": """CREATIVE DIRECTION — Real Estate Listing:
+- Write like a top-producing luxury real estate agent.
+- Headlines should create desire: lifestyle-first, not just features.
+  Good: "Your Sunday mornings, reimagined" / Bad: "3BR 2BA for sale"
+- Body copy: paint the lifestyle. Mention the neighborhood feel, the light, the experience.
+- If a listing photo is provided, reference what makes it special — the view, the kitchen, the space.
+- Include key details naturally: beds/baths, square footage, notable features — but weave them into the story.
+- CTA: "Schedule a private showing", "See this home", "Book your tour" — never "Buy now".
+- Avoid generic real estate clichés like "dream home", "move-in ready", "won't last long".
+- Think Compass, Sotheby's, The Agency — premium, editorial, aspirational.""",
+    },
+    "saas_product": {
+        "label": "SaaS / Tech Product",
+        "prompt": """CREATIVE DIRECTION — SaaS / Tech Product:
+- Write like a product marketer at a top-tier SaaS company.
+- Headlines should name the pain point or outcome directly: "Stop losing deals to slow follow-up".
+- Body copy: one clear benefit, stated concretely. Avoid feature lists.
+- Use "you/your" language. The reader should see themselves immediately.
+- CTA should be low-friction: "Start free", "See it in action", "Try for free".
+- Avoid buzzwords: "revolutionary", "cutting-edge", "game-changing", "synergy".
+- Think Linear, Notion, Figma — clear, sharp, developer-friendly.""",
+    },
+    "ecommerce_conversion": {
+        "label": "E-Commerce Conversion",
+        "prompt": """CREATIVE DIRECTION — E-Commerce Conversion:
+- Write for immediate desire and action.
+- Headlines should trigger want: highlight the transformation, the feeling, the result.
+- Body copy: social proof + scarcity + benefit in one punchy sentence.
+- Use sensory language for physical products — how it feels, looks, sounds.
+- CTA should be direct and action-oriented: "Shop now", "Get yours", "Add to bag".
+- Think Glossier, Allbirds, Away — desirable, clean, conversion-optimized.""",
+    },
+    "local_business": {
+        "label": "Local Business",
+        "prompt": """CREATIVE DIRECTION — Local Business:
+- Write like a trusted neighborhood business that people recommend to friends.
+- Headlines should feel local and personal — mention the community, the area, the shared experience.
+- Body copy: emphasize proximity, personal touch, and real results from real neighbors.
+- Use informal, warm language. First names, local landmarks, neighborhood references.
+- CTA: "Visit us today", "Call for a free estimate", "Stop by this weekend".
+- Think local bakery, family dentist, neighborhood gym — personal and genuine.""",
+    },
+}
+
+# ─── Industry-specific color palettes (mirrors frontend industryThemes.ts) ──
+
+INDUSTRY_COLOR_PALETTES = {
+    "saas-tech": {
+        "background": "#0f1117",
+        "text": "#f0f0f5",
+        "accent": "#6366f1",
+        "accentSecondary": "#818cf8",
+    },
+    "fintech": {
+        "background": "#0a0f0d",
+        "text": "#e8f5e9",
+        "accent": "#22c55e",
+        "accentSecondary": "#4ade80",
+    },
+    "ecommerce": {
+        "background": "#1a1008",
+        "text": "#fff8f0",
+        "accent": "#f59e0b",
+        "accentSecondary": "#fb923c",
+    },
+    "healthcare": {
+        "background": "#0f1a1a",
+        "text": "#e0f2f1",
+        "accent": "#14b8a6",
+        "accentSecondary": "#5eead4",
+    },
+    "edtech": {
+        "background": "#140f1a",
+        "text": "#f3e8ff",
+        "accent": "#a855f7",
+        "accentSecondary": "#c084fc",
+    },
+    "real-estate": {
+        "background": "#0c0f1a",
+        "text": "#f5f0e8",
+        "accent": "#d4a537",
+        "accentSecondary": "#e8c468",
+    },
+    "fitness": {
+        "background": "#1a0a0a",
+        "text": "#fff0f0",
+        "accent": "#ef4444",
+        "accentSecondary": "#f97316",
+    },
+    "creative": {
+        "background": "#0f0a14",
+        "text": "#f8f0ff",
+        "accent": "#ec4899",
+        "accentSecondary": "#06b6d4",
+    },
+}
+
+
 # Templates suitable for auto-assignment during batch generation
 VISUAL_TEMPLATES = [
     "bold_hook",
@@ -236,6 +393,11 @@ async def generate_content_batch(
     instructions: str | None = None,
     brand_profile=None,
     template_type: str | None = None,
+    industry_vertical: str | None = None,
+    creative_preset: str | None = None,
+    image_url: str | None = None,
+    industry_colors: dict | None = None,
+    use_premium_model: bool = False,
 ) -> list[dict]:
     """Generate a batch of content pieces using RAG + Claude."""
 
@@ -257,7 +419,34 @@ async def generate_content_batch(
     # Build brand constraints from structured profile
     brand_constraints = _build_brand_constraints(brand_profile)
 
-    system_prompt = f"""You are an expert marketing content creator. You create high-quality, engaging content that drives results.
+    # Build creative direction from preset
+    creative_direction = ""
+    if creative_preset and creative_preset in CREATIVE_PRESETS:
+        creative_direction = CREATIVE_PRESETS[creative_preset]["prompt"]
+
+    # Build color guidance from industry vertical
+    color_guidance = ""
+    colors = industry_colors or INDUSTRY_COLOR_PALETTES.get(industry_vertical or "", None)
+    if colors:
+        color_guidance = f"""
+VISUAL COLOR PALETTE (use these exact colors for ad styling):
+- Background: {colors.get('background', '#0f1117')}
+- Text: {colors.get('text', '#f0f0f5')}
+- Accent/CTA: {colors.get('accent', '#6366f1')}
+- Secondary accent: {colors.get('accentSecondary', colors.get('accent', '#6366f1'))}
+For each variation, return backgroundColor, textColor, and accentColor from this palette."""
+
+    # Build image context
+    image_context = ""
+    if image_url:
+        image_context = f"""
+HERO IMAGE: The user has provided a product/listing image at: {image_url}
+- Reference this image in your copy where relevant.
+- The image will be displayed as the background/hero of the ad template.
+- Write copy that complements and enhances the image, not competes with it.
+- Keep text concise since it will overlay on the image."""
+
+    system_prompt = f"""You are an expert marketing content creator and visual ad designer. You create high-quality, engaging content that drives results and looks premium.
 
 Product: {product.name}
 Description: {product.description}
@@ -269,10 +458,25 @@ Differentiators: {product.differentiators or "Not specified"}
 
 {brand_constraints}
 
+{creative_direction}
+
+{color_guidance}
+
+{image_context}
+
 Funnel Stage: {funnel_stage}
 {FUNNEL_STAGE_CONTEXT.get(funnel_stage, "")}
 
+{f"Industry Vertical: {industry_vertical}" if industry_vertical else ""}
+
 {f"Product Knowledge Context: {rag_context}" if rag_context else ""}
+
+DESIGN QUALITY STANDARDS:
+- Every ad must look like it was designed by a professional creative agency.
+- Copy should be tight and intentional — no filler words, no generic marketing speak.
+- Headlines should be scroll-stopping. If it doesn't make you pause, rewrite it.
+- Body text should be one powerful statement, not a paragraph.
+- CTAs should feel natural and low-pressure while being action-oriented.
 
 IMPORTANT: Only use factual information from the provided context. Do not invent features or claims.
 {f"IMPORTANT: Follow ALL brand voice constraints and content rules above. They are mandatory, not suggestions." if brand_constraints else ""}"""
@@ -330,13 +534,18 @@ Return your response as a JSON array with this structure:
         "body": "the full content text",
         "hook": "the opening hook or headline (max 30 chars for ads)",
         "cta": "the call to action (max 15 chars for ads)",
+        "backgroundColor": "#hex — dominant background",
+        "textColor": "#hex — text color",
+        "accentColor": "#hex — CTA/accent color",
         "slide_headlines": "optional — pipe-delimited slide headlines for carousel format"
     }}
 ]
 
 Return ONLY the JSON array, no additional text or markdown formatting."""
 
-            result = await call_claude(user_prompt, system=system_prompt)
+            # Use premium model for ad_copy and when user requests it
+            use_premium = use_premium_model or content_type in ("ad_copy", "carousel", "story")
+            result = await call_claude(user_prompt, system=system_prompt, premium=use_premium)
 
             # Parse the response
             try:
@@ -364,10 +573,13 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                     "input_tokens": result["input_tokens"],
                     "output_tokens": result["output_tokens"],
                     "funnel_stage": funnel_stage,
+                    "creative_preset": creative_preset,
+                    "industry_vertical": industry_vertical,
                 }
-                # Store carousel slide headlines in metadata if present
                 if piece.get("slide_headlines"):
                     piece_meta["slide_headlines"] = piece["slide_headlines"]
+                if image_url:
+                    piece_meta["image_url"] = image_url
                 piece_dict = {
                     "content_type": content_type,
                     "platform": platform,
@@ -378,6 +590,10 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                     "template_type": assigned_template,
                     "metadata": json.dumps(piece_meta),
                 }
+                # Pass through AI-suggested colors
+                for color_key in ("backgroundColor", "textColor", "accentColor"):
+                    if piece.get(color_key):
+                        piece_dict[color_key] = piece[color_key]
                 # Enforce template character limits as safety net
                 _enforce_template_limits(piece_dict, assigned_template)
                 all_pieces.append(piece_dict)
@@ -394,6 +610,11 @@ def generate_content_batch_sync(
     instructions: str | None = None,
     brand_profile=None,
     template_type: str | None = None,
+    industry_vertical: str | None = None,
+    creative_preset: str | None = None,
+    image_url: str | None = None,
+    industry_colors: dict | None = None,
+    use_premium_model: bool = False,
 ) -> list[dict]:
     """Sync version of generate_content_batch for background threads."""
     from app.services.claude_client import call_claude_sync
@@ -414,7 +635,34 @@ def generate_content_batch_sync(
     # Build brand constraints from structured profile
     brand_constraints = _build_brand_constraints(brand_profile)
 
-    system_prompt = f"""You are an expert marketing content creator. You create high-quality, engaging content that drives results.
+    # Build creative direction from preset
+    creative_direction = ""
+    if creative_preset and creative_preset in CREATIVE_PRESETS:
+        creative_direction = CREATIVE_PRESETS[creative_preset]["prompt"]
+
+    # Build color guidance from industry vertical
+    color_guidance = ""
+    colors = industry_colors or INDUSTRY_COLOR_PALETTES.get(industry_vertical or "", None)
+    if colors:
+        color_guidance = f"""
+VISUAL COLOR PALETTE (use these exact colors for ad styling):
+- Background: {colors.get('background', '#0f1117')}
+- Text: {colors.get('text', '#f0f0f5')}
+- Accent/CTA: {colors.get('accent', '#6366f1')}
+- Secondary accent: {colors.get('accentSecondary', colors.get('accent', '#6366f1'))}
+For each variation, return backgroundColor, textColor, and accentColor from this palette."""
+
+    # Build image context
+    image_context = ""
+    if image_url:
+        image_context = f"""
+HERO IMAGE: The user has provided a product/listing image at: {image_url}
+- Reference this image in your copy where relevant (e.g., "as shown", "pictured").
+- The image will be displayed as the background/hero of the ad template.
+- Write copy that complements and enhances the image, not competes with it.
+- Keep text concise since it will overlay on the image."""
+
+    system_prompt = f"""You are an expert marketing content creator and visual ad designer. You create high-quality, engaging content that drives results and looks premium.
 
 Product: {product.name}
 Description: {product.description}
@@ -426,10 +674,25 @@ Differentiators: {product.differentiators or "Not specified"}
 
 {brand_constraints}
 
+{creative_direction}
+
+{color_guidance}
+
+{image_context}
+
 Funnel Stage: {funnel_stage}
 {FUNNEL_STAGE_CONTEXT.get(funnel_stage, "")}
 
+{f"Industry Vertical: {industry_vertical}" if industry_vertical else ""}
+
 {f"Product Knowledge Context: {rag_context}" if rag_context else ""}
+
+DESIGN QUALITY STANDARDS:
+- Every ad must look like it was designed by a professional creative agency.
+- Copy should be tight and intentional — no filler words, no generic marketing speak.
+- Headlines should be scroll-stopping. If it doesn't make you pause, rewrite it.
+- Body text should be one powerful statement, not a paragraph.
+- CTAs should feel natural and low-pressure while being action-oriented.
 
 IMPORTANT: Only use factual information from the provided context. Do not invent features or claims.
 {f"IMPORTANT: Follow ALL brand voice constraints and content rules above. They are mandatory, not suggestions." if brand_constraints else ""}"""
@@ -487,13 +750,18 @@ Return your response as a JSON array with this structure:
         "body": "the full content text",
         "hook": "the opening hook or headline (max 30 chars for ads)",
         "cta": "the call to action (max 15 chars for ads)",
+        "backgroundColor": "#hex — dominant background",
+        "textColor": "#hex — text color",
+        "accentColor": "#hex — CTA/accent color",
         "slide_headlines": "optional — pipe-delimited slide headlines for carousel format"
     }}
 ]
 
 Return ONLY the JSON array, no additional text or markdown formatting."""
 
-            result = call_claude_sync(user_prompt, system=system_prompt)
+            # Use premium model for ad_copy and when user requests it
+            use_premium = use_premium_model or content_type in ("ad_copy", "carousel", "story")
+            result = call_claude_sync(user_prompt, system=system_prompt, premium=use_premium)
 
             try:
                 text = result["content"].strip()
@@ -520,9 +788,13 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                     "input_tokens": result["input_tokens"],
                     "output_tokens": result["output_tokens"],
                     "funnel_stage": funnel_stage,
+                    "creative_preset": creative_preset,
+                    "industry_vertical": industry_vertical,
                 }
                 if piece.get("slide_headlines"):
                     piece_meta["slide_headlines"] = piece["slide_headlines"]
+                if image_url:
+                    piece_meta["image_url"] = image_url
                 piece_dict = {
                     "content_type": content_type,
                     "platform": platform,
@@ -533,6 +805,10 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                     "template_type": assigned_template,
                     "metadata": json.dumps(piece_meta),
                 }
+                # Pass through AI-suggested colors
+                for color_key in ("backgroundColor", "textColor", "accentColor"):
+                    if piece.get(color_key):
+                        piece_dict[color_key] = piece[color_key]
                 # Enforce template character limits as safety net
                 _enforce_template_limits(piece_dict, assigned_template)
                 all_pieces.append(piece_dict)

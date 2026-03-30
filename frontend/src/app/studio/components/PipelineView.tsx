@@ -12,14 +12,20 @@ import {
 
 /* ── Pipeline step definitions ─────────────────────────────────────────────── */
 
-const STEPS = [
+const FULL_STEPS = [
   { id: "sharpen", label: "Idea Sharpener", icon: "diamond", desc: "Finding the core observation" },
   { id: "draft", label: "Newsletter Draft", icon: "edit_note", desc: "Writing the primary piece" },
   { id: "expand", label: "Multi-format", icon: "hub", desc: "Expanding to all platforms" },
   { id: "finalize", label: "Finalize", icon: "check_circle", desc: "Saving to your content library" },
 ] as const;
 
-type StepId = (typeof STEPS)[number]["id"];
+const QUICK_STEPS = [
+  { id: "sharpen", label: "Idea Sharpener", icon: "diamond", desc: "Finding the core observation" },
+  { id: "expand", label: "Multi-format", icon: "hub", desc: "Generating platform content" },
+  { id: "finalize", label: "Finalize", icon: "check_circle", desc: "Saving to your content library" },
+] as const;
+
+type StepId = "sharpen" | "draft" | "expand" | "finalize";
 type StepStatus = "pending" | "running" | "done" | "error";
 
 interface PipelineViewProps {
@@ -45,9 +51,13 @@ export default function PipelineView({
   onComplete,
   onReset,
 }: PipelineViewProps) {
+  // Quick mode = newsletter not in selectedOutputs
+  const quickMode = !selectedOutputs.includes("newsletter");
+  const STEPS = quickMode ? QUICK_STEPS : FULL_STEPS;
+
   const [stepStatuses, setStepStatuses] = useState<Record<StepId, StepStatus>>({
     sharpen: "running",
-    draft: "pending",
+    draft: quickMode ? "done" : "pending",  // skip draft in quick mode
     expand: "pending",
     finalize: "pending",
   });
@@ -97,7 +107,11 @@ export default function PipelineView({
       setStatus("sharpen", "done");
 
       if (autoRun) {
-        runDraft(result);
+        if (quickMode) {
+          runQuickExpand(result);
+        } else {
+          runDraft(result);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sharpening failed");
@@ -129,6 +143,42 @@ export default function PipelineView({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Drafting failed");
       setStatus("draft", "error");
+    }
+  };
+
+  const runQuickExpand = async (seed?: PipelineSharpenResult) => {
+    const seedData = seed || sharpenResult;
+    if (!seedData) return;
+
+    setError(null);
+    setStatus("expand", "running");
+    setCurrentStep("expand");
+
+    const platforms = selectedOutputs.includes("social")
+      ? ["twitter", "linkedin", "meta"]
+      : ["twitter", "linkedin"];
+
+    const contentTypes = ["social_post"];
+
+    try {
+      const result = await api.pipelineQuickExpand({
+        product_id: productId,
+        seed: seedData,
+        voice_profile_id: voiceProfileId || undefined,
+        platforms,
+        content_types: contentTypes,
+        include_video_script: selectedOutputs.includes("video_script"),
+        include_thread: selectedOutputs.includes("x_thread"),
+      });
+      setExpandResult(result.pieces);
+      setStatus("expand", "done");
+
+      if (autoRun) {
+        runFinalize(seedData, undefined, result.pieces);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Expansion failed");
+      setStatus("expand", "error");
     }
   };
 
@@ -175,15 +225,17 @@ export default function PipelineView({
     const seedData = seed || sharpenResult;
     const draftData = draft || draftResult;
     const piecesData = pieces || expandResult;
-    if (!seedData || !draftData || !piecesData) return;
+    if (!seedData || !piecesData) return;
 
     setError(null);
     setStatus("finalize", "running");
     setCurrentStep("finalize");
 
-    // Combine newsletter draft + expanded pieces
-    const allPieces: PipelineExpandedPiece[] = [
-      {
+    // In full mode, combine newsletter draft + expanded pieces
+    // In quick mode, just use expanded pieces directly
+    const allPieces: PipelineExpandedPiece[] = [];
+    if (draftData) {
+      allPieces.push({
         content_type: "newsletter",
         platform: "general",
         title: draftData.title,
@@ -192,9 +244,9 @@ export default function PipelineView({
         cta: null,
         funnel_stage: "awareness",
         metadata: { template_used: draftData.template_used, preview_text: draftData.preview_text },
-      },
-      ...piecesData,
-    ];
+      });
+    }
+    allPieces.push(...piecesData);
 
     try {
       const result = await api.pipelineFinalize({
@@ -215,15 +267,20 @@ export default function PipelineView({
   /* ── Approve / Regenerate handlers ──────────────────────────────────────── */
 
   const handleApprove = (step: StepId) => {
-    if (step === "sharpen") runDraft();
-    else if (step === "draft") runExpand();
+    if (step === "sharpen") {
+      if (quickMode) runQuickExpand();
+      else runDraft();
+    } else if (step === "draft") runExpand();
     else if (step === "expand") runFinalize();
   };
 
   const handleRegenerate = (step: StepId) => {
     if (step === "sharpen") runSharpen();
     else if (step === "draft") runDraft();
-    else if (step === "expand") runExpand();
+    else if (step === "expand") {
+      if (quickMode) runQuickExpand();
+      else runExpand();
+    }
   };
 
   /* ── Edit helpers ───────────────────────────────────────────────────────── */
@@ -249,9 +306,10 @@ export default function PipelineView({
 
   /* ── Progress calculation ───────────────────────────────────────────────── */
 
-  const doneCount = Object.values(stepStatuses).filter((s) => s === "done").length;
+  const activeStepIds = STEPS.map((s) => s.id as StepId);
+  const doneCount = activeStepIds.filter((id) => stepStatuses[id] === "done").length;
   const progressPct = Math.round((doneCount / STEPS.length) * 100);
-  const activeStep = STEPS.find((s) => stepStatuses[s.id] === "running");
+  const activeStep = STEPS.find((s) => stepStatuses[s.id as StepId] === "running");
 
   return (
     <motion.div
@@ -264,7 +322,7 @@ export default function PipelineView({
       <div className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl px-5 py-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50">
-            Content Pipeline
+            {quickMode ? "Quick Pipeline" : "Content Pipeline"}
           </span>
           <span className="text-sm font-bold text-[#FF9500]">
             {progressPct}%{" "}
@@ -285,7 +343,7 @@ export default function PipelineView({
           />
           <div className="relative flex justify-between w-full">
             {STEPS.map((step) => {
-              const status = stepStatuses[step.id];
+              const status = stepStatuses[step.id as StepId];
               return (
                 <div key={step.id} className="flex flex-col items-center gap-1.5">
                   <div
@@ -377,40 +435,42 @@ export default function PipelineView({
           )}
         </AnimatePresence>
 
-        {/* Step 2: Draft */}
-        <AnimatePresence>
-          {stepStatuses.draft !== "pending" && (
-            <StepCard
-              step={STEPS[1]}
-              status={stepStatuses.draft}
-              isEditing={editingStep === "draft"}
-              onApprove={() => handleApprove("draft")}
-              onRegenerate={() => handleRegenerate("draft")}
-              onEdit={() => startEdit("draft")}
-              showActions={stepStatuses.draft === "done" && stepStatuses.expand === "pending"}
-            >
-              {stepStatuses.draft === "running" && <StepLoading />}
-              {stepStatuses.draft === "done" && draftResult && (
-                editingStep === "draft" ? (
-                  <EditView
-                    value={editBuffer}
-                    onChange={setEditBuffer}
-                    onSave={saveEdit}
-                    onCancel={() => setEditingStep(null)}
-                  />
-                ) : (
-                  <DraftOutput data={draftResult} />
-                )
-              )}
-            </StepCard>
-          )}
-        </AnimatePresence>
+        {/* Step 2: Draft (skipped in quick mode) */}
+        {!quickMode && (
+          <AnimatePresence>
+            {stepStatuses.draft !== "pending" && (
+              <StepCard
+                step={FULL_STEPS[1]}
+                status={stepStatuses.draft}
+                isEditing={editingStep === "draft"}
+                onApprove={() => handleApprove("draft")}
+                onRegenerate={() => handleRegenerate("draft")}
+                onEdit={() => startEdit("draft")}
+                showActions={stepStatuses.draft === "done" && stepStatuses.expand === "pending"}
+              >
+                {stepStatuses.draft === "running" && <StepLoading />}
+                {stepStatuses.draft === "done" && draftResult && (
+                  editingStep === "draft" ? (
+                    <EditView
+                      value={editBuffer}
+                      onChange={setEditBuffer}
+                      onSave={saveEdit}
+                      onCancel={() => setEditingStep(null)}
+                    />
+                  ) : (
+                    <DraftOutput data={draftResult} />
+                  )
+                )}
+              </StepCard>
+            )}
+          </AnimatePresence>
+        )}
 
         {/* Step 3: Expand */}
         <AnimatePresence>
           {stepStatuses.expand !== "pending" && (
             <StepCard
-              step={STEPS[2]}
+              step={quickMode ? QUICK_STEPS[1] : FULL_STEPS[2]}
               status={stepStatuses.expand}
               isEditing={false}
               onApprove={() => handleApprove("expand")}
@@ -430,7 +490,7 @@ export default function PipelineView({
         <AnimatePresence>
           {stepStatuses.finalize !== "pending" && (
             <StepCard
-              step={STEPS[3]}
+              step={quickMode ? QUICK_STEPS[2] : FULL_STEPS[3]}
               status={stepStatuses.finalize}
               isEditing={false}
               onApprove={() => {}}
@@ -492,7 +552,7 @@ function StepCard({
   showActions,
   children,
 }: {
-  step: (typeof STEPS)[number];
+  step: { id: string; label: string; icon: string; desc: string };
   status: StepStatus;
   isEditing: boolean;
   onApprove: () => void;

@@ -16,6 +16,19 @@ const stagger = {
   animate: { transition: { staggerChildren: 0.08 } },
 };
 
+const CREATIVE_PRESETS = [
+  { value: "", label: "None", description: "No creative direction — use default generation" },
+  { value: "high_end_minimal", label: "High-End Minimal", description: "Luxury brand restraint — Apple, Aesop, Porsche", bestFor: ["saas-tech", "fintech", "real-estate"] },
+  { value: "bold_disruptor", label: "Bold Disruptor", description: "Challenger brand energy — contrarian, scroll-stopping", bestFor: ["ecommerce", "fitness", "creative"] },
+  { value: "warm_trust", label: "Warm & Trustworthy", description: "Approachable and genuine — Airbnb, Patagonia", bestFor: ["healthcare", "edtech", "real-estate"] },
+  { value: "data_driven", label: "Data-Driven Impact", description: "Lead with numbers and proof — Bloomberg, Stripe", bestFor: ["saas-tech", "fintech"] },
+  { value: "storyteller", label: "Story-Driven", description: "Emotional narratives — Nike, Dove", bestFor: ["fitness", "healthcare", "creative"] },
+  { value: "real_estate_listing", label: "Real Estate Listing", description: "Luxury listings — lifestyle-first, editorial", bestFor: ["real-estate"] },
+  { value: "saas_product", label: "SaaS / Tech Product", description: "Clear, sharp product marketing — Linear, Notion", bestFor: ["saas-tech", "edtech"] },
+  { value: "ecommerce_conversion", label: "E-Commerce", description: "Desire + conversion — Glossier, Allbirds", bestFor: ["ecommerce"] },
+  { value: "local_business", label: "Local Business", description: "Neighborhood trust — personal, warm, community", bestFor: [] },
+];
+
 const TEMPLATE_CHOICES = [
   { value: "", label: "Auto (Best for platform)" },
   { value: "bold_hook", label: "Bold Hook" },
@@ -190,6 +203,9 @@ function GenerateForm() {
   const [aspectRatio, setAspectRatio] = useState("");
   const [industryVertical, setIndustryVertical] = useState("");
   const [logoFile, setLogoFile] = useState<string>("");
+  const [creativePreset, setCreativePreset] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [usePremiumModel, setUsePremiumModel] = useState(false);
 
   useEffect(() => {
     api
@@ -202,12 +218,33 @@ function GenerateForm() {
       .finally(() => setLoading(false));
   }, [productId]);
 
+  // Auto-suggest a creative preset when industry changes
+  useEffect(() => {
+    if (!industryVertical || creativePreset) return;
+    const autoMap: Record<string, string> = {
+      "real-estate": "real_estate_listing",
+      "saas-tech": "saas_product",
+      "ecommerce": "ecommerce_conversion",
+      "fintech": "data_driven",
+      "healthcare": "warm_trust",
+      "fitness": "bold_disruptor",
+      "creative": "bold_disruptor",
+      "edtech": "warm_trust",
+    };
+    const suggested = autoMap[industryVertical];
+    if (suggested) setCreativePreset(suggested);
+  }, [industryVertical, creativePreset]);
+
   const handleGenerate = async () => {
     if (!productId) return;
     setGenerating(true);
     setStatus(null);
 
     try {
+      // Get industry colors if a vertical is selected
+      const theme = industryVertical ? getTheme(industryVertical) : undefined;
+      const industryColors = theme ? theme.colors : undefined;
+
       const result = await api.generateContent(productId, {
         content_types: contentTypes,
         platforms,
@@ -217,6 +254,10 @@ function GenerateForm() {
         template_type: templateType || undefined,
         aspect_ratio: aspectRatio || undefined,
         industry_vertical: industryVertical || undefined,
+        creative_preset: creativePreset || undefined,
+        image_url: imageUrl || undefined,
+        industry_colors: industryColors,
+        use_premium_model: usePremiumModel,
       });
       setStatus(result);
 
@@ -532,6 +573,42 @@ function GenerateForm() {
           })()}
         </motion.div>
 
+        {/* Creative Preset */}
+        <motion.div {...fadeUp(0.24)}>
+          <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
+            Creative Direction
+          </p>
+          <p className="text-xs text-[#E5E1E4]/30 mb-3 font-mono">
+            Sets the tone, style, and copywriting approach for generated ads
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {CREATIVE_PRESETS
+              .filter((p) => {
+                // Show "None" always, plus presets that match selected industry or have no bestFor
+                if (p.value === "") return true;
+                if (!industryVertical) return true;
+                return (p.bestFor?.length ?? 0) === 0 || p.bestFor?.includes(industryVertical);
+              })
+              .map((preset) => (
+                <ChipButton
+                  key={preset.value}
+                  active={creativePreset === preset.value}
+                  onClick={() => setCreativePreset(preset.value)}
+                >
+                  {preset.label}
+                </ChipButton>
+              ))}
+          </div>
+          {creativePreset && (() => {
+            const preset = CREATIVE_PRESETS.find((p) => p.value === creativePreset);
+            return preset ? (
+              <p className="mt-2 text-xs text-[#E5E1E4]/40 font-mono">
+                {preset.description}
+              </p>
+            ) : null;
+          })()}
+        </motion.div>
+
         {/* Visual Template */}
         <motion.div {...fadeUp(0.26)}>
           <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
@@ -681,6 +758,74 @@ function GenerateForm() {
           </div>
         </motion.div>
 
+        {/* Hero Image URL */}
+        <motion.div {...fadeUp(0.39)}>
+          <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
+            Hero Image URL
+          </p>
+          <p className="text-xs text-[#E5E1E4]/30 mb-3 font-mono">
+            Paste a URL to a listing photo, product shot, or hero image to use in templates
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://example.com/listing-photo.jpg"
+              className="flex-1 px-4 py-3 glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl text-sm text-[#E5E1E4] placeholder:text-[#E5E1E4]/20 focus:outline-none focus:border-[#FF9500]/50 transition-colors"
+            />
+            {imageUrl && (
+              <button
+                onClick={() => setImageUrl("")}
+                className="text-[#ffb4ab] text-xs hover:underline shrink-0"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {imageUrl && (
+            <div className="mt-3 rounded-xl overflow-hidden border border-[#554334]/30 w-32 h-32">
+              <img
+                src={imageUrl}
+                alt="Preview"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            </div>
+          )}
+        </motion.div>
+
+        {/* Premium Model Toggle */}
+        <motion.div {...fadeUp(0.40)}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1">
+                Premium Quality
+              </p>
+              <p className="text-xs text-[#E5E1E4]/30 font-mono">
+                Uses Claude Opus for sharper, more nuanced ad copy (auto-enabled for ad copy)
+              </p>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setUsePremiumModel(!usePremiumModel)}
+              className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${
+                usePremiumModel
+                  ? "bg-[#FF9500]"
+                  : "bg-[#353437]/60"
+              }`}
+            >
+              <motion.div
+                className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md"
+                animate={{ left: usePremiumModel ? 24 : 4 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+            </motion.button>
+          </div>
+        </motion.div>
+
         {/* Instructions */}
         <motion.div {...fadeUp(0.42)}>
           <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-3">
@@ -693,7 +838,15 @@ function GenerateForm() {
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
             rows={3}
-            placeholder="e.g., Focus on the new curation features and how they save time..."
+            placeholder={
+              industryVertical === "real-estate"
+                ? "e.g., 4BR/3BA in Westlake, $1.2M, focus on the open kitchen and backyard views..."
+                : industryVertical === "saas-tech"
+                ? "e.g., Focus on the new AI features and how they save 5+ hours per week..."
+                : industryVertical === "ecommerce"
+                ? "e.g., Summer collection drop, highlight the linen fabric and earth tones..."
+                : "e.g., Focus on the new curation features and how they save time..."
+            }
             className="w-full px-4 py-3 glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl text-sm text-[#E5E1E4] placeholder:text-[#E5E1E4]/20 focus:outline-none focus:border-[#FF9500]/50 transition-colors resize-none"
           />
         </motion.div>

@@ -139,6 +139,11 @@ export default function ContentDetailPage() {
   const imageGenPollRef = useRef<NodeJS.Timeout | null>(null);
   const [exportingFrame, setExportingFrame] = useState(false);
   const frameExportRef = useRef<HTMLDivElement>(null);
+  // Inline refinement state
+  const [refining, setRefining] = useState(false);
+  const [refineOpen, setRefineOpen] = useState(false);
+  const [refineInstructions, setRefineInstructions] = useState("");
+  const [refineSuccess, setRefineSuccess] = useState(false);
   // Color override state
   const [colorOverride, setColorOverride] = useState<{ bg?: string; text?: string; accent?: string }>({});
   const [showColorPanel, setShowColorPanel] = useState(false);
@@ -395,6 +400,36 @@ export default function ContentDetailPage() {
       setError(err instanceof Error ? err.message : "Frame export failed");
     } finally {
       setExportingFrame(false);
+    }
+  };
+
+  const handleRefine = async () => {
+    if (!piece) return;
+    setRefining(true);
+    setError(null);
+    try {
+      const result = await api.pipelineRefine({
+        content_id: piece.id,
+        instructions: refineInstructions || undefined,
+      });
+      // Update the piece with refined content
+      const updated = await api.updateContent(piece.id, {
+        title: result.title,
+        body: result.body,
+        hook: result.hook ?? undefined,
+        cta: result.cta ?? undefined,
+      });
+      setPiece(updated);
+      setEditBody(result.body);
+      setEditTitle(result.title);
+      setRefineOpen(false);
+      setRefineInstructions("");
+      setRefineSuccess(true);
+      setTimeout(() => setRefineSuccess(false), 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Refinement failed");
+    } finally {
+      setRefining(false);
     }
   };
 
@@ -873,15 +908,52 @@ export default function ContentDetailPage() {
         </div>
       )}
 
+      {/* Refine success toast */}
+      {refineSuccess && (
+        <div className="bg-[#4ade80]/10 border border-[#4ade80]/20 rounded-lg px-4 py-3 mb-4 flex items-center gap-3">
+          <span className="material-symbols-outlined text-[#4ade80] text-lg">check_circle</span>
+          <p className="text-sm text-[#4ade80]">Content refined successfully. Changes saved.</p>
+          <button onClick={() => setRefineSuccess(false)} className="ml-auto text-[#4ade80]/70 hover:text-[#4ade80] text-xs">Dismiss</button>
+        </div>
+      )}
+
       {/* Actions — primary row */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         {piece.status === "draft" && (
+          <>
+            <button
+              onClick={() => handleStatusChange("review")}
+              className="px-4 py-2 bg-[#FF9500]/20 text-[#FF9500] rounded-lg text-sm font-medium hover:bg-[#FF9500]/30 transition-colors"
+            >
+              Submit for Review
+            </button>
+            <button
+              onClick={() => handleStatusChange("approved")}
+              className="px-4 py-2 bg-[#4ade80]/20 text-[#4ade80] rounded-lg text-sm font-medium hover:bg-[#4ade80]/30 transition-colors"
+            >
+              Approve
+            </button>
+            <button
+              onClick={() => handleStatusChange("rejected")}
+              className="px-4 py-2 bg-[#201f21] text-[#ffb4ab] border border-[#ffb4ab]/20 rounded-lg text-sm font-medium hover:bg-[#ffb4ab]/10 transition-colors"
+            >
+              Reject
+            </button>
+          </>
+        )}
+        {piece.status === "review" && (
           <>
             <button
               onClick={() => handleStatusChange("approved")}
               className="px-4 py-2 bg-[#4ade80]/20 text-[#4ade80] rounded-lg text-sm font-medium hover:bg-[#4ade80]/30 transition-colors"
             >
               Approve
+            </button>
+            <button
+              onClick={() => handleStatusChange("draft")}
+              className="px-4 py-2 bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
+            >
+              Back to Draft
             </button>
             <button
               onClick={() => handleStatusChange("rejected")}
@@ -931,6 +1003,14 @@ export default function ContentDetailPage() {
             Edit
           </button>
         )}
+        {/* Refine with AI */}
+        <button
+          onClick={() => setRefineOpen(!refineOpen)}
+          disabled={refining}
+          className="px-4 py-2 bg-[#FF9500]/10 text-[#FF9500] border border-[#FF9500]/20 rounded-lg text-sm font-medium hover:bg-[#FF9500]/20 disabled:opacity-50 transition-colors"
+        >
+          {refining ? "Refining..." : "Refine with AI"}
+        </button>
         {/* Re-generate variation */}
         <button
           onClick={() => router.push(`/generate?product_id=${piece.product_id}`)}
@@ -987,6 +1067,60 @@ export default function ContentDetailPage() {
           </button>
         )}
       </div>
+
+      {/* Refine with AI Panel */}
+      {refineOpen && (
+        <div className="bg-[#1b1b1d] border border-[#FF9500]/20 rounded-xl p-4 mb-4 space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-[#FF9500] text-lg">auto_fix_high</span>
+            <h4 className="text-sm font-semibold text-[#E5E1E4]">Refine with AI</h4>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { label: "Make it shorter", value: "Make it shorter and more concise" },
+              { label: "More professional", value: "Use a more professional, authoritative tone" },
+              { label: "More casual", value: "Make it more conversational and casual" },
+              { label: "Stronger hook", value: "Improve the opening hook to be more attention-grabbing" },
+              { label: "Better CTA", value: "Make the call to action more compelling" },
+              { label: "Add urgency", value: "Add a sense of urgency without being pushy" },
+            ].map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => setRefineInstructions(preset.value)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                  refineInstructions === preset.value
+                    ? "bg-[#FF9500]/15 text-[#FF9500] border-[#FF9500]/30"
+                    : "bg-[#201f21] text-[#E5E1E4]/50 border-white/10 hover:border-white/20"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={refineInstructions}
+            onChange={(e) => setRefineInstructions(e.target.value)}
+            placeholder="Describe how you'd like to refine this content..."
+            rows={2}
+            className="w-full bg-[#131315]/60 border border-white/10 rounded-lg px-3 py-2 text-sm text-[#E5E1E4] placeholder:text-[#E5E1E4]/20 focus:outline-none focus:border-[#FF9500]/50 resize-none transition-all"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={handleRefine}
+              disabled={refining}
+              className="px-4 py-2 bg-[#FF9500] text-[#2d1600] rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
+            >
+              {refining ? "Refining..." : "Refine"}
+            </button>
+            <button
+              onClick={() => { setRefineOpen(false); setRefineInstructions(""); }}
+              className="px-4 py-2 bg-[#201f21] text-[#E5E1E4]/50 border border-white/10 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Production info strip */}
       <div className="flex items-center gap-3 mb-6 text-[10px] text-[#E5E1E4]/30 font-mono flex-wrap">
@@ -1103,8 +1237,9 @@ export default function ContentDetailPage() {
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { bg: string; dot: string }> = {
     draft: { bg: "bg-[#ffbd7f]/10 text-[#ffbd7f] border-[#ffbd7f]/20", dot: "bg-[#ffbd7f]" },
+    review: { bg: "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20", dot: "bg-[#FF9500]" },
     approved: { bg: "bg-[#4ade80]/10 text-[#4ade80] border-[#4ade80]/20", dot: "bg-[#4ade80]" },
-    posted: { bg: "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20", dot: "bg-[#FF9500]" },
+    posted: { bg: "bg-[#818cf8]/10 text-[#818cf8] border-[#818cf8]/20", dot: "bg-[#818cf8]" },
     rejected: { bg: "bg-[#ffb4ab]/10 text-[#ffb4ab] border-[#ffb4ab]/20", dot: "bg-[#ffb4ab]" },
   };
   const c = config[status] || { bg: "bg-white/5 text-[#dbc2ad] border-white/10", dot: "bg-[#E5E1E4]/40" };

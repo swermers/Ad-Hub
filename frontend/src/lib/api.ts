@@ -508,6 +508,28 @@ export const api = {
     if (!res.ok) throw new Error("Upload failed");
     return res.json();
   },
+  extractBrandGuide: async (productId: string, file: File): Promise<BrandGuideExtractResult> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/products/${productId}/brand-profile/extract-guide`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+      throw new Error(err.detail || "Upload failed");
+    }
+    return res.json();
+  },
   listRejectionFeedback: (productId: string, limit: number = 50) =>
     request<RejectionFeedbackItem[]>(`/api/products/${productId}/rejection-feedback?limit=${limit}`),
   createRejectionFeedback: (productId: string, data: RejectionFeedbackCreate) =>
@@ -723,6 +745,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  pipelineQuickExpand: (data: PipelineQuickExpandRequest) =>
+    request<PipelineExpandResult>("/api/pipeline/quick-expand", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  pipelineRefine: (data: PipelineRefineRequest) =>
+    request<PipelineRefineResult>("/api/pipeline/refine", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
 
 // Types
@@ -786,6 +818,10 @@ export interface GenerateRequest {
   template_type?: string;
   aspect_ratio?: string;
   industry_vertical?: string;
+  creative_preset?: string;
+  image_url?: string;
+  industry_colors?: Record<string, string>;
+  use_premium_model?: boolean;
 }
 
 export interface GenerateStatus {
@@ -1362,6 +1398,15 @@ export interface BrollSearchResult {
   results: (BrollPhoto | BrollVideo)[];
 }
 
+// Brand Guide Extraction
+
+export interface BrandGuideExtractResult {
+  status: string;
+  extracted_fields: number;
+  summary: string;
+  profile: BrandProfileData;
+}
+
 // Brand Profile types
 
 export interface BrandProfileData {
@@ -1733,4 +1778,27 @@ export interface PipelineFinalizeResult {
   content_ids: string[];
   seed_id: string | null;
   pieces_saved: number;
+}
+
+export interface PipelineQuickExpandRequest {
+  product_id: string;
+  seed: PipelineSharpenResult;
+  voice_profile_id?: string;
+  platforms?: string[];
+  content_types?: string[];
+  include_video_script?: boolean;
+  include_thread?: boolean;
+}
+
+export interface PipelineRefineRequest {
+  content_id: string;
+  instructions?: string;
+  voice_profile_id?: string;
+}
+
+export interface PipelineRefineResult {
+  title: string;
+  body: string;
+  hook: string | null;
+  cta: string | null;
 }

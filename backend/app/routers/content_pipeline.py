@@ -77,6 +77,17 @@ class ExpandRequest(BaseModel):
     include_thread: bool = True
 
 
+class QuickExpandRequest(BaseModel):
+    """Sharpened seed → platform content directly (skip newsletter draft)."""
+    product_id: str
+    seed: dict
+    voice_profile_id: str | None = None
+    platforms: list[str] = ["twitter", "linkedin", "meta"]
+    content_types: list[str] = ["social_post"]
+    include_video_script: bool = False
+    include_thread: bool = False
+
+
 class ExpandedPiece(BaseModel):
     content_type: str
     platform: str
@@ -440,6 +451,203 @@ Return ONLY the JSON array."""
         ))
 
     return ExpandResponse(pieces=pieces)
+
+
+# ─── Step 3b: Quick Expand (skip newsletter draft) ─────────────────────────
+
+
+@router.post("/quick-expand", response_model=ExpandResponse)
+async def quick_expand(
+    data: QuickExpandRequest,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Generate platform content directly from seed, skipping the newsletter draft step."""
+    product = db.query(Product).filter(Product.id == data.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
+    prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
+
+    # Build the list of pieces to generate
+    pieces_to_gen = []
+    for ct in data.content_types:
+        for platform in data.platforms:
+            pieces_to_gen.append({"content_type": ct, "platform": platform})
+    if data.include_video_script:
+        pieces_to_gen.append({"content_type": "video_script", "platform": "general"})
+    if data.include_thread:
+        pieces_to_gen.append({"content_type": "x_thread", "platform": "twitter"})
+
+    pieces_spec = "\n".join([f"- {p['content_type']} for {p['platform']}" for p in pieces_to_gen])
+
+    brand_context = _get_brand_context(product, db)
+
+    system_prompt = f"""You are a content creator generating platform-specific content directly from a content seed.
+
+Product: {product.name}
+Description: {product.description}
+Target Audience: {product.target_audience or "General audience"}
+
+{voice_context}
+
+{brand_context}
+
+{prompt_set["voice_rules"]}
+
+SOCIAL POST RULES:
+{prompt_set["social_post_rules"]}
+
+VIDEO SCRIPT RULES:
+{prompt_set["video_script_rules"]}
+
+X THREAD RULES:
+{prompt_set["x_thread_rules"]}"""
+
+    user_prompt = f"""Here is the approved content seed:
+
+Core seed: {data.seed.get('seed', '')}
+Heat lines: {json.dumps(data.seed.get('heat', []))}
+Audience hook: {data.seed.get('audience_hook', '')}
+Weekly theme: {data.seed.get('weekly_theme', '')}
+Metaphor: {data.seed.get('metaphor', 'None')}
+
+Generate these content pieces directly from the seed (no newsletter needed):
+{pieces_spec}
+
+Return ONLY a JSON array:
+[
+    {{
+        "content_type": "social_post|video_script|x_thread",
+        "platform": "twitter|linkedin|meta|general",
+        "title": "short label",
+        "body": "full content text",
+        "hook": "opening line",
+        "cta": "call to action",
+        "funnel_stage": "awareness",
+        "metadata": {{
+            "specificity_check": "what the reader sees",
+            "tension_check": "what pulls against what",
+            "stealable_line": "the screenshot-worthy phrase"
+        }}
+    }}
+]
+
+Return ONLY the JSON array."""
+
+    result = await call_claude(user_prompt, system=system_prompt, max_tokens=6144, premium=True)
+
+    try:
+        text = result["content"].strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+        parsed = json.loads(text)
+    except (json.JSONDecodeError, IndexError):
+        parsed = []
+
+    pieces = []
+    for p in parsed:
+        pieces.append(ExpandedPiece(
+            content_type=p.get("content_type", "social_post"),
+            platform=p.get("platform", "general"),
+            title=p.get("title", ""),
+            body=p.get("body", ""),
+            hook=p.get("hook"),
+            cta=p.get("cta"),
+            funnel_stage=p.get("funnel_stage", "awareness"),
+            metadata=p.get("metadata", {}),
+        ))
+
+    return ExpandResponse(pieces=pieces)
+
+
+# ─── Step 5: Refine ───────────────────────────────────────────────────────
+
+
+class RefineRequest(BaseModel):
+    """Refine/regenerate a single content piece with optional instructions."""
+    content_id: str
+    instructions: str = ""  # e.g. "make it shorter", "more professional tone"
+    voice_profile_id: str | None = None
+
+
+class RefineResponse(BaseModel):
+    title: str
+    body: str
+    hook: str | None = None
+    cta: str | None = None
+
+
+@router.post("/refine", response_model=RefineResponse)
+async def refine_content(
+    data: RefineRequest,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Refine or regenerate a single content piece using Claude."""
+    piece = db.query(ContentPiece).filter(ContentPiece.id == data.content_id).first()
+    if not piece:
+        raise HTTPException(status_code=404, detail="Content piece not found")
+
+    product = db.query(Product).filter(Product.id == piece.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
+    brand_context = _get_brand_context(product, db)
+
+    system_prompt = f"""You are a content editor refining existing content.
+
+Product: {product.name}
+Target Audience: {product.target_audience or "General audience"}
+
+{voice_context}
+
+{brand_context}
+
+Content Type: {piece.content_type}
+Platform: {piece.platform}
+Funnel Stage: {piece.funnel_stage}"""
+
+    instruction_text = data.instructions or "Improve the overall quality, clarity, and impact of this content."
+
+    user_prompt = f"""Here is the existing content to refine:
+
+Title: {piece.title or ""}
+Hook: {piece.hook or ""}
+Body:
+{piece.body}
+CTA: {piece.cta or ""}
+
+Refinement instructions: {instruction_text}
+
+Return ONLY a JSON object with the refined content:
+{{
+    "title": "refined title",
+    "body": "refined body text",
+    "hook": "refined hook or null",
+    "cta": "refined call to action or null"
+}}
+
+Return ONLY the JSON object."""
+
+    result = await call_claude(user_prompt, system=system_prompt, max_tokens=4096, premium=True)
+
+    try:
+        text = result["content"].strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+        parsed = json.loads(text)
+    except (json.JSONDecodeError, IndexError):
+        parsed = {
+            "title": piece.title or "",
+            "body": result.get("content", piece.body),
+            "hook": piece.hook,
+            "cta": piece.cta,
+        }
+
+    return RefineResponse(**parsed)
 
 
 # ─── Step 4: Finalize ───────────────────────────────────────────────────────
