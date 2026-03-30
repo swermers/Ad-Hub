@@ -3,13 +3,22 @@ import {
   useCurrentFrame,
   useVideoConfig,
   interpolate,
-  Easing,
   AbsoluteFill,
+  Sequence,
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
 import { TYPE, GRID, PALETTE, headlineSize, SPACE, isLightColor } from "./swissDesign";
-import { safeTruncate } from "./animationUtils";
+import {
+  safeTruncate,
+  springProgress,
+  springSlideUp,
+  springScale,
+  drawProgress,
+  animatedMeshGradient,
+  vignetteOverlay,
+  shiftHue,
+} from "./animationUtils";
 
 export interface SwissCarouselProps {
   headline: string;
@@ -67,40 +76,35 @@ export function SwissCarouselComposition({
   );
   const frameInSlide = frame - currentSlideIndex * framesPerSlide;
 
-  // Slide entrance/exit
-  const slideEnter = interpolate(
-    frameInSlide,
-    [0, transitionFrames],
-    [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) },
-  );
+  // Slide entrance — spring-based crossfade with "smooth" preset
+  const slideEnter = springProgress(frameInSlide, fps, 0, "smooth");
   const slideExit = currentSlideIndex < slideCount - 1
     ? interpolate(
         frameInSlide,
         [framesPerSlide - transitionFrames, framesPerSlide],
         [1, 0],
-        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.in(Easing.cubic) },
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
       )
     : 1;
   const slideOpacity = Math.min(slideEnter, slideExit);
 
-  // Text slide-up on enter
-  const textY = interpolate(
+  // Text slide-up on enter — spring-based with "snappy" preset
+  const { opacity: textOpacity, transform: textTransform } = springSlideUp(
     frameInSlide,
-    [0, transitionFrames],
-    [40, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) },
+    fps,
+    0,
+    40,
+    "snappy",
   );
 
   const currentSlide = slides[currentSlideIndex];
 
-  // Accent bar width animation
-  const barWidth = interpolate(
+  // Accent bar width animation — drawProgress for clean reveal
+  const barWidth = drawProgress(
     frameInSlide,
-    [transitionFrames * 0.5, transitionFrames * 1.5],
-    [0, 100],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) },
-  );
+    Math.floor(transitionFrames * 0.5),
+    Math.floor(transitionFrames * 1.0),
+  ) * 100;
 
   // Geometric accent — rotates position per slide
   const accentPositions = [
@@ -115,16 +119,34 @@ export function SwissCarouselComposition({
   // Is this the last slide (CTA slide)?
   const isLastSlide = currentSlideIndex === slideCount - 1;
 
+  // Shifted hue for CTA button gradient on last slide
+  const ctaGradient = isLastSlide
+    ? `linear-gradient(135deg, ${accentColor}, ${shiftHue(accentColor, 30)})`
+    : undefined;
+
+  // Animated mesh gradient background
+  const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.08);
+
   return (
     <AbsoluteFill
       style={{
         width,
         height,
-        backgroundColor,
+        background: meshBg,
         fontFamily: font,
         overflow: "hidden",
       }}
     >
+      {/* Vignette overlay */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: vignetteOverlay(0.3),
+          pointerEvents: "none",
+        }}
+      />
+
       {/* Geometric accent — circle outline, changes position per slide */}
       <div
         style={{
@@ -174,7 +196,7 @@ export function SwissCarouselComposition({
           flexDirection: "column",
           justifyContent: "center",
           opacity: slideOpacity,
-          transform: `translateY(${textY}px)`,
+          transform: textTransform,
         }}
       >
         {/* Slide headline */}
@@ -233,7 +255,8 @@ export function SwissCarouselComposition({
           >
             <div
               style={{
-                backgroundColor: accentColor,
+                background: ctaGradient,
+                backgroundColor: ctaGradient ? undefined : accentColor,
                 color: isLightColor(accentColor) ? PALETTE.dark : PALETTE.light,
                 fontSize: TYPE.cta.size,
                 fontWeight: TYPE.cta.weight,

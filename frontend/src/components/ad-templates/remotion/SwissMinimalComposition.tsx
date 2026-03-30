@@ -2,13 +2,20 @@ import React from "react";
 import {
   useCurrentFrame,
   useVideoConfig,
-  interpolate,
-  Easing,
   AbsoluteFill,
+  Sequence,
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
 import { TYPE, GRID, PALETTE, headlineSize, SPACE } from "./swissDesign";
+import {
+  springProgress,
+  springSlideUp,
+  springScale,
+  drawProgress,
+  breathe,
+  vignetteOverlay,
+} from "./animationUtils";
 
 export interface SwissMinimalProps {
   headline: string;
@@ -50,49 +57,29 @@ export function SwissMinimalComposition({
 
   const font = brandFont || TYPE.fontFamily;
 
-  // Single accent circle — fades in first as anchor
-  const circleScale = interpolate(frame, [0, fps * 0.8], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-  const circleOpacity = interpolate(frame, [0, fps * 0.4], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // Single accent circle — spring scale entrance (Apple-level restrained)
+  const circleEntrance = springScale(frame, fps, 0, 0, "smooth");
 
-  // Headline — precise vertical reveal using clip-path
-  const headlineReveal = interpolate(frame, [fps * 0.4, fps * 1.2], [0, 100], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Headline — spring-based clip reveal
+  const headlineRevealProgress = springProgress(frame, fps, Math.round(fps * 0.4), "smooth");
+  const headlineReveal = headlineRevealProgress * 100;
 
-  // Body
-  const bodyOpacity = interpolate(frame, [fps * 1.4, fps * 2.0], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // Body — snappy spring fade
+  const bodyOpacity = springProgress(frame, fps, Math.round(fps * 1.4), "snappy");
 
-  // CTA line + text
-  const ctaLineWidth = interpolate(frame, [fps * 2.2, fps * 2.8], [0, 60], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-  const ctaTextOpacity = interpolate(frame, [fps * 2.5, fps * 3.0], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // CTA line — draw progress
+  const ctaLineDraw = drawProgress(frame, Math.round(fps * 2.2), Math.round(fps * 0.6));
+  const ctaLineWidth = ctaLineDraw * 60;
+
+  // CTA text — snappy spring fade
+  const ctaTextOpacity = springProgress(frame, fps, Math.round(fps * 2.5), "snappy");
 
   // Subtle breathing on the circle after entrance
-  const breathe = frame > fps * 1.0
-    ? interpolate(
-        (frame - fps * 1.0) % (fps * 3),
-        [0, fps * 1.5, fps * 3],
-        [1, 1.03, 1],
-      )
-    : 1;
+  const circleBreath = breathe(frame, Math.round(fps * 1.0));
+
+  // Bottom line — draw progress
+  const bottomLineDraw = drawProgress(frame, Math.round(fps * 0.2), Math.round(fps * 0.6));
+  const bottomLineWidth = bottomLineDraw * GRID.spanWidth(3, width);
 
   const circleSize = Math.min(width, height) * 0.15;
 
@@ -106,6 +93,17 @@ export function SwissMinimalComposition({
         overflow: "hidden",
       }}
     >
+      {/* Vignette overlay — very subtle for minimal composition */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: vignetteOverlay(0.2),
+          pointerEvents: "none",
+          zIndex: 10,
+        }}
+      />
+
       {/* Single accent circle — top right area */}
       <div
         style={{
@@ -116,8 +114,8 @@ export function SwissMinimalComposition({
           height: circleSize,
           borderRadius: "50%",
           backgroundColor: accentColor,
-          opacity: circleOpacity * 0.12,
-          transform: `scale(${circleScale * breathe})`,
+          opacity: circleEntrance.opacity * 0.12,
+          transform: `scale(${parseFloat(circleEntrance.transform.replace(/scale\(|\)/g, "")) * circleBreath})`,
         }}
       />
 
@@ -135,74 +133,80 @@ export function SwissMinimalComposition({
         }}
       >
         {/* Headline with vertical clip reveal */}
-        <div
-          style={{
-            clipPath: `inset(0 ${100 - headlineReveal}% 0 0)`,
-          }}
-        >
-          <h1
+        <Sequence from={0}>
+          <div
             style={{
-              fontSize: headlineSize(headline, true),
-              fontWeight: TYPE.display.weight,
-              lineHeight: TYPE.display.lineHeight,
-              letterSpacing: TYPE.display.tracking,
-              color: textColor,
-              margin: 0,
-              textTransform: "uppercase",
-              maxWidth: GRID.spanWidth(10, width),
+              clipPath: `inset(0 ${100 - headlineReveal}% 0 0)`,
             }}
           >
-            {headline}
-          </h1>
-        </div>
+            <h1
+              style={{
+                fontSize: headlineSize(headline, true),
+                fontWeight: TYPE.display.weight,
+                lineHeight: TYPE.display.lineHeight,
+                letterSpacing: TYPE.display.tracking,
+                color: textColor,
+                margin: 0,
+                textTransform: "uppercase",
+                maxWidth: GRID.spanWidth(10, width),
+              }}
+            >
+              {headline}
+            </h1>
+          </div>
+        </Sequence>
 
         {/* Generous whitespace between headline and body */}
         <div style={{ height: SPACE.xl }} />
 
         {/* Body — understated */}
-        <p
-          style={{
-            fontSize: TYPE.body.size,
-            fontWeight: TYPE.body.weight,
-            lineHeight: TYPE.body.lineHeight,
-            color: textColor,
-            opacity: bodyOpacity * 0.5,
-            margin: 0,
-            maxWidth: GRID.spanWidth(6, width),
-          }}
-        >
-          {body}
-        </p>
-
-        {/* CTA — just a line + text, extremely minimal */}
-        <div
-          style={{
-            marginTop: SPACE.xl,
-            display: "flex",
-            alignItems: "center",
-            gap: 20,
-          }}
-        >
-          <div
+        <Sequence from={0}>
+          <p
             style={{
-              width: ctaLineWidth,
-              height: 2,
-              backgroundColor: accentColor,
-            }}
-          />
-          <span
-            style={{
-              fontSize: TYPE.caption.size,
-              fontWeight: TYPE.caption.weight,
-              letterSpacing: TYPE.caption.tracking,
-              textTransform: "uppercase",
-              color: accentColor,
-              opacity: ctaTextOpacity,
+              fontSize: TYPE.body.size,
+              fontWeight: TYPE.body.weight,
+              lineHeight: TYPE.body.lineHeight,
+              color: textColor,
+              opacity: bodyOpacity * 0.5,
+              margin: 0,
+              maxWidth: GRID.spanWidth(6, width),
             }}
           >
-            {cta}
-          </span>
-        </div>
+            {body}
+          </p>
+        </Sequence>
+
+        {/* CTA — just a line + text, extremely minimal */}
+        <Sequence from={0}>
+          <div
+            style={{
+              marginTop: SPACE.xl,
+              display: "flex",
+              alignItems: "center",
+              gap: 20,
+            }}
+          >
+            <div
+              style={{
+                width: ctaLineWidth,
+                height: 2,
+                backgroundColor: accentColor,
+              }}
+            />
+            <span
+              style={{
+                fontSize: TYPE.caption.size,
+                fontWeight: TYPE.caption.weight,
+                letterSpacing: TYPE.caption.tracking,
+                textTransform: "uppercase",
+                color: accentColor,
+                opacity: ctaTextOpacity,
+              }}
+            >
+              {cta}
+            </span>
+          </div>
+        </Sequence>
       </div>
 
       {/* Bottom-left grid reference — thin horizontal line */}
@@ -211,11 +215,7 @@ export function SwissMinimalComposition({
           position: "absolute",
           left: GRID.margin,
           bottom: GRID.margin,
-          width: interpolate(frame, [fps * 0.2, fps * 0.8], [0, GRID.spanWidth(3, width)], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: Easing.out(Easing.cubic),
-          }),
+          width: bottomLineWidth,
           height: 1,
           backgroundColor: textColor,
           opacity: 0.1,

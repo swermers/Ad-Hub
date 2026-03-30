@@ -23,9 +23,9 @@ import {
   useCurrentFrame,
   useVideoConfig,
   interpolate,
-  Easing,
   AbsoluteFill,
   Img,
+  Sequence,
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
@@ -36,6 +36,14 @@ import {
   HandDrawnCircle,
   HandDrawnCheckmark,
 } from "./HandDrawnElements";
+import {
+  springSlideUp,
+  springScale,
+  springStagger,
+  springProgress,
+  breathe as breatheUtil,
+  vignetteOverlay,
+} from "./animationUtils";
 
 // ─── Palette ────────────────────────────────────────────────────────────────
 
@@ -91,57 +99,28 @@ export function HandDrawnComposition({
   const bodySize = Math.round(width * 0.032);
   const ctaSize = Math.round(width * 0.038);
 
-  // ── Background ─────────────────────────────────────────────────────────
+  // ── Background (spring) ────────────────────────────────────────────────
 
-  const bgOpacity = interpolate(frame, [0, fps * 0.6], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const bgOpacity = springProgress(frame, fps, 0, "smooth");
 
-  // ── Headline word-by-word ──────────────────────────────────────────────
+  // ── Headline word-by-word (spring stagger) ────────────────────────────
 
   const words = headline.split(/\s+/);
-  const wordStart = fps * 0.3;
+  const wordBaseDelay = Math.round(fps * 0.3);
   const wordGap = Math.min(4, Math.round((fps * 0.9) / Math.max(words.length, 1)));
+  const wordProgresses = springStagger(frame, fps, words.length, wordBaseDelay, wordGap, "snappy");
 
-  // ── Body ───────────────────────────────────────────────────────────────
+  // ── Body (spring slide up) ────────────────────────────────────────────
 
-  const bodyY = interpolate(
-    frame,
-    [fps * 1.4, fps * 2.2],
-    [20, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
-  );
-  const bodyOpacity = interpolate(
-    frame,
-    [fps * 1.4, fps * 2.0],
-    [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
+  const bodyAnim = springSlideUp(frame, fps, Math.round(fps * 1.4), 20, "smooth");
 
-  // ── CTA ────────────────────────────────────────────────────────────────
+  // ── CTA (spring slide up) ─────────────────────────────────────────────
 
-  const ctaOpacity = interpolate(
-    frame,
-    [fps * 2.4, fps * 3.0],
-    [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-  const ctaY = interpolate(
-    frame,
-    [fps * 2.4, fps * 3.2],
-    [15, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
-  );
+  const ctaAnim = springSlideUp(frame, fps, Math.round(fps * 2.4), 15, "snappy");
 
-  // ── Gentle breathing float (3.5s onward) ───────────────────────────────
+  // ── Gentle breathing float (3.5s onward) ──────────────────────────────
 
-  const breathe = interpolate(
-    frame,
-    [fps * 3.5, fps * 5, fps * 6.5, fps * 8],
-    [0, -3, 0, -2],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
+  const breatheValue = (breatheUtil(frame, Math.round(fps * 3.5), 90, 0.03) - 1) * 100;
 
   // ── Kraft paper texture (CSS noise) ────────────────────────────────────
 
@@ -194,6 +173,17 @@ export function HandDrawnComposition({
         }}
       />
 
+      {/* ── Vignette overlay (very subtle) ────────────────────────────── */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: vignetteOverlay(0.15),
+          opacity: bgOpacity,
+          pointerEvents: "none",
+        }}
+      />
+
       {/* ── Content container ─────────────────────────────────────────── */}
       <div
         style={{
@@ -201,49 +191,41 @@ export function HandDrawnComposition({
           top: contentTop,
           left: pad,
           right: pad,
-          transform: `translateY(${breathe}px)`,
+          transform: `translateY(${breatheValue}px)`,
         }}
       >
-        {/* ── Headline (word-by-word) ────────────────────────────────── */}
-        <div
-          style={{
-            fontSize: hlSize,
-            fontWeight: 700,
-            lineHeight: 1.2,
-            color: WARM.ink,
-            letterSpacing: "-0.02em",
-            marginBottom: SPACE.sm,
-          }}
-        >
-          {words.map((word, i) => {
-            const wStart = wordStart + i * wordGap;
-            const wOpacity = interpolate(
-              frame,
-              [wStart, wStart + 5],
-              [0, 1],
-              { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-            );
-            const wY = interpolate(
-              frame,
-              [wStart, wStart + 6],
-              [12, 0],
-              { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
-            );
-            return (
-              <span
-                key={i}
-                style={{
-                  display: "inline-block",
-                  opacity: wOpacity,
-                  transform: `translateY(${wY}px)`,
-                  marginRight: hlSize * 0.25,
-                }}
-              >
-                {word}
-              </span>
-            );
-          })}
-        </div>
+        {/* ── Headline (word-by-word spring stagger) ────────────────── */}
+        <Sequence from={0} layout="none">
+          <div
+            style={{
+              fontSize: hlSize,
+              fontWeight: 700,
+              lineHeight: 1.2,
+              color: WARM.ink,
+              letterSpacing: "-0.02em",
+              marginBottom: SPACE.sm,
+            }}
+          >
+            {words.map((word, i) => {
+              const p = wordProgresses[i];
+              const wOpacity = Math.min(p * 1.5, 1);
+              const wY = 12 * (1 - p);
+              return (
+                <span
+                  key={i}
+                  style={{
+                    display: "inline-block",
+                    opacity: wOpacity,
+                    transform: `translateY(${wY}px)`,
+                    marginRight: hlSize * 0.25,
+                  }}
+                >
+                  {word}
+                </span>
+              );
+            })}
+          </div>
+        </Sequence>
 
         {/* ── Hand-drawn underline ───────────────────────────────────── */}
         <div style={{ marginBottom: SPACE.md }}>
@@ -258,19 +240,21 @@ export function HandDrawnComposition({
         </div>
 
         {/* ── Body text ─────────────────────────────────────────────── */}
-        <div
-          style={{
-            fontSize: bodySize,
-            lineHeight: 1.65,
-            color: WARM.inkMuted,
-            maxWidth: width * 0.8,
-            opacity: bodyOpacity,
-            transform: `translateY(${bodyY}px)`,
-            marginBottom: SPACE.lg,
-          }}
-        >
-          {body}
-        </div>
+        <Sequence from={0} layout="none">
+          <div
+            style={{
+              fontSize: bodySize,
+              lineHeight: 1.65,
+              color: WARM.inkMuted,
+              maxWidth: width * 0.8,
+              opacity: bodyAnim.opacity,
+              transform: bodyAnim.transform,
+              marginBottom: SPACE.lg,
+            }}
+          >
+            {body}
+          </div>
+        </Sequence>
 
         {/* ── Squiggle divider ──────────────────────────────────────── */}
         <div style={{ marginBottom: SPACE.md }}>
@@ -286,55 +270,57 @@ export function HandDrawnComposition({
         </div>
 
         {/* ── CTA with circle emphasis ──────────────────────────────── */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: SPACE.sm,
-            opacity: ctaOpacity,
-            transform: `translateY(${ctaY}px)`,
-          }}
-        >
-          <div style={{ position: "relative", display: "inline-block" }}>
-            <span
-              style={{
-                fontSize: ctaSize,
-                fontWeight: 600,
-                color: accentColor,
-                letterSpacing: "0.01em",
-              }}
-            >
-              {cta}
-            </span>
-            {/* Circle drawn around CTA */}
-            <div
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                pointerEvents: "none",
-              }}
-            >
-              <HandDrawnCircle
-                size={Math.round(ctaSize * 3.2)}
-                color={accentColor}
-                strokeWidth={2}
-                startFrame={Math.round(fps * 2.6)}
-                duration={18}
-              />
+        <Sequence from={0} layout="none">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: SPACE.sm,
+              opacity: ctaAnim.opacity,
+              transform: ctaAnim.transform,
+            }}
+          >
+            <div style={{ position: "relative", display: "inline-block" }}>
+              <span
+                style={{
+                  fontSize: ctaSize,
+                  fontWeight: 600,
+                  color: accentColor,
+                  letterSpacing: "0.01em",
+                }}
+              >
+                {cta}
+              </span>
+              {/* Circle drawn around CTA */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  pointerEvents: "none",
+                }}
+              >
+                <HandDrawnCircle
+                  size={Math.round(ctaSize * 3.2)}
+                  color={accentColor}
+                  strokeWidth={2}
+                  startFrame={Math.round(fps * 2.6)}
+                  duration={18}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Checkmark */}
-          <HandDrawnCheckmark
-            size={Math.round(ctaSize * 1.2)}
-            color={accentColor}
-            strokeWidth={3}
-            startFrame={Math.round(fps * 3.0)}
-            duration={10}
-          />
-        </div>
+            {/* Checkmark */}
+            <HandDrawnCheckmark
+              size={Math.round(ctaSize * 1.2)}
+              color={accentColor}
+              strokeWidth={3}
+              startFrame={Math.round(fps * 3.0)}
+              duration={10}
+            />
+          </div>
+        </Sequence>
       </div>
 
       {/* ── Corner accent marks (hand-drawn feel) ─────────────────────── */}

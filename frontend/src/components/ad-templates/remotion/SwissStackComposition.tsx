@@ -3,12 +3,23 @@ import {
   useCurrentFrame,
   useVideoConfig,
   interpolate,
-  Easing,
   AbsoluteFill,
+  Sequence,
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
 import { TYPE, SPACE, isLightColor } from "./swissDesign";
+import {
+  springProgress,
+  springSlideUp,
+  springScale,
+  springStagger,
+  drawProgress,
+  animatedMeshGradient,
+  vignetteOverlay,
+  breathe,
+  shiftHue,
+} from "./animationUtils";
 
 export interface SwissStackProps {
   headline: string;
@@ -75,44 +86,61 @@ export function SwissStackComposition({
   // 3.5-4.0s: Bottom CTA slides in
   // 4.0-6s: Hold with subtle glow
 
-  // Card border opacity
-  const cardBorderOpacity = interpolate(frame, [0, fps * 0.4], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Card border opacity — "heavy" preset for weighty card entrance
+  const cardBorderOpacity = springProgress(frame, fps, 0, "heavy");
 
-  // Label
-  const labelOpacity = interpolate(frame, [fps * 0.3, fps * 0.6], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // Label — "snappy" preset
+  const labelOpacity = springProgress(frame, fps, Math.round(fps * 0.3), "snappy");
 
-  // Bottom CTA
-  const ctaOpacity = interpolate(frame, [fps * 3.5, fps * 4.0], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const ctaY = interpolate(frame, [fps * 3.5, fps * 4.0], [15, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Stack items cascade — springStagger with "snappy" preset
+  const itemBaseDelay = Math.round(fps * 0.4);
+  const itemStaggerDelay = Math.round(fps * 0.2);
+  const itemProgresses = springStagger(
+    frame,
+    fps,
+    items.length,
+    itemBaseDelay,
+    itemStaggerDelay,
+    "snappy",
+  );
 
-  // Body paragraph
-  const bodyOpacity = interpolate(frame, [fps * 2.0, fps * 2.8], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // Cross separator — spring-based timing
+  const crossBaseDelay = Math.round(fps * 1.5);
+  const crossStaggerDelay = Math.round(fps * 0.1);
+  const crossProgresses = springStagger(
+    frame,
+    fps,
+    items.length,
+    crossBaseDelay,
+    crossStaggerDelay,
+    "snappy",
+  );
 
-  // Subtle card glow after entrance
-  const glowOpacity = frame > fps * 4
-    ? interpolate(
-        (frame - fps * 4) % (fps * 3),
-        [0, fps * 1.5, fps * 3],
-        [0, 0.03, 0],
-      )
-    : 0;
+  // Body paragraph — spring progress
+  const bodyOpacity = springProgress(frame, fps, Math.round(fps * 2.0), "smooth");
+
+  // Bottom CTA — springSlideUp with "snappy" preset
+  const { opacity: ctaOpacity, transform: ctaTransform } = springSlideUp(
+    frame,
+    fps,
+    Math.round(fps * 3.5),
+    15,
+    "snappy",
+  );
+
+  // Bottom line — drawProgress
+  const lineWidth = drawProgress(
+    frame,
+    Math.round(fps * 3.2),
+    Math.round(fps * 0.3),
+  ) * 100;
+
+  // Subtle card glow — breathe utility
+  const glowScale = breathe(frame, Math.round(fps * 4), Math.round(fps * 3), 0.03);
+  const glowOpacity = frame > fps * 4 ? (glowScale - 1) / 0.03 * 0.03 : 0;
+
+  // Stats opacity — spring-based
+  const statsOpacity = springProgress(frame, fps, Math.round(fps * 3.0), "snappy");
 
   // Item font sizes
   const itemSize = items.length > 3
@@ -122,23 +150,29 @@ export function SwissStackComposition({
   // Separator mark
   const crossSize = Math.round(width * 0.015);
 
-  // Bottom line
-  const lineWidth = interpolate(frame, [fps * 3.2, fps * 3.5], [0, 100], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Animated mesh gradient background
+  const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.06);
 
   return (
     <AbsoluteFill
       style={{
         width,
         height,
-        backgroundColor,
+        background: meshBg,
         fontFamily: font,
         overflow: "hidden",
       }}
     >
+      {/* Vignette overlay */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: vignetteOverlay(0.35),
+          pointerEvents: "none",
+        }}
+      />
+
       {/* Brand name — top left */}
       <div
         style={{
@@ -210,26 +244,12 @@ export function SwissStackComposition({
           {/* Stacked items with cross separators */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
             {items.map((item, i) => {
-              const itemStart = fps * 0.4 + i * fps * 0.2;
-              const itemEnd = itemStart + fps * 0.35;
-
-              const itemOpacity = interpolate(frame, [itemStart, itemEnd], [0, 1], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              });
-              const itemX = interpolate(frame, [itemStart, itemEnd], [-25, 0], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-                easing: Easing.out(Easing.cubic),
-              });
+              const itemOpacity = itemProgresses[i];
+              const itemX = -25 * (1 - itemProgresses[i]);
 
               // Cross separator between items
-              const crossStart = fps * 1.5 + i * fps * 0.1;
               const crossOpacity = i < items.length - 1
-                ? interpolate(frame, [crossStart, crossStart + fps * 0.2], [0, 0.35], {
-                    extrapolateLeft: "clamp",
-                    extrapolateRight: "clamp",
-                  })
+                ? crossProgresses[i] * 0.35
                 : 0;
 
               return (
@@ -253,7 +273,7 @@ export function SwissStackComposition({
                     </span>
                   </div>
 
-                  {/* Cross separator × */}
+                  {/* Cross separator x */}
                   {i < items.length - 1 && (
                     <div
                       style={{
@@ -308,10 +328,7 @@ export function SwissStackComposition({
             position: "absolute",
             left: margin,
             top: cardBottom + SPACE.lg,
-            opacity: interpolate(frame, [fps * 3.0, fps * 3.5], [0, 0.5], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            }),
+            opacity: statsOpacity * 0.5,
           }}
         >
           <p
@@ -350,7 +367,7 @@ export function SwissStackComposition({
           right: margin,
           bottom: margin,
           opacity: ctaOpacity,
-          transform: `translateY(${ctaY}px)`,
+          transform: ctaTransform,
         }}
       >
         <div
