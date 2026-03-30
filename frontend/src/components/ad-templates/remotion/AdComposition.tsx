@@ -2,28 +2,36 @@ import React from "react";
 import {
   useCurrentFrame,
   useVideoConfig,
-  interpolate,
-  Easing,
   AbsoluteFill,
   Sequence,
 } from "remotion";
 import type { AdTemplateProps, AspectRatio } from "../types";
 import { getDimensions } from "../types";
-import { safeTruncate } from "./animationUtils";
+import {
+  safeTruncate,
+  shiftHue,
+  springProgress,
+  springSlideUp,
+  springScale,
+  springBlurIn,
+  drawProgress,
+  animatedMeshGradient,
+  vignetteOverlay,
+  breathe,
+} from "./animationUtils";
 
 export interface AdCompositionProps extends AdTemplateProps {
   aspectRatio?: AspectRatio;
 }
 
 /**
- * Animated ad composition for Remotion.
- * Renders a full motion ad with:
- * - Animated background
- * - Text reveal (headline, body, CTA)
- * - Product screenshot entrance
- * - CTA pulse
+ * Default animated ad composition for Remotion.
  *
- * Default: 5 seconds at 30fps = 150 frames
+ * Full motion ad with spring physics, mesh gradient background,
+ * cinematic vignette, screenshot entrance, headline + body reveal,
+ * and CTA with glow pulse.
+ *
+ * 5 seconds at 30fps = 150 frames
  */
 export function AdComposition({
   headline,
@@ -39,110 +47,72 @@ export function AdComposition({
   const { fps } = useVideoConfig();
   const { width, height } = getDimensions(aspectRatio);
 
-  // Apply text safety
+  // Text safety
   const safeHeadline = safeTruncate(headline, 30);
   const safeBody = safeTruncate(body, 60);
 
-  // Animation timing (in frames)
-  const bgRevealEnd = fps * 0.5;      // 0-0.5s: background
-  const screenshotEnd = fps * 1.2;     // 0.5-1.2s: screenshot
-  const headlineStart = fps * 0.8;     // 0.8s: headline starts
-  const headlineEnd = fps * 1.5;       // 1.5s: headline fully visible
-  const bodyStart = fps * 1.5;         // 1.5s: body starts
-  const bodyEnd = fps * 2.0;           // 2.0s: body visible
-  const ctaStart = fps * 2.5;          // 2.5s: CTA appears
-  const ctaEnd = fps * 3.0;            // 3.0s: CTA fully visible
+  // --- Timeline ---
+  const screenshotDelay = Math.round(fps * 0.3);
+  const accentLineStart = Math.round(fps * 0.7);
+  const headlineDelay = Math.round(fps * 0.8);
+  const bodyDelay = Math.round(fps * 1.5);
+  const ctaDelay = Math.round(fps * 2.2);
 
-  // Background scale animation
-  const bgScale = interpolate(frame, [0, bgRevealEnd], [1.1, 1], {
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // --- Spring animations ---
 
-  // Screenshot entrance
-  const screenshotOpacity = interpolate(frame, [fps * 0.3, screenshotEnd], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const screenshotY = interpolate(frame, [fps * 0.3, screenshotEnd], [40, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Background scale spring (heavy — weighty settle)
+  const bgSpring = springProgress(frame, fps, 0, "heavy");
 
-  // Headline animation
-  const headlineOpacity = interpolate(frame, [headlineStart, headlineEnd], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const headlineY = interpolate(frame, [headlineStart, headlineEnd], [30, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Screenshot entrance (smooth — elegant reveal)
+  const screenshotAnim = springSlideUp(frame, fps, screenshotDelay, 40, "smooth");
 
-  // Body animation
-  const bodyOpacity = interpolate(frame, [bodyStart, bodyEnd], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const bodyY = interpolate(frame, [bodyStart, bodyEnd], [20, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Accent line draw
+  const lineProgress = drawProgress(frame, accentLineStart, Math.round(fps * 0.5));
 
-  // CTA animation with pulse
-  const ctaOpacity = interpolate(frame, [ctaStart, ctaEnd], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const ctaScale = interpolate(frame, [ctaStart, ctaEnd, ctaEnd + fps * 0.2], [0.8, 1.05, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Headline blur-in (smooth — premium text reveal)
+  const headlineAnim = springBlurIn(frame, fps, headlineDelay, 10, "smooth");
 
-  // Subtle CTA glow pulse after entrance
-  const glowPulse = frame > ctaEnd
-    ? interpolate(
-        (frame - ctaEnd) % (fps * 2),
-        [0, fps, fps * 2],
-        [0.3, 0.6, 0.3],
-      )
+  // Body slide up (snappy — quick follow-up)
+  const bodyAnim = springSlideUp(frame, fps, bodyDelay, 20, "snappy");
+
+  // CTA pop entrance (bouncy — attention-grabbing)
+  const ctaAnim = springScale(frame, fps, ctaDelay, 0.5, "bouncy");
+
+  // CTA glow pulse after entrance
+  const ctaGlow = frame > ctaDelay + fps * 0.5
+    ? 0.3 + 0.3 * Math.sin(((frame - ctaDelay) / (fps * 2)) * Math.PI * 2)
     : 0.3;
 
-  // Accent line animation
-  const accentWidth = interpolate(frame, [headlineStart, headlineEnd], [0, 100], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // CTA breathing scale
+  const ctaBreath = breathe(frame, ctaDelay + Math.round(fps * 1), fps * 2, 0.02);
+
+  // Animated mesh gradient background
+  const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.12);
 
   return (
     <AbsoluteFill
       style={{
         width,
         height,
-        backgroundColor,
+        background: meshBg,
         fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
         overflow: "hidden",
       }}
     >
-      {/* Gradient background overlay */}
+      {/* Cinematic vignette */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background: `radial-gradient(ellipse at 30% 20%, ${accentColor}22 0%, transparent 50%),
-                        radial-gradient(ellipse at 70% 80%, ${accentColor}15 0%, transparent 40%)`,
-          transform: `scale(${bgScale})`,
+          background: vignetteOverlay(0.45),
+          zIndex: 2,
+          pointerEvents: "none",
         }}
       />
 
-      {/* Screenshot with entrance animation */}
+      {/* Screenshot with spring entrance */}
       {screenshotUrl && (
-        <Sequence from={Math.round(fps * 0.3)}>
+        <Sequence from={screenshotDelay} layout="none">
           <div
             style={{
               position: "absolute",
@@ -152,9 +122,10 @@ export function AdComposition({
               height: height * 0.4,
               borderRadius: 20,
               overflow: "hidden",
-              opacity: screenshotOpacity,
-              transform: `translateY(${screenshotY}px)`,
-              boxShadow: `0 20px 60px rgba(0,0,0,0.4), 0 0 80px ${accentColor}22`,
+              zIndex: 1,
+              opacity: screenshotAnim.opacity,
+              transform: screenshotAnim.transform,
+              boxShadow: `0 ${20 * (screenshotAnim.opacity)}px ${60 * (screenshotAnim.opacity)}px rgba(0,0,0,0.4), 0 0 80px ${accentColor}22`,
             }}
           >
             <div
@@ -164,7 +135,7 @@ export function AdComposition({
                 backgroundImage: `url(${screenshotUrl})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center top",
-                transform: `scale(${bgScale})`,
+                transform: `scale(${1 + 0.1 * (1 - bgSpring)})`,
               }}
             />
           </div>
@@ -186,75 +157,86 @@ export function AdComposition({
           flexDirection: "column",
           justifyContent: "flex-end",
           height: screenshotUrl ? "60%" : "100%",
+          zIndex: 3,
         }}
       >
         {!screenshotUrl && <div style={{ flex: 1 }} />}
 
-        {/* Accent line */}
-        <div
-          style={{
-            width: accentWidth,
-            height: 6,
-            backgroundColor: accentColor,
-            borderRadius: 3,
-            marginBottom: 24,
-          }}
-        />
+        {/* Scene 1: Accent line draw */}
+        <Sequence from={accentLineStart} layout="none">
+          <div
+            style={{
+              width: 100 * lineProgress,
+              height: 6,
+              background: `linear-gradient(90deg, ${accentColor}, ${shiftHue(accentColor, 25)})`,
+              borderRadius: 3,
+              marginBottom: 24,
+              boxShadow: `0 0 ${10 * lineProgress}px ${accentColor}55`,
+            }}
+          />
+        </Sequence>
 
-        {/* Headline */}
-        <h1
-          style={{
-            fontSize: 58,
-            fontWeight: 900,
-            color: textColor,
-            lineHeight: 1.1,
-            margin: 0,
-            marginBottom: 20,
-            opacity: headlineOpacity,
-            transform: `translateY(${headlineY}px)`,
-            textTransform: "uppercase",
-            letterSpacing: -1,
-          }}
-        >
-          {safeHeadline}
-        </h1>
+        {/* Scene 2: Headline — blur-in reveal */}
+        <Sequence from={headlineDelay} layout="none">
+          <h1
+            style={{
+              fontSize: 58,
+              fontWeight: 900,
+              color: textColor,
+              lineHeight: 1.1,
+              margin: 0,
+              marginBottom: 20,
+              opacity: headlineAnim.opacity,
+              filter: headlineAnim.filter,
+              transform: headlineAnim.transform,
+              textTransform: "uppercase",
+              letterSpacing: -1,
+            }}
+          >
+            {safeHeadline}
+          </h1>
+        </Sequence>
 
-        {/* Body */}
-        <p
-          style={{
-            fontSize: 24,
-            fontWeight: 400,
-            color: textColor,
-            opacity: bodyOpacity * 0.8,
-            transform: `translateY(${bodyY}px)`,
-            lineHeight: 1.5,
-            margin: 0,
-            marginBottom: 40,
-            maxWidth: width * 0.75,
-          }}
-        >
-          {safeBody}
-        </p>
+        {/* Scene 3: Body — spring slide up */}
+        <Sequence from={bodyDelay} layout="none">
+          <p
+            style={{
+              fontSize: 24,
+              fontWeight: 400,
+              color: textColor,
+              opacity: bodyAnim.opacity * 0.8,
+              transform: bodyAnim.transform,
+              lineHeight: 1.5,
+              margin: 0,
+              marginBottom: 40,
+              maxWidth: width * 0.75,
+            }}
+          >
+            {safeBody}
+          </p>
+        </Sequence>
 
-        {/* CTA button */}
-        <div
-          style={{
-            display: "inline-flex",
-            alignSelf: "flex-start",
-            backgroundColor: accentColor,
-            color: "#ffffff",
-            fontSize: 22,
-            fontWeight: 800,
-            padding: "18px 48px",
-            borderRadius: 50,
-            letterSpacing: 1,
-            opacity: ctaOpacity,
-            transform: `scale(${ctaScale})`,
-            boxShadow: `0 8px 32px ${accentColor}${Math.round(glowPulse * 255).toString(16).padStart(2, "0")}`,
-          }}
-        >
-          {cta} →
-        </div>
+        {/* Scene 4: CTA — bouncy pop with glow pulse */}
+        <Sequence from={ctaDelay} layout="none">
+          <div
+            style={{
+              display: "inline-flex",
+              alignSelf: "flex-start",
+              background: `linear-gradient(135deg, ${accentColor}, ${shiftHue(accentColor, 25)})`,
+              color: "#ffffff",
+              fontSize: 22,
+              fontWeight: 800,
+              padding: "18px 48px",
+              borderRadius: 50,
+              letterSpacing: 1,
+              opacity: ctaAnim.opacity,
+              transform: `${ctaAnim.transform} scale(${ctaBreath})`,
+              boxShadow: `0 8px 32px ${accentColor}${Math.round(ctaGlow * 255).toString(16).padStart(2, "0")}`,
+            }}
+          >
+            {cta} →
+          </div>
+        </Sequence>
       </div>
     </AbsoluteFill>
   );
