@@ -118,7 +118,7 @@ def _seed_default_workspace(db):
     ws = Workspace(
         name="Default Workspace",
         slug="default",
-        owner_email="admin@adhub.local",
+        owner_email="admin@iterant.local",
         tier="pro",
         max_products=10,
         max_generations_per_month=1000,
