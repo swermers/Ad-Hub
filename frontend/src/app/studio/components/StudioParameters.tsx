@@ -7,6 +7,8 @@ import { api, type Product, type VoiceProfileItem } from "@/lib/api";
 const OUTPUT_TYPES = [
   { id: "newsletter", label: "Newsletter", icon: "mail" },
   { id: "social", label: "Social Posts", icon: "forum" },
+  { id: "video_ad", label: "Video Ad", icon: "videocam" },
+  { id: "carousel", label: "Carousel", icon: "view_carousel" },
   { id: "video_script", label: "Video Script", icon: "movie" },
   { id: "x_thread", label: "X Thread", icon: "tag" },
 ];

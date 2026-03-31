@@ -846,6 +846,9 @@ export interface ContentPiece {
   aspect_ratio: string | null;
   generation_metadata: string | null;
   image_url: string | null;
+  media_type: string | null;
+  video_style: string | null;
+  video_config: string | null;
   created_at: string;
 }
 
@@ -1750,6 +1753,8 @@ export interface PipelineExpandRequest {
   platforms?: string[];
   include_video_script?: boolean;
   include_thread?: boolean;
+  include_video_ad?: boolean;
+  include_carousel?: boolean;
 }
 
 export interface PipelineExpandedPiece {
@@ -1761,6 +1766,8 @@ export interface PipelineExpandedPiece {
   cta: string | null;
   funnel_stage: string;
   metadata: Record<string, string>;
+  video_style?: string | null;
+  video_config?: { aspect_ratio?: string; accent_color?: string } | null;
 }
 
 export interface PipelineExpandResult {
@@ -1788,6 +1795,8 @@ export interface PipelineQuickExpandRequest {
   content_types?: string[];
   include_video_script?: boolean;
   include_thread?: boolean;
+  include_video_ad?: boolean;
+  include_carousel?: boolean;
 }
 
 export interface PipelineRefineRequest {

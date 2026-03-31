@@ -5,7 +5,7 @@
  * and reusable animation timing functions.
  */
 
-import { Easing, interpolate } from "remotion";
+import { Easing, interpolate, spring as remotionSpring } from "remotion";
 
 // ─── Easing Presets ───
 
@@ -118,6 +118,178 @@ export function progressBar(
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+}
+
+// ─── Spring Physics ───
+
+/** Spring config presets — use these instead of manual stiffness/damping tuning */
+export const SPRING_CONFIGS = {
+  /** Snappy entrance — fast settle, minimal overshoot. Great for UI elements. */
+  snappy: { stiffness: 200, damping: 20, mass: 0.8 },
+  /** Bouncy entrance — visible overshoot with playful settle. Great for CTAs, badges. */
+  bouncy: { stiffness: 120, damping: 10, mass: 0.6 },
+  /** Smooth entrance — gentle and elegant. Great for headlines, backgrounds. */
+  smooth: { stiffness: 80, damping: 14, mass: 1.0 },
+  /** Heavy — weighty, deliberate motion. Great for large elements, cards. */
+  heavy: { stiffness: 100, damping: 18, mass: 1.5 },
+  /** Quick pop — sharp snap with tiny bounce. Great for icons, small elements. */
+  pop: { stiffness: 300, damping: 15, mass: 0.4 },
+} as const;
+
+export type SpringPreset = keyof typeof SPRING_CONFIGS;
+
+/**
+ * Spring-based entrance animation. Returns 0→1 progress with physics-based easing.
+ * Use this instead of interpolate for organic, weighted motion.
+ */
+export function springProgress(
+  frame: number,
+  fps: number,
+  delay: number = 0,
+  config: SpringPreset | { stiffness: number; damping: number; mass: number } = "snappy",
+): number {
+  const springConfig = typeof config === "string" ? SPRING_CONFIGS[config] : config;
+  return remotionSpring({
+    frame: frame - delay,
+    fps,
+    config: springConfig,
+    durationInFrames: undefined,
+  });
+}
+
+/**
+ * Spring-based fade + slide up. Drop-in replacement for fadeSlideUp with physics.
+ */
+export function springSlideUp(
+  frame: number,
+  fps: number,
+  delay: number = 0,
+  slideDistance: number = 40,
+  config: SpringPreset = "snappy",
+): { opacity: number; transform: string } {
+  const progress = springProgress(frame, fps, delay, config);
+  return {
+    opacity: Math.min(progress * 1.5, 1), // opacity leads slightly
+    transform: `translateY(${slideDistance * (1 - progress)}px)`,
+  };
+}
+
+/**
+ * Spring-based scale entrance. Drop-in replacement for scaleEntrance with physics.
+ */
+export function springScale(
+  frame: number,
+  fps: number,
+  delay: number = 0,
+  fromScale: number = 0.8,
+  config: SpringPreset = "bouncy",
+): { opacity: number; transform: string } {
+  const progress = springProgress(frame, fps, delay, config);
+  const scale = fromScale + (1 - fromScale) * progress;
+  return {
+    opacity: Math.min(progress * 2, 1),
+    transform: `scale(${scale})`,
+  };
+}
+
+/**
+ * Spring-based blur-in entrance. Text/elements reveal from blurred to sharp.
+ * The signature "premium" animation — blur(12px) + scale(1.05) → clear + scale(1).
+ */
+export function springBlurIn(
+  frame: number,
+  fps: number,
+  delay: number = 0,
+  maxBlur: number = 12,
+  config: SpringPreset = "smooth",
+): { opacity: number; filter: string; transform: string } {
+  const progress = springProgress(frame, fps, delay, config);
+  const blur = maxBlur * (1 - progress);
+  const scale = 1 + 0.05 * (1 - progress);
+  return {
+    opacity: Math.min(progress * 1.8, 1),
+    filter: `blur(${blur}px)`,
+    transform: `scale(${scale})`,
+  };
+}
+
+/**
+ * Staggered spring animation for word-by-word cascade.
+ * Returns array of spring progress values, one per item.
+ */
+export function springStagger(
+  frame: number,
+  fps: number,
+  count: number,
+  baseDelay: number = 0,
+  staggerDelay: number = 3,
+  config: SpringPreset = "snappy",
+): number[] {
+  return Array.from({ length: count }, (_, i) =>
+    springProgress(frame, fps, baseDelay + i * staggerDelay, config),
+  );
+}
+
+// ─── Background Generators ───
+
+/**
+ * Generate a CSS mesh gradient background string.
+ * Creates a multi-stop radial gradient that simulates a mesh gradient.
+ */
+export function meshGradient(
+  baseColor: string,
+  accentColor: string,
+  intensity: number = 0.15,
+): string {
+  const hex = (opacity: number) => Math.round(opacity * 255).toString(16).padStart(2, "0");
+  const a1 = hex(intensity);
+  const a2 = hex(intensity * 0.7);
+  const a3 = hex(intensity * 0.5);
+  return [
+    `radial-gradient(ellipse at 20% 20%, ${accentColor}${a1} 0%, transparent 50%)`,
+    `radial-gradient(ellipse at 80% 30%, ${shiftHue(accentColor, 40)}${a2} 0%, transparent 45%)`,
+    `radial-gradient(ellipse at 50% 80%, ${shiftHue(accentColor, -30)}${a3} 0%, transparent 55%)`,
+    `radial-gradient(ellipse at 70% 70%, ${accentColor}${hex(intensity * 0.3)} 0%, transparent 40%)`,
+    baseColor,
+  ].join(", ");
+}
+
+/**
+ * Animated mesh gradient — shifts gradient positions based on frame.
+ * Creates subtle movement in the background without distracting from content.
+ */
+export function animatedMeshGradient(
+  frame: number,
+  fps: number,
+  baseColor: string,
+  accentColor: string,
+  intensity: number = 0.15,
+): string {
+  const cycle = (frame / (fps * 8)) * Math.PI * 2; // 8-second cycle
+  const x1 = 20 + Math.sin(cycle) * 10;
+  const y1 = 20 + Math.cos(cycle) * 8;
+  const x2 = 80 + Math.cos(cycle * 0.7) * 12;
+  const y2 = 30 + Math.sin(cycle * 0.7) * 10;
+  const hex = (opacity: number) => Math.round(opacity * 255).toString(16).padStart(2, "0");
+  const a1 = hex(intensity);
+  const a2 = hex(intensity * 0.7);
+  const a3 = hex(intensity * 0.5);
+  return [
+    `radial-gradient(ellipse at ${x1}% ${y1}%, ${accentColor}${a1} 0%, transparent 50%)`,
+    `radial-gradient(ellipse at ${x2}% ${y2}%, ${shiftHue(accentColor, 40)}${a2} 0%, transparent 45%)`,
+    `radial-gradient(ellipse at 50% 80%, ${shiftHue(accentColor, -30)}${a3} 0%, transparent 55%)`,
+    baseColor,
+  ].join(", ");
+}
+
+/**
+ * Cinematic vignette overlay — darkens edges, draws eye to center.
+ */
+export function vignetteOverlay(strength: number = 0.5): string {
+  return [
+    `radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,${strength * 0.6}) 100%)`,
+    `linear-gradient(180deg, rgba(0,0,0,${strength * 0.15}) 0%, transparent 25%, transparent 70%, rgba(0,0,0,${strength * 0.3}) 100%)`,
+  ].join(", ");
 }
 
 // ─── Text Safety ───

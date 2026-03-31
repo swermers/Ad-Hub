@@ -2,13 +2,22 @@ import React from "react";
 import {
   useCurrentFrame,
   useVideoConfig,
-  interpolate,
-  Easing,
   AbsoluteFill,
+  Sequence,
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
 import { TYPE, GRID, PALETTE, headlineSize, SPACE } from "./swissDesign";
+import {
+  springProgress,
+  springSlideUp,
+  springScale,
+  springStagger,
+  drawProgress,
+  animatedMeshGradient,
+  vignetteOverlay,
+  shiftHue,
+} from "./animationUtils";
 
 export interface SwissGridProps {
   headline: string;
@@ -48,66 +57,54 @@ export function SwissGridComposition({
 
   const font = brandFont || TYPE.fontFamily;
 
-  // Grid block animations — staggered reveal
-  const block1 = interpolate(frame, [0, fps * 0.4], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-  const block2 = interpolate(frame, [fps * 0.15, fps * 0.55], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-  const block3 = interpolate(frame, [fps * 0.3, fps * 0.7], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Grid block animations — staggered spring reveal
+  const [block1, block2, block3] = springStagger(frame, fps, 3, 0, 5, "snappy");
 
-  // Headline
-  const headlineOpacity = interpolate(frame, [fps * 0.5, fps * 1.0], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const headlineX = interpolate(frame, [fps * 0.5, fps * 1.0], [-40, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Headline — spring slide from left
+  const headlineAnim = springSlideUp(frame, fps, Math.round(fps * 0.5), -40, "smooth");
+  // Override slideUp's translateY with translateX for left-to-right slide
+  const headlineProgress = springProgress(frame, fps, Math.round(fps * 0.5), "smooth");
+  const headlineOpacity = Math.min(headlineProgress * 1.5, 1);
+  const headlineX = -40 * (1 - headlineProgress);
 
-  // Body
-  const bodyOpacity = interpolate(frame, [fps * 1.3, fps * 1.8], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // Body — snappy spring fade
+  const bodyOpacity = springProgress(frame, fps, Math.round(fps * 1.3), "snappy");
 
-  // CTA
-  const ctaOpacity = interpolate(frame, [fps * 2.0, fps * 2.5], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const ctaScale = interpolate(frame, [fps * 2.0, fps * 2.5], [0.9, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // CTA — bouncy spring scale
+  const ctaAnim = springScale(frame, fps, Math.round(fps * 2.0), 0.9, "bouncy");
+
+  // Grid dot markers — staggered spring
+  const dotMarkers = springStagger(frame, fps, 3, Math.round(fps * 0.3), 3, "snappy");
 
   // Grid layout: large accent block top-right, small blocks for rhythm
   const accentBlockW = GRID.spanWidth(7, width);
   const accentBlockH = height * 0.42;
   const smallBlockSize = GRID.spanWidth(2, width);
 
+  // Animated mesh gradient background
+  const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.06);
+
   return (
     <AbsoluteFill
       style={{
         width,
         height,
-        backgroundColor,
+        background: meshBg,
         fontFamily: font,
         overflow: "hidden",
       }}
     >
+      {/* Vignette overlay */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: vignetteOverlay(0.25),
+          pointerEvents: "none",
+          zIndex: 10,
+        }}
+      />
+
       {/* Large accent block — top right */}
       <div
         style={{
@@ -151,81 +148,87 @@ export function SwissGridComposition({
       />
 
       {/* Headline — positioned in left half, overlapping the accent block edge */}
-      <div
-        style={{
-          position: "absolute",
-          left: GRID.margin,
-          top: accentBlockH - 40,
-          right: GRID.margin,
-          opacity: headlineOpacity,
-          transform: `translateX(${headlineX}px)`,
-        }}
-      >
-        <h1
-          style={{
-            fontSize: headlineSize(headline),
-            fontWeight: TYPE.display.weight,
-            lineHeight: TYPE.display.lineHeight,
-            letterSpacing: TYPE.display.tracking,
-            color: textColor,
-            margin: 0,
-            textTransform: "uppercase",
-          }}
-        >
-          {headline}
-        </h1>
-      </div>
-
-      {/* Body text — below headline, left-aligned on grid */}
-      <div
-        style={{
-          position: "absolute",
-          left: GRID.margin,
-          top: accentBlockH + headlineSize(headline) * TYPE.display.lineHeight + SPACE.md,
-          maxWidth: GRID.spanWidth(7, width),
-          opacity: bodyOpacity,
-        }}
-      >
-        <p
-          style={{
-            fontSize: TYPE.body.size,
-            fontWeight: TYPE.body.weight,
-            lineHeight: TYPE.body.lineHeight,
-            color: textColor,
-            opacity: 0.65,
-            margin: 0,
-          }}
-        >
-          {body}
-        </p>
-      </div>
-
-      {/* CTA — bottom right, clean rectangle */}
-      <div
-        style={{
-          position: "absolute",
-          right: GRID.margin,
-          bottom: GRID.margin,
-          opacity: ctaOpacity,
-          transform: `scale(${ctaScale})`,
-          transformOrigin: "bottom right",
-        }}
-      >
+      <Sequence from={0}>
         <div
           style={{
-            backgroundColor: textColor,
-            color: backgroundColor,
-            fontSize: TYPE.cta.size,
-            fontWeight: TYPE.cta.weight,
-            letterSpacing: TYPE.cta.tracking,
-            textTransform: "uppercase",
-            padding: "20px 48px",
-            // Swiss: sharp corners, no border-radius
+            position: "absolute",
+            left: GRID.margin,
+            top: accentBlockH - 40,
+            right: GRID.margin,
+            opacity: headlineOpacity,
+            transform: `translateX(${headlineX}px)`,
           }}
         >
-          {cta}
+          <h1
+            style={{
+              fontSize: headlineSize(headline),
+              fontWeight: TYPE.display.weight,
+              lineHeight: TYPE.display.lineHeight,
+              letterSpacing: TYPE.display.tracking,
+              color: textColor,
+              margin: 0,
+              textTransform: "uppercase",
+            }}
+          >
+            {headline}
+          </h1>
         </div>
-      </div>
+      </Sequence>
+
+      {/* Body text — below headline, left-aligned on grid */}
+      <Sequence from={0}>
+        <div
+          style={{
+            position: "absolute",
+            left: GRID.margin,
+            top: accentBlockH + headlineSize(headline) * TYPE.display.lineHeight + SPACE.md,
+            maxWidth: GRID.spanWidth(7, width),
+            opacity: bodyOpacity,
+          }}
+        >
+          <p
+            style={{
+              fontSize: TYPE.body.size,
+              fontWeight: TYPE.body.weight,
+              lineHeight: TYPE.body.lineHeight,
+              color: textColor,
+              opacity: 0.65,
+              margin: 0,
+            }}
+          >
+            {body}
+          </p>
+        </div>
+      </Sequence>
+
+      {/* CTA — bottom right, clean rectangle */}
+      <Sequence from={0}>
+        <div
+          style={{
+            position: "absolute",
+            right: GRID.margin,
+            bottom: GRID.margin,
+            opacity: ctaAnim.opacity,
+            transform: ctaAnim.transform,
+            transformOrigin: "bottom right",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: textColor,
+              color: backgroundColor,
+              fontSize: TYPE.cta.size,
+              fontWeight: TYPE.cta.weight,
+              letterSpacing: TYPE.cta.tracking,
+              textTransform: "uppercase",
+              padding: "20px 48px",
+              // Swiss: sharp corners, no border-radius
+            }}
+          >
+            {cta}
+          </div>
+        </div>
+      </Sequence>
 
       {/* Grid dot markers — subtle reference points */}
       {[0, 1, 2].map((i) => (
@@ -239,10 +242,7 @@ export function SwissGridComposition({
             height: 6,
             borderRadius: "50%",
             backgroundColor: accentColor,
-            opacity: interpolate(frame, [fps * (0.3 + i * 0.1), fps * (0.5 + i * 0.1)], [0, 0.4], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            }),
+            opacity: dotMarkers[i] * 0.4,
           }}
         />
       ))}

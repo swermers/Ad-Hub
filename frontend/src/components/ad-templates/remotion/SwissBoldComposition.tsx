@@ -2,14 +2,22 @@ import React from "react";
 import {
   useCurrentFrame,
   useVideoConfig,
-  interpolate,
-  Easing,
   AbsoluteFill,
+  Sequence,
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
-import { TYPE, GRID, PALETTE, SPACE, isLightColor } from "./swissDesign";
-import { safeTruncate } from "./animationUtils";
+import { TYPE, PALETTE, SPACE, isLightColor } from "./swissDesign";
+import {
+  safeTruncate,
+  springProgress,
+  springSlideUp,
+  springScale,
+  springBlurIn,
+  springStagger,
+  animatedMeshGradient,
+  breathe,
+} from "./animationUtils";
 import { IconArrowRight } from "./icons";
 
 export interface SwissBoldProps {
@@ -31,8 +39,8 @@ export interface SwissBoldProps {
  * dominates with one emphasis word in a contrasting color.
  * Rounded card with notch details. Arrow CTA.
  *
- * Inspired by bold editorial Instagram carousels —
- * high contrast, provocative typography, impossible to scroll past.
+ * Uses spring physics for all motion, Sequence for scene management,
+ * and animated mesh gradient background for depth.
  *
  * 5 seconds at 30fps = 150 frames
  */
@@ -55,113 +63,62 @@ export function SwissBoldComposition({
   // The accent color IS the card background — that's the bold move
   const cardBg = accentColor;
   const isCardLight = isLightColor(cardBg);
-  // Headline: dark on vivid bg (editorial look), light on dark bg
   const headlineColor = isCardLight ? PALETTE.dark : PALETTE.light;
-  // Emphasis: always the opposite of headline for maximum pop
   const emphasisColor = isCardLight ? PALETTE.light : PALETTE.dark;
 
-  // Card inset from canvas edges
+  // Card geometry
   const cardInset = Math.round(width * 0.04);
   const cardRadius = Math.round(width * 0.04);
   const notchSize = Math.round(width * 0.04);
   const cardPadding = Math.round(width * 0.08);
 
-  // --- Animation timeline ---
-  // 0-0.4s: Card scales in from center
-  // 0.2-0.8s: Headline words cascade in
-  // 0.8-1.3s: Emphasis word color shift
-  // 1.3-1.8s: Body subtitle slides in
-  // 1.8-2.3s: Arrow CTA appears
-  // 2.3-5s: Subtle emphasis word pulse
-
-  // Card entrance
-  const cardScale = interpolate(frame, [0, fps * 0.4], [0.9, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-  const cardOpacity = interpolate(frame, [0, fps * 0.2], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // Apply text safety
+  // Text safety
   const safeHeadline = safeTruncate(headline, 30);
   const safeBody = safeTruncate(body, 60);
 
-  // Split headline into words — last word (or short phrase) gets emphasis
+  // Split headline into words
   const words = safeHeadline.split(/\s+/);
-  // Pick emphasis: if the body is short (1-2 words), use it as emphasis text
-  // Otherwise use the last word of headline
   const bodyWords = safeBody.trim().split(/\s+/);
   const useBodyAsEmphasis = bodyWords.length <= 3 && safeBody.trim().length <= 20;
-  const mainWords = words;
   const emphasisText = useBodyAsEmphasis ? safeBody.trim() : null;
 
-  // Word stagger animation
-  const wordStartFrame = fps * 0.2;
-  const wordStagger = 3; // frames between words
-
-  // Emphasis reveal
-  const emphasisOpacity = interpolate(frame, [fps * 0.8, fps * 1.3], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-  const emphasisY = interpolate(frame, [fps * 0.8, fps * 1.3], [20, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-
-  // Subtitle (body text when not used as emphasis)
-  const subtitleOpacity = interpolate(frame, [fps * 1.3, fps * 1.8], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const subtitleX = interpolate(frame, [fps * 1.3, fps * 1.8], [-20, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-
-  // Arrow CTA
-  const arrowOpacity = interpolate(frame, [fps * 1.8, fps * 2.3], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const arrowX = interpolate(frame, [fps * 1.8, fps * 2.3], [-15, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-
-  // Emphasis pulse after entrance
-  const emphasisScale = frame > fps * 2.5
-    ? interpolate(
-        (frame - fps * 2.5) % (fps * 2),
-        [0, fps * 1, fps * 2],
-        [1, 1.03, 1],
-      )
-    : 1;
-
-  // Bottom attribution
-  const attrOpacity = interpolate(frame, [fps * 2.0, fps * 2.5], [0, 0.5], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // Headline font size — bigger than standard, this is BOLD
+  // Headline font size
   const hlSize = safeHeadline.length > 18
     ? Math.round(width * 0.09)
     : Math.round(width * 0.115);
+
+  // --- Spring-based animations ---
+
+  // Scene 1: Card entrance (spring heavy — weighty card sliding in)
+  const cardSpring = springProgress(frame, fps, 0, "heavy");
+
+  // Scene 2: Word cascade (staggered springs)
+  const wordSprings = springStagger(frame, fps, words.length, Math.round(fps * 0.2), 3, "snappy");
+
+  // Scene 3: Emphasis reveal (blur-in for premium feel)
+  const emphasisAnim = springBlurIn(frame, fps, Math.round(fps * 0.8), 10, "smooth");
+
+  // Scene 4: Subtitle slide
+  const subtitleAnim = springSlideUp(frame, fps, Math.round(fps * 1.3), 25, "snappy");
+
+  // Scene 5: Arrow CTA (pop spring for snappy entrance)
+  const arrowAnim = springScale(frame, fps, Math.round(fps * 1.8), 0.5, "pop");
+
+  // Attribution fade
+  const attrSpring = springProgress(frame, fps, Math.round(fps * 2.0), "smooth");
+
+  // Emphasis breathing pulse after entrance
+  const emphasisScale = breathe(frame, Math.round(fps * 2.5), fps * 2, 0.03);
+
+  // Animated mesh gradient background
+  const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.12);
 
   return (
     <AbsoluteFill
       style={{
         width,
         height,
-        backgroundColor,
+        background: meshBg,
         fontFamily: font,
         overflow: "hidden",
         display: "flex",
@@ -169,200 +126,200 @@ export function SwissBoldComposition({
         justifyContent: "center",
       }}
     >
-      {/* Rounded card with saturated background */}
-      <div
-        style={{
-          position: "absolute",
-          left: cardInset,
-          right: cardInset,
-          top: cardInset,
-          bottom: cardInset,
-          backgroundColor: cardBg,
-          borderRadius: cardRadius,
-          opacity: cardOpacity,
-          transform: `scale(${cardScale})`,
-          overflow: "hidden",
-        }}
-      >
-        {/* Top notch */}
+      {/* Scene 1: Card entrance */}
+      <Sequence from={0} layout="none">
         <div
           style={{
             position: "absolute",
-            top: -notchSize / 2,
-            left: "50%",
-            marginLeft: -notchSize / 2,
-            width: notchSize,
-            height: notchSize,
-            borderRadius: "50%",
-            backgroundColor,
-          }}
-        />
-
-        {/* Bottom notch */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: -notchSize / 2,
-            left: "50%",
-            marginLeft: -notchSize / 2,
-            width: notchSize,
-            height: notchSize,
-            borderRadius: "50%",
-            backgroundColor,
-          }}
-        />
-
-        {/* Main content area */}
-        <div
-          style={{
-            position: "absolute",
-            left: cardPadding,
-            right: cardPadding,
-            top: cardPadding * 1.5,
-            bottom: cardPadding * 1.5,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
+            left: cardInset,
+            right: cardInset,
+            top: cardInset,
+            bottom: cardInset,
+            backgroundColor: cardBg,
+            borderRadius: cardRadius,
+            opacity: Math.min(cardSpring * 2, 1),
+            transform: `scale(${0.9 + 0.1 * cardSpring})`,
+            overflow: "hidden",
+            boxShadow: `0 ${20 * cardSpring}px ${60 * cardSpring}px rgba(0,0,0,0.3)`,
           }}
         >
-          {/* Oversized headline — word cascade */}
+          {/* Top notch */}
           <div
             style={{
+              position: "absolute",
+              top: -notchSize / 2,
+              left: "50%",
+              marginLeft: -notchSize / 2,
+              width: notchSize,
+              height: notchSize,
+              borderRadius: "50%",
+              backgroundColor,
+            }}
+          />
+
+          {/* Bottom notch */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: -notchSize / 2,
+              left: "50%",
+              marginLeft: -notchSize / 2,
+              width: notchSize,
+              height: notchSize,
+              borderRadius: "50%",
+              backgroundColor,
+            }}
+          />
+
+          {/* Main content area */}
+          <div
+            style={{
+              position: "absolute",
+              left: cardPadding,
+              right: cardPadding,
+              top: cardPadding * 1.5,
+              bottom: cardPadding * 1.5,
               display: "flex",
-              flexWrap: "wrap",
-              gap: `${Math.round(width * 0.012)}px ${Math.round(width * 0.02)}px`,
+              flexDirection: "column",
+              justifyContent: "center",
             }}
           >
-            {mainWords.map((word, i) => {
-              const wStart = wordStartFrame + i * wordStagger;
-              const wEnd = wStart + fps * 0.25;
-
-              const wOpacity = interpolate(frame, [wStart, wEnd], [0, 1], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              });
-              const wY = interpolate(frame, [wStart, wEnd], [40, 0], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-                easing: Easing.out(Easing.cubic),
-              });
-
-              return (
-                <span
-                  key={i}
-                  style={{
-                    fontSize: hlSize,
-                    fontWeight: 900,
-                    lineHeight: 1.0,
-                    letterSpacing: -2,
-                    color: headlineColor,
-                    textTransform: "uppercase",
-                    opacity: wOpacity,
-                    transform: `translateY(${wY}px)`,
-                    display: "inline-block",
-                  }}
-                >
-                  {word}
-                </span>
-              );
-            })}
-          </div>
-
-          {/* Emphasis word — contrasting color, bold statement */}
-          {emphasisText && (
-            <div
-              style={{
-                marginTop: SPACE.md,
-                opacity: emphasisOpacity,
-                transform: `translateY(${emphasisY}px) scale(${emphasisScale})`,
-                transformOrigin: "left center",
-              }}
-            >
-              <span
+            {/* Scene 2: Headline word cascade with spring physics */}
+            <Sequence from={Math.round(fps * 0.15)} layout="none">
+              <div
                 style={{
-                  fontSize: Math.round(hlSize * 0.85),
-                  fontWeight: 900,
-                  lineHeight: 1.0,
-                  letterSpacing: -1,
-                  color: emphasisColor,
-                  textTransform: "uppercase",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: `${Math.round(width * 0.012)}px ${Math.round(width * 0.02)}px`,
                 }}
               >
-                {emphasisText}
-              </span>
-            </div>
-          )}
+                {words.map((word, i) => {
+                  const progress = wordSprings[i] ?? 0;
+                  return (
+                    <span
+                      key={i}
+                      style={{
+                        fontSize: hlSize,
+                        fontWeight: 900,
+                        lineHeight: 1.0,
+                        letterSpacing: -2,
+                        color: headlineColor,
+                        textTransform: "uppercase",
+                        opacity: Math.min(progress * 1.5, 1),
+                        transform: `translateY(${40 * (1 - progress)}px)`,
+                        display: "inline-block",
+                      }}
+                    >
+                      {word}
+                    </span>
+                  );
+                })}
+              </div>
+            </Sequence>
 
-          {/* Subtitle line — italic or light weight */}
+            {/* Scene 3: Emphasis word — blur-in reveal */}
+            {emphasisText && (
+              <Sequence from={Math.round(fps * 0.7)} layout="none">
+                <div
+                  style={{
+                    marginTop: SPACE.md,
+                    opacity: emphasisAnim.opacity,
+                    filter: emphasisAnim.filter,
+                    transform: `${emphasisAnim.transform} scale(${emphasisScale})`,
+                    transformOrigin: "left center",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: Math.round(hlSize * 0.85),
+                      fontWeight: 900,
+                      lineHeight: 1.0,
+                      letterSpacing: -1,
+                      color: emphasisColor,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {emphasisText}
+                  </span>
+                </div>
+              </Sequence>
+            )}
+
+            {/* Scene 4: Subtitle line */}
+            <Sequence from={Math.round(fps * 1.2)} layout="none">
+              <div
+                style={{
+                  marginTop: SPACE.lg,
+                  opacity: subtitleAnim.opacity,
+                  transform: subtitleAnim.transform,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: SPACE.md,
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: Math.round(width * 0.028),
+                    fontWeight: 600,
+                    lineHeight: 1.3,
+                    letterSpacing: 0,
+                    color: headlineColor,
+                    margin: 0,
+                    fontStyle: "italic",
+                    maxWidth: "75%",
+                  }}
+                >
+                  {useBodyAsEmphasis ? cta : safeBody}
+                </p>
+
+                {/* Scene 5: Arrow CTA — pop spring */}
+                <Sequence from={Math.round(fps * 0.5)} layout="none">
+                  <div
+                    style={{
+                      opacity: arrowAnim.opacity,
+                      transform: arrowAnim.transform,
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <IconArrowRight
+                      size={Math.round(width * 0.06)}
+                      color={headlineColor}
+                      strokeWidth={3}
+                    />
+                  </div>
+                </Sequence>
+              </div>
+            </Sequence>
+          </div>
+
+          {/* Bottom attribution area */}
           <div
             style={{
-              marginTop: SPACE.lg,
-              opacity: subtitleOpacity,
-              transform: `translateX(${subtitleX}px)`,
+              position: "absolute",
+              left: cardPadding,
+              right: cardPadding,
+              bottom: cardPadding * 0.6,
               display: "flex",
               alignItems: "center",
-              gap: SPACE.md,
+              justifyContent: "space-between",
+              opacity: attrSpring * 0.5,
             }}
           >
-            <p
+            <span
               style={{
-                fontSize: Math.round(width * 0.028),
+                fontSize: Math.round(width * 0.016),
                 fontWeight: 600,
-                lineHeight: 1.3,
-                letterSpacing: 0,
                 color: headlineColor,
-                margin: 0,
-                fontStyle: "italic",
-                maxWidth: "75%",
+                textTransform: "uppercase",
+                letterSpacing: 1,
               }}
             >
-              {useBodyAsEmphasis ? cta : safeBody}
-            </p>
-
-            {/* Arrow indicator */}
-            <div
-              style={{
-                opacity: arrowOpacity,
-                transform: `translateX(${arrowX}px)`,
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <IconArrowRight
-                size={Math.round(width * 0.06)}
-                color={headlineColor}
-                strokeWidth={3}
-              />
-            </div>
+              {cta}
+            </span>
           </div>
         </div>
-
-        {/* Bottom attribution area */}
-        <div
-          style={{
-            position: "absolute",
-            left: cardPadding,
-            right: cardPadding,
-            bottom: cardPadding * 0.6,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            opacity: attrOpacity,
-          }}
-        >
-          <span
-            style={{
-              fontSize: Math.round(width * 0.016),
-              fontWeight: 600,
-              color: headlineColor,
-              textTransform: "uppercase",
-              letterSpacing: 1,
-            }}
-          >
-            {cta}
-          </span>
-        </div>
-      </div>
+      </Sequence>
     </AbsoluteFill>
   );
 }

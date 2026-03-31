@@ -12,9 +12,17 @@
  * Duration: 7 seconds @ 30fps (210 frames)
  */
 
-import { AbsoluteFill, Img, useCurrentFrame, interpolate, Easing } from "remotion";
+import { AbsoluteFill, Img, Sequence, useCurrentFrame } from "remotion";
 import type { AspectRatio } from "../types";
 import { ASPECT_DIMENSIONS } from "../types";
+import {
+  springProgress,
+  springSlideUp,
+  springScale,
+  breathe,
+  vignetteOverlay,
+  shiftHue,
+} from "./animationUtils";
 
 interface ImageFrameOverlayProps {
   headline: string;
@@ -28,22 +36,6 @@ interface ImageFrameOverlayProps {
 }
 
 const FPS = 30;
-
-const EASE_OUT = Easing.out(Easing.cubic);
-const EASE_OUT_BACK = Easing.out(Easing.back(1.7));
-
-function clampInterpolate(
-  frame: number,
-  inputRange: [number, number],
-  outputRange: [number, number],
-  easing?: (t: number) => number,
-): number {
-  return interpolate(frame, inputRange, outputRange, {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing,
-  });
-}
 
 export function ImageFrameOverlayComposition({
   headline,
@@ -69,40 +61,37 @@ export function ImageFrameOverlayComposition({
   // 75-90:   CTA pill scales in with spring (2.5-3.0s)
   // 90-210:  Hold with subtle badge pulse (3.0-7.0s)
 
-  // ─── Background zoom ───
-  const bgScale = clampInterpolate(frame, [0, 15], [1.1, 1.0], EASE_OUT);
-  const bgOpacity = clampInterpolate(frame, [0, 10], [0, 1], EASE_OUT);
+  // ─── Background zoom (spring) ───
+  const bgProgress = springProgress(frame, FPS, 0, "smooth");
+  const bgScale = 1.1 - 0.1 * bgProgress;
+  const bgOpacity = Math.min(bgProgress * 1.5, 1);
 
-  // ─── Vignette fade-in ───
-  const vignetteOpacity = clampInterpolate(frame, [0, 20], [0, 1], EASE_OUT);
+  // ─── Badge entrance (spring) ───
+  const badgeScaleAnim = springScale(frame, FPS, 9, 0.3, "bouncy");
+  const badgePositionProgress = springProgress(frame, FPS, 9, "bouncy");
+  const badgeSlideX = -200 * (1 - badgePositionProgress);
+  const badgeSlideY = -120 * (1 - badgePositionProgress);
 
-  // ─── Badge entrance ───
-  const badgeSlideX = clampInterpolate(frame, [9, 24], [-200, 0], EASE_OUT_BACK);
-  const badgeSlideY = clampInterpolate(frame, [9, 24], [-120, 0], EASE_OUT_BACK);
-  const badgeScale = clampInterpolate(frame, [9, 24], [0.3, 1.0], EASE_OUT_BACK);
-  const badgeOpacity = clampInterpolate(frame, [9, 18], [0, 1], EASE_OUT);
-
-  // Badge rotation settle
-  const badgeRotation = clampInterpolate(frame, [24, 36], [-5, -3], EASE_OUT);
+  // Badge rotation settle (spring)
+  const rotationProgress = springProgress(frame, FPS, 24, "smooth");
+  const badgeRotation = -5 + 2 * rotationProgress;
 
   // Badge breathing pulse during hold (3.0s-7.0s)
-  const breathCycle = frame >= 90
-    ? Math.sin(((frame - 90) / FPS) * Math.PI * 0.8) * 0.02 + 1.0
-    : 1.0;
+  const breathCycle = breathe(frame, 90, 38, 0.02);
 
-  const finalBadgeScale = badgeScale * breathCycle;
+  const finalBadgeScale = parseFloat(badgeScaleAnim.transform.replace(/scale\(|\)/g, "")) * breathCycle;
 
-  // ─── Glass strip slide up ───
-  const glassStripY = clampInterpolate(frame, [36, 54], [200, 0], EASE_OUT);
-  const glassStripOpacity = clampInterpolate(frame, [36, 48], [0, 1], EASE_OUT);
+  // ─── Glass strip slide up (spring) ───
+  const glassAnim = springSlideUp(frame, FPS, 36, 200, "smooth");
 
-  // ─── Body text fade in ───
-  const bodyOpacity = clampInterpolate(frame, [54, 70], [0, 1], EASE_OUT);
-  const bodySlideY = clampInterpolate(frame, [54, 70], [20, 0], EASE_OUT);
+  // ─── Body text (spring slide up) ───
+  const bodyAnim = springSlideUp(frame, FPS, 54, 20, "snappy");
 
-  // ─── CTA entrance ───
-  const ctaScale = clampInterpolate(frame, [75, 90], [0.5, 1.0], EASE_OUT_BACK);
-  const ctaOpacity = clampInterpolate(frame, [75, 85], [0, 1], EASE_OUT);
+  // ─── CTA entrance (spring scale) ───
+  const ctaAnim = springScale(frame, FPS, 75, 0.5, "pop");
+
+  // ─── CTA gradient with hue shift ───
+  const ctaGradient = `linear-gradient(135deg, ${accentColor}, ${shiftHue(accentColor, 30)})`;
 
   return (
     <AbsoluteFill
@@ -132,100 +121,101 @@ export function ImageFrameOverlayComposition({
         style={{
           position: "absolute",
           inset: 0,
-          opacity: vignetteOpacity,
-          background: `
-            radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%),
-            linear-gradient(180deg, rgba(0,0,0,0.15) 0%, transparent 30%, transparent 60%, rgba(0,0,0,0.4) 100%)
-          `,
+          opacity: bgOpacity,
+          backgroundImage: vignetteOverlay(0.5),
         }}
       />
 
       {/* Badge / ribbon — top-left */}
-      <div
-        style={{
-          position: "absolute",
-          top: height * 0.04,
-          left: padding,
-          zIndex: 3,
-          opacity: badgeOpacity,
-          transform: `translate(${badgeSlideX}px, ${badgeSlideY}px) rotate(${badgeRotation}deg) scale(${finalBadgeScale})`,
-          transformOrigin: "top left",
-        }}
-      >
+      <Sequence from={0} layout="none">
         <div
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            backgroundColor: accentColor,
-            color: "#ffffff",
-            fontSize: width * 0.022,
-            fontWeight: 800,
-            textTransform: "uppercase" as const,
-            letterSpacing: 2.5,
-            padding: `${height * 0.013}px ${width * 0.03}px`,
-            borderRadius: 8,
-            boxShadow: `0 6px 24px rgba(0,0,0,0.45), 0 2px 8px ${accentColor}55`,
-            lineHeight: 1.2,
+            position: "absolute",
+            top: height * 0.04,
+            left: padding,
+            zIndex: 3,
+            opacity: badgeScaleAnim.opacity,
+            transform: `translate(${badgeSlideX}px, ${badgeSlideY}px) rotate(${badgeRotation}deg) scale(${finalBadgeScale})`,
+            transformOrigin: "top left",
           }}
         >
-          {headline}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              backgroundColor: accentColor,
+              color: "#ffffff",
+              fontSize: width * 0.022,
+              fontWeight: 800,
+              textTransform: "uppercase" as const,
+              letterSpacing: 2.5,
+              padding: `${height * 0.013}px ${width * 0.03}px`,
+              borderRadius: 8,
+              boxShadow: `0 6px 24px rgba(0,0,0,0.45), 0 2px 8px ${accentColor}55`,
+              lineHeight: 1.2,
+            }}
+          >
+            {headline}
+          </div>
         </div>
-      </div>
+      </Sequence>
 
       {/* Frosted glass strip at bottom */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 2,
-          opacity: glassStripOpacity,
-          transform: `translateY(${glassStripY}px)`,
-          backgroundColor: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          padding: `${height * 0.03}px ${padding}px ${height * 0.04}px`,
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-        }}
-      >
-        {/* Body text */}
+      <Sequence from={0} layout="none">
         <div
           style={{
-            fontSize: width * 0.02,
-            fontWeight: 400,
-            color: textColor,
-            opacity: bodyOpacity,
-            transform: `translateY(${bodySlideY}px)`,
-            lineHeight: 1.55,
-            marginBottom: height * 0.025,
-            maxWidth: width * 0.75,
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 2,
+            opacity: glassAnim.opacity,
+            transform: glassAnim.transform,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            padding: `${height * 0.03}px ${padding}px ${height * 0.04}px`,
+            borderTop: "1px solid rgba(255,255,255,0.08)",
           }}
         >
-          {body}
-        </div>
+          {/* Body text */}
+          <div
+            style={{
+              fontSize: width * 0.02,
+              fontWeight: 400,
+              color: textColor,
+              opacity: bodyAnim.opacity,
+              transform: bodyAnim.transform,
+              lineHeight: 1.55,
+              marginBottom: height * 0.025,
+              maxWidth: width * 0.75,
+            }}
+          >
+            {body}
+          </div>
 
-        {/* CTA pill button */}
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            backgroundColor: accentColor,
-            color: "#ffffff",
-            fontSize: width * 0.019,
-            fontWeight: 700,
-            padding: `${height * 0.012}px ${width * 0.038}px`,
-            borderRadius: 50,
-            letterSpacing: 0.8,
-            boxShadow: `0 4px 20px ${accentColor}55`,
-            opacity: ctaOpacity,
-            transform: `scale(${ctaScale})`,
-            transformOrigin: "left center",
-          }}
-        >
-          {cta} &rarr;
+          {/* CTA pill button */}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              background: ctaGradient,
+              color: "#ffffff",
+              fontSize: width * 0.019,
+              fontWeight: 700,
+              padding: `${height * 0.012}px ${width * 0.038}px`,
+              borderRadius: 50,
+              letterSpacing: 0.8,
+              boxShadow: `0 4px 20px ${accentColor}55`,
+              opacity: ctaAnim.opacity,
+              transform: ctaAnim.transform,
+              transformOrigin: "left center",
+            }}
+          >
+            {cta} &rarr;
+          </div>
         </div>
-      </div>
+      </Sequence>
     </AbsoluteFill>
   );
 }

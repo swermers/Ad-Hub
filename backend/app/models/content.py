@@ -26,6 +26,9 @@ class ContentPiece(Base):
     aspect_ratio: Mapped[str | None] = mapped_column(String(10))
     generation_metadata: Mapped[str | None] = mapped_column(Text)
     image_url: Mapped[str | None] = mapped_column(Text)
+    media_type: Mapped[str | None] = mapped_column(String(20))  # "text", "video", "carousel", "image"
+    video_style: Mapped[str | None] = mapped_column(String(50))  # Remotion composition style
+    video_config: Mapped[str | None] = mapped_column(Text)  # JSON: colors, aspect_ratio, etc.
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )

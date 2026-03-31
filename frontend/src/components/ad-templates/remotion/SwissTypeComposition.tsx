@@ -2,13 +2,21 @@ import React from "react";
 import {
   useCurrentFrame,
   useVideoConfig,
-  interpolate,
-  Easing,
   AbsoluteFill,
+  Sequence,
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
 import { TYPE, GRID, SHAPE_PRESETS, shapeStyle, PALETTE, headlineSize } from "./swissDesign";
+import {
+  springProgress,
+  springSlideUp,
+  springStagger,
+  drawProgress,
+  vignetteOverlay,
+  shiftHue,
+  breathe,
+} from "./animationUtils";
 
 export interface SwissTypeProps {
   headline: string;
@@ -45,7 +53,7 @@ export function SwissTypeComposition({
 
   // --- Animation timeline ---
   // 0-0.4s: Geometric shapes draw in
-  // 0.2-1.0s: Headline slides up from below, letter by letter stagger
+  // 0.2-1.0s: Headline slides up from below
   // 1.0-1.5s: Accent line draws across
   // 1.2-1.8s: Body text fades in
   // 2.0-2.5s: CTA appears with clean slide
@@ -53,52 +61,32 @@ export function SwissTypeComposition({
 
   const shapes = SHAPE_PRESETS.poster;
 
-  // Shape animations
-  const shapeProgress = interpolate(frame, [0, fps * 0.6], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Shape animations — staggered spring entrance
+  const shapeProgressValues = springStagger(
+    frame,
+    fps,
+    shapes.length,
+    0,
+    Math.round(fps * 0.15),
+    "snappy",
+  );
 
-  // Headline animation — slides up from bottom
-  const headlineY = interpolate(frame, [fps * 0.2, fps * 1.0], [80, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-  const headlineOpacity = interpolate(frame, [fps * 0.2, fps * 0.6], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // Headline animation — spring slide up with heavy preset for big type
+  const headlineAnim = springSlideUp(frame, fps, fps * 0.2, 80, "heavy");
 
   // Accent line draws across
-  const lineWidth = interpolate(frame, [fps * 1.0, fps * 1.5], [0, 100], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  const lineProgress = drawProgress(frame, fps * 1.0, fps * 0.5);
 
-  // Body text
-  const bodyOpacity = interpolate(frame, [fps * 1.2, fps * 1.8], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const bodyY = interpolate(frame, [fps * 1.2, fps * 1.8], [20, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Body text — spring slide up
+  const bodyAnim = springSlideUp(frame, fps, fps * 1.2, 20, "snappy");
 
-  // CTA
-  const ctaOpacity = interpolate(frame, [fps * 2.0, fps * 2.5], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const ctaX = interpolate(frame, [fps * 2.0, fps * 2.5], [-30, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // CTA — spring slide from left (horizontal)
+  const ctaProgress = springProgress(frame, fps, fps * 2.0, "snappy");
+  const ctaOpacity = Math.min(ctaProgress * 1.5, 1);
+  const ctaX = -30 * (1 - ctaProgress);
+
+  // Corner accent — spring progress for opacity
+  const cornerOpacity = springProgress(frame, fps, 0, "snappy");
 
   const fgColor = textColor;
 
@@ -112,15 +100,19 @@ export function SwissTypeComposition({
         overflow: "hidden",
       }}
     >
+      {/* Vignette overlay — subtle */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: vignetteOverlay(0.2),
+          pointerEvents: "none",
+        }}
+      />
+
       {/* Geometric shapes */}
       {shapes.map((shape, i) => {
-        const delay = i * 0.15;
-        const progress = interpolate(
-          frame,
-          [fps * delay, fps * (delay + 0.5)],
-          [0, 1],
-          { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
-        );
+        const progress = shapeProgressValues[i];
         return (
           <div
             key={i}
@@ -131,7 +123,7 @@ export function SwissTypeComposition({
                 height,
                 accentColor,
               ),
-              opacity: progress * shapeProgress * 0.6,
+              opacity: progress * 0.6,
               transform: `${shapeStyle({ ...shape, color: "accent" }, width, height, accentColor).transform || ""} scale(${progress})`,
             }}
           />
@@ -166,8 +158,8 @@ export function SwissTypeComposition({
               color: fgColor,
               margin: 0,
               textTransform: "uppercase",
-              transform: `translateY(${headlineY}px)`,
-              opacity: headlineOpacity,
+              transform: headlineAnim.transform,
+              opacity: headlineAnim.opacity,
             }}
           >
             {headline}
@@ -177,7 +169,7 @@ export function SwissTypeComposition({
         {/* Accent line */}
         <div
           style={{
-            width: `${lineWidth}%`,
+            width: `${lineProgress * 100}%`,
             maxWidth: GRID.spanWidth(8, width),
             height: 6,
             backgroundColor: accentColor,
@@ -194,8 +186,8 @@ export function SwissTypeComposition({
             lineHeight: TYPE.body.lineHeight,
             letterSpacing: TYPE.body.tracking,
             color: fgColor,
-            opacity: bodyOpacity * 0.7,
-            transform: `translateY(${bodyY}px)`,
+            opacity: bodyAnim.opacity * 0.7,
+            transform: bodyAnim.transform,
             margin: 0,
             maxWidth: GRID.spanWidth(8, width),
           }}
@@ -244,10 +236,7 @@ export function SwissTypeComposition({
           width: 16,
           height: 16,
           backgroundColor: accentColor,
-          opacity: interpolate(frame, [0, fps * 0.3], [0, 1], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          }),
+          opacity: cornerOpacity,
         }}
       />
     </AbsoluteFill>

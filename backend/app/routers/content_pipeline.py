@@ -75,6 +75,8 @@ class ExpandRequest(BaseModel):
     platforms: list[str] = ["twitter", "linkedin", "meta"]
     include_video_script: bool = True
     include_thread: bool = True
+    include_video_ad: bool = False
+    include_carousel: bool = False
 
 
 class QuickExpandRequest(BaseModel):
@@ -86,6 +88,8 @@ class QuickExpandRequest(BaseModel):
     content_types: list[str] = ["social_post"]
     include_video_script: bool = False
     include_thread: bool = False
+    include_video_ad: bool = False
+    include_carousel: bool = False
 
 
 class ExpandedPiece(BaseModel):
@@ -97,6 +101,9 @@ class ExpandedPiece(BaseModel):
     cta: str | None = None
     funnel_stage: str = "awareness"
     metadata: dict = {}
+    # Video / carousel composition fields
+    video_style: str | None = None
+    video_config: dict | None = None
 
 
 class ExpandResponse(BaseModel):
@@ -374,10 +381,36 @@ async def expand_to_platforms(
         pieces_to_gen.append({"content_type": "video_script", "platform": "general"})
     if data.include_thread:
         pieces_to_gen.append({"content_type": "x_thread", "platform": "twitter"})
+    if data.include_video_ad:
+        pieces_to_gen.append({"content_type": "video_ad", "platform": "general"})
+    if data.include_carousel:
+        pieces_to_gen.append({"content_type": "carousel", "platform": "general"})
 
     pieces_spec = "\n".join([f"- {p['content_type']} for {p['platform']}" for p in pieces_to_gen])
 
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
+
+    video_ad_rules = ""
+    if data.include_video_ad or data.include_carousel:
+        video_ad_rules = """
+VIDEO AD RULES (content_type: "video_ad"):
+Generate a short, punchy video ad with composition-ready fields:
+- headline: 5-8 words max, bold and attention-grabbing (this appears on screen)
+- body: 1-2 sentence supporting text (secondary on-screen text)
+- cta: 2-4 word call to action (e.g. "Try It Free", "Learn More")
+- video_style: pick the BEST style for this content from: "swiss-bold", "swiss-stack", "swiss-type", "swiss-grid", "swiss-minimal", "swiss-story", "default", "pas", "kinetic", "saas-demo", "data-hype", "social-proof", "image-overlay"
+  Style guide: "pas" for pain-point content, "data-hype" for stats/numbers, "social-proof" for testimonials, "saas-demo" for product features, "kinetic" for energetic/punchy, "swiss-bold" for editorial statements, "default" for general/elegant
+- video_config: {"aspect_ratio": "1:1" or "9:16" or "4:5", "accent_color": "#hex"}
+  Pick 9:16 for stories/reels, 1:1 for feed posts, 4:5 for portrait feed
+
+CAROUSEL RULES (content_type: "carousel"):
+Generate a multi-slide carousel:
+- headline: overall carousel title (5-8 words)
+- body: pipe-delimited slide headlines, 4-6 slides (e.g. "Slide 1 Title|Slide 2 Title|Slide 3 Title|Slide 4 Title")
+- cta: final slide CTA text
+- video_style: always "swiss-carousel"
+- video_config: {"aspect_ratio": "1:1", "accent_color": "#hex"}
+"""
 
     system_prompt = f"""You are a content creator expanding a newsletter into platform-specific content.
 
@@ -392,7 +425,8 @@ VIDEO SCRIPT RULES:
 {prompt_set["video_script_rules"]}
 
 X THREAD RULES:
-{prompt_set["x_thread_rules"]}"""
+{prompt_set["x_thread_rules"]}
+{video_ad_rules}"""
 
     user_prompt = f"""Here is the approved newsletter draft:
 
@@ -410,18 +444,20 @@ Generate these content pieces from the newsletter:
 Return ONLY a JSON array:
 [
     {{
-        "content_type": "social_post|video_script|x_thread",
+        "content_type": "social_post|video_script|x_thread|video_ad|carousel",
         "platform": "twitter|linkedin|meta|general",
         "title": "short label",
-        "body": "full content text",
-        "hook": "opening line",
+        "body": "full content text (for video_ad: on-screen supporting text, for carousel: pipe-delimited slide headlines)",
+        "hook": "opening line (for video_ad: the headline shown on screen)",
         "cta": "call to action",
         "funnel_stage": "awareness",
         "metadata": {{
             "specificity_check": "what the reader sees",
             "tension_check": "what pulls against what",
             "stealable_line": "the screenshot-worthy phrase"
-        }}
+        }},
+        "video_style": "only for video_ad/carousel types, null otherwise",
+        "video_config": {{"aspect_ratio": "1:1", "accent_color": "#hex"}}
     }}
 ]
 
@@ -448,6 +484,8 @@ Return ONLY the JSON array."""
             cta=p.get("cta"),
             funnel_stage=p.get("funnel_stage", "awareness"),
             metadata=p.get("metadata", {}),
+            video_style=p.get("video_style"),
+            video_config=p.get("video_config"),
         ))
 
     return ExpandResponse(pieces=pieces)
@@ -479,10 +517,36 @@ async def quick_expand(
         pieces_to_gen.append({"content_type": "video_script", "platform": "general"})
     if data.include_thread:
         pieces_to_gen.append({"content_type": "x_thread", "platform": "twitter"})
+    if data.include_video_ad:
+        pieces_to_gen.append({"content_type": "video_ad", "platform": "general"})
+    if data.include_carousel:
+        pieces_to_gen.append({"content_type": "carousel", "platform": "general"})
 
     pieces_spec = "\n".join([f"- {p['content_type']} for {p['platform']}" for p in pieces_to_gen])
 
     brand_context = _get_brand_context(product, db)
+
+    video_ad_rules = ""
+    if data.include_video_ad or data.include_carousel:
+        video_ad_rules = """
+VIDEO AD RULES (content_type: "video_ad"):
+Generate a short, punchy video ad with composition-ready fields:
+- headline: 5-8 words max, bold and attention-grabbing (this appears on screen)
+- body: 1-2 sentence supporting text (secondary on-screen text)
+- cta: 2-4 word call to action (e.g. "Try It Free", "Learn More")
+- video_style: pick the BEST style for this content from: "swiss-bold", "swiss-stack", "swiss-type", "swiss-grid", "swiss-minimal", "swiss-story", "default", "pas", "kinetic", "saas-demo", "data-hype", "social-proof", "image-overlay"
+  Style guide: "pas" for pain-point content, "data-hype" for stats/numbers, "social-proof" for testimonials, "saas-demo" for product features, "kinetic" for energetic/punchy, "swiss-bold" for editorial statements, "default" for general/elegant
+- video_config: {"aspect_ratio": "1:1" or "9:16" or "4:5", "accent_color": "#hex"}
+  Pick 9:16 for stories/reels, 1:1 for feed posts, 4:5 for portrait feed
+
+CAROUSEL RULES (content_type: "carousel"):
+Generate a multi-slide carousel:
+- headline: overall carousel title (5-8 words)
+- body: pipe-delimited slide headlines, 4-6 slides (e.g. "Slide 1 Title|Slide 2 Title|Slide 3 Title|Slide 4 Title")
+- cta: final slide CTA text
+- video_style: always "swiss-carousel"
+- video_config: {"aspect_ratio": "1:1", "accent_color": "#hex"}
+"""
 
     system_prompt = f"""You are a content creator generating platform-specific content directly from a content seed.
 
@@ -503,7 +567,8 @@ VIDEO SCRIPT RULES:
 {prompt_set["video_script_rules"]}
 
 X THREAD RULES:
-{prompt_set["x_thread_rules"]}"""
+{prompt_set["x_thread_rules"]}
+{video_ad_rules}"""
 
     user_prompt = f"""Here is the approved content seed:
 
@@ -519,18 +584,20 @@ Generate these content pieces directly from the seed (no newsletter needed):
 Return ONLY a JSON array:
 [
     {{
-        "content_type": "social_post|video_script|x_thread",
+        "content_type": "social_post|video_script|x_thread|video_ad|carousel",
         "platform": "twitter|linkedin|meta|general",
         "title": "short label",
-        "body": "full content text",
-        "hook": "opening line",
+        "body": "full content text (for video_ad: on-screen supporting text, for carousel: pipe-delimited slide headlines)",
+        "hook": "opening line (for video_ad: the headline shown on screen)",
         "cta": "call to action",
         "funnel_stage": "awareness",
         "metadata": {{
             "specificity_check": "what the reader sees",
             "tension_check": "what pulls against what",
             "stealable_line": "the screenshot-worthy phrase"
-        }}
+        }},
+        "video_style": "only for video_ad/carousel types, null otherwise",
+        "video_config": {{"aspect_ratio": "1:1", "accent_color": "#hex"}}
     }}
 ]
 
@@ -557,6 +624,8 @@ Return ONLY the JSON array."""
             cta=p.get("cta"),
             funnel_stage=p.get("funnel_stage", "awareness"),
             metadata=p.get("metadata", {}),
+            video_style=p.get("video_style"),
+            video_config=p.get("video_config"),
         ))
 
     return ExpandResponse(pieces=pieces)
@@ -677,7 +746,20 @@ async def finalize_content(
             "newsletter": "blog_draft",
             "video_script": "blog_draft",
             "x_thread": "social_post",
+            # video_ad and carousel stay as-is
         }
+
+        # Determine media type
+        media_type_map = {
+            "video_ad": "video",
+            "carousel": "carousel",
+            "video_script": "text",
+        }
+        media_type = media_type_map.get(ct, "text")
+
+        # Video config
+        video_style = piece_data.get("video_style")
+        video_config = piece_data.get("video_config")
 
         piece = ContentPiece(
             product_id=data.product_id,
@@ -690,6 +772,10 @@ async def finalize_content(
             funnel_stage=piece_data.get("funnel_stage", "awareness"),
             status="draft",
             generation_metadata=json.dumps(meta),
+            media_type=media_type,
+            video_style=video_style,
+            video_config=json.dumps(video_config) if video_config else None,
+            aspect_ratio=video_config.get("aspect_ratio") if video_config else None,
         )
         db.add(piece)
         db.flush()

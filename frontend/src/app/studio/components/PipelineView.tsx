@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 import {
   api,
   type PipelineSharpenResult,
@@ -9,6 +10,12 @@ import {
   type PipelineExpandedPiece,
   type PipelineFinalizeResult,
 } from "@/lib/api";
+import type { VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
+
+const DynamicVideoPreview = dynamic(
+  () => import("@/components/ad-templates/remotion/VideoPreview").then((m) => m.VideoPreview),
+  { ssr: false, loading: () => <div className="h-48 rounded-xl bg-[#131315]/60 animate-pulse" /> },
+);
 
 /* ── Pipeline step definitions ─────────────────────────────────────────────── */
 
@@ -169,6 +176,8 @@ export default function PipelineView({
         content_types: contentTypes,
         include_video_script: selectedOutputs.includes("video_script"),
         include_thread: selectedOutputs.includes("x_thread"),
+        include_video_ad: selectedOutputs.includes("video_ad"),
+        include_carousel: selectedOutputs.includes("carousel"),
       });
       setExpandResult(result.pieces);
       setStatus("expand", "done");
@@ -204,6 +213,8 @@ export default function PipelineView({
         platforms: platforms.length > 0 ? platforms : ["twitter", "linkedin"],
         include_video_script: selectedOutputs.includes("video_script"),
         include_thread: selectedOutputs.includes("x_thread"),
+        include_video_ad: selectedOutputs.includes("video_ad"),
+        include_carousel: selectedOutputs.includes("carousel"),
       });
       setExpandResult(result.pieces);
       setStatus("expand", "done");
@@ -816,39 +827,97 @@ function ExpandOutput({ pieces }: { pieces: PipelineExpandedPiece[] }) {
     meta: "group",
     general: "public",
   };
+  const typeIcons: Record<string, string> = {
+    video_ad: "videocam",
+    carousel: "view_carousel",
+    video_script: "movie",
+    social_post: "forum",
+    x_thread: "tag",
+  };
 
   return (
     <div className="space-y-3">
       <p className="text-[10px] uppercase tracking-wider text-[#E5E1E4]/40 font-semibold">
         {pieces.length} piece{pieces.length !== 1 ? "s" : ""} generated
       </p>
-      {pieces.map((p, i) => (
-        <div
-          key={i}
-          className="p-3 rounded-xl border border-[#353437]/50 bg-[#131315]/40 space-y-2"
-        >
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm text-[#FF9500]">
-              {platformIcons[p.platform] || "article"}
-            </span>
-            <span className="text-xs font-medium text-[#E5E1E4]/70">
-              {p.content_type.replace(/_/g, " ")}
-            </span>
-            <span className="text-[10px] text-[#E5E1E4]/30">{p.platform}</span>
-            {p.title && (
-              <span className="text-[10px] text-[#E5E1E4]/40 ml-auto truncate max-w-[120px]">
-                {p.title}
+      {pieces.map((p, i) => {
+        const isVideo = p.content_type === "video_ad" || p.content_type === "carousel";
+        const videoStyle = (p.video_style || "default") as VideoStyle;
+        const aspectRatio = p.video_config?.aspect_ratio || "1:1";
+
+        return (
+          <div
+            key={i}
+            className="p-3 rounded-xl border border-[#353437]/50 bg-[#131315]/40 space-y-2"
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm text-[#FF9500]">
+                {typeIcons[p.content_type] || platformIcons[p.platform] || "article"}
               </span>
+              <span className="text-xs font-medium text-[#E5E1E4]/70">
+                {p.content_type.replace(/_/g, " ")}
+              </span>
+              <span className="text-[10px] text-[#E5E1E4]/30">{p.platform}</span>
+              {isVideo && p.video_style && (
+                <span className="px-1.5 py-0.5 rounded bg-[#a4a7ff]/10 text-[9px] font-medium text-[#a4a7ff]">
+                  {p.video_style}
+                </span>
+              )}
+              {p.title && (
+                <span className="text-[10px] text-[#E5E1E4]/40 ml-auto truncate max-w-[120px]">
+                  {p.title}
+                </span>
+              )}
+            </div>
+
+            {/* Video / Carousel preview */}
+            {isVideo && (
+              <div className="rounded-lg overflow-hidden border border-[#353437]/30">
+                <DynamicVideoPreview
+                  headline={p.hook || p.title || ""}
+                  body={p.body}
+                  cta={p.cta || "Learn More"}
+                  videoStyle={videoStyle}
+                  aspectRatio={aspectRatio as "1:1" | "4:5" | "9:16"}
+                  accentColor={p.video_config?.accent_color}
+                  previewWidth={320}
+                  autoPlay
+                  loop
+                  slideHeadlines={p.content_type === "carousel" ? p.body : undefined}
+                />
+              </div>
+            )}
+
+            {/* Text content */}
+            {!isVideo && (
+              <>
+                <p className="text-xs text-[#E5E1E4]/60 leading-relaxed line-clamp-3">{p.body}</p>
+                {p.hook && (
+                  <p className="text-[10px] text-[#ffbd7f] italic truncate">
+                    Hook: &ldquo;{p.hook}&rdquo;
+                  </p>
+                )}
+              </>
+            )}
+
+            {/* Show headline/cta for video below preview */}
+            {isVideo && (
+              <div className="flex items-center gap-2 text-[10px]">
+                {p.hook && (
+                  <span className="text-[#ffbd7f] italic truncate flex-1">
+                    &ldquo;{p.hook}&rdquo;
+                  </span>
+                )}
+                {p.cta && (
+                  <span className="px-2 py-0.5 rounded-full bg-[#FF9500]/10 text-[#FF9500] font-medium">
+                    {p.cta}
+                  </span>
+                )}
+              </div>
             )}
           </div>
-          <p className="text-xs text-[#E5E1E4]/60 leading-relaxed line-clamp-3">{p.body}</p>
-          {p.hook && (
-            <p className="text-[10px] text-[#ffbd7f] italic truncate">
-              Hook: &ldquo;{p.hook}&rdquo;
-            </p>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

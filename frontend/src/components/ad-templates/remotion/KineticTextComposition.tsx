@@ -2,13 +2,24 @@ import React from "react";
 import {
   useCurrentFrame,
   useVideoConfig,
-  interpolate,
-  Easing,
   AbsoluteFill,
+  Sequence,
+  interpolate,
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
-import { safeTruncate, shiftHue } from "./animationUtils";
+import {
+  safeTruncate,
+  shiftHue,
+  springProgress,
+  springSlideUp,
+  springScale,
+  springBlurIn,
+  springStagger,
+  animatedMeshGradient,
+  vignetteOverlay,
+  drawProgress,
+} from "./animationUtils";
 
 export interface KineticTextProps {
   headline: string;
@@ -24,9 +35,12 @@ export interface KineticTextProps {
 /**
  * Kinetic Typography composition.
  *
- * Words animate in one-by-one with scale/fade effects.
- * Each word of the headline appears sequentially,
- * then the body fades in, then CTA bounces in.
+ * Words animate in one-by-one with spring physics + blur-in.
+ * Each word of the headline appears sequentially with bounce,
+ * then the body fades in, then CTA pops in.
+ *
+ * Uses spring physics, Sequence scenes, animated mesh gradient,
+ * and cinematic vignette for depth.
  *
  * 5 seconds at 30fps = 150 frames
  */
@@ -44,67 +58,55 @@ export function KineticTextComposition({
   const { fps } = useVideoConfig();
   const { width, height } = getDimensions(aspectRatio);
 
-  // Apply text safety
+  // Text safety
   const safeHeadline = safeTruncate(headline, 35);
-
   const words = safeHeadline.split(/\s+/);
-  const framesPerWord = Math.min(Math.floor((fps * 2) / Math.max(words.length, 1)), fps * 0.4);
-  const totalWordAnimTime = words.length * framesPerWord;
 
-  // Body appears after all words
-  const bodyStart = totalWordAnimTime + fps * 0.3;
-  const bodyEnd = bodyStart + fps * 0.5;
+  // Timeline
+  const wordCascadeDelay = 4; // frames between each word spring
+  const bodyStartFrame = Math.round(words.length * wordCascadeDelay + fps * 0.6);
+  const ctaStartFrame = bodyStartFrame + Math.round(fps * 0.6);
 
-  // CTA appears after body
-  const ctaStart = bodyEnd + fps * 0.3;
-  const ctaEnd = ctaStart + fps * 0.4;
+  // --- Spring animations ---
 
-  // Background gradient rotation
-  const gradientAngle = interpolate(frame, [0, fps * 5], [135, 225], {
-    extrapolateRight: "clamp",
-  });
+  // Word cascade with staggered springs (bouncy for kinetic energy)
+  const wordSprings = springStagger(frame, fps, words.length, 0, wordCascadeDelay, "bouncy");
 
-  // Body animation
-  const bodyOpacity = interpolate(frame, [bodyStart, bodyEnd], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const bodyY = interpolate(frame, [bodyStart, bodyEnd], [20, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Accent line draw
+  const lineProgress = drawProgress(frame, bodyStartFrame - Math.round(fps * 0.3), Math.round(fps * 0.4));
 
-  // CTA animation
-  const ctaOpacity = interpolate(frame, [ctaStart, ctaEnd], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const ctaScale = interpolate(frame, [ctaStart, ctaEnd, ctaEnd + fps * 0.15], [0.6, 1.1, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Body text blur-in (smooth, premium feel)
+  const bodyAnim = springBlurIn(frame, fps, bodyStartFrame, 8, "smooth");
+
+  // CTA pop entrance (bouncy spring for energy)
+  const ctaAnim = springScale(frame, fps, ctaStartFrame, 0.5, "bouncy");
+
+  // CTA glow pulse after entrance
+  const ctaGlow = frame > ctaStartFrame + fps * 0.5
+    ? 0.4 + 0.2 * Math.sin(((frame - ctaStartFrame) / (fps * 1.5)) * Math.PI * 2)
+    : 0;
+
+  // Animated mesh gradient background
+  const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.1);
 
   return (
     <AbsoluteFill
       style={{
         width,
         height,
-        backgroundColor,
+        background: meshBg,
         fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
         overflow: "hidden",
       }}
     >
-      {/* Animated gradient background */}
+      {/* Cinematic vignette */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background: `
-            linear-gradient(${gradientAngle}deg, ${accentColor}15 0%, transparent 50%),
-            radial-gradient(ellipse at 50% 100%, ${accentColor}10 0%, transparent 50%)
-          `,
+          background: vignetteOverlay(0.4),
+          zIndex: 2,
+          pointerEvents: "none",
         }}
       />
 
@@ -119,7 +121,7 @@ export function KineticTextComposition({
               backgroundSize: "cover",
               backgroundPosition: "center",
               opacity: 0.15,
-              filter: "blur(20px)",
+              filter: "blur(20px) saturate(0.7)",
             }}
           />
           <div
@@ -136,7 +138,7 @@ export function KineticTextComposition({
       <div
         style={{
           position: "relative",
-          zIndex: 1,
+          zIndex: 3,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -145,111 +147,100 @@ export function KineticTextComposition({
           padding: "80px 60px",
         }}
       >
-        {/* Kinetic headline - words appear one by one */}
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "center",
-            gap: "12px 16px",
-            marginBottom: 40,
-            maxWidth: width * 0.85,
-          }}
-        >
-          {words.map((word, i) => {
-            const wordStart = i * framesPerWord;
-            const wordEnd = wordStart + framesPerWord;
+        {/* Scene 1: Kinetic headline — words cascade with spring bounce */}
+        <Sequence from={0} layout="none">
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: "12px 16px",
+              marginBottom: 40,
+              maxWidth: width * 0.85,
+            }}
+          >
+            {words.map((word, i) => {
+              const progress = wordSprings[i] ?? 0;
+              const isHighlight = i === words.length - 1 || (i > 0 && i % 3 === 0);
 
-            const wordOpacity = interpolate(frame, [wordStart, wordEnd], [0, 1], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            });
-            const wordScale = interpolate(frame, [wordStart, wordEnd], [0.7, 1], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: Easing.out(Easing.back(1.5)),
-            });
-            const wordY = interpolate(frame, [wordStart, wordEnd], [30, 0], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: Easing.out(Easing.cubic),
-            });
+              return (
+                <span
+                  key={i}
+                  style={{
+                    fontSize: 56,
+                    fontWeight: 900,
+                    color: isHighlight ? accentColor : textColor,
+                    lineHeight: 1.1,
+                    opacity: Math.min(progress * 1.5, 1),
+                    transform: `scale(${0.7 + 0.3 * progress}) translateY(${30 * (1 - progress)}px)`,
+                    display: "inline-block",
+                    textTransform: "uppercase",
+                    letterSpacing: -1,
+                    textShadow: isHighlight ? `0 0 ${40 * progress}px ${accentColor}44` : "none",
+                  }}
+                >
+                  {word}
+                </span>
+              );
+            })}
+          </div>
+        </Sequence>
 
-            // Highlight key words (every 3rd or last word) with accent color
-            const isHighlight = i === words.length - 1 || (i > 0 && i % 3 === 0);
+        {/* Scene 2: Accent line draw */}
+        <Sequence from={bodyStartFrame - Math.round(fps * 0.4)} layout="none">
+          <div
+            style={{
+              width: 80 * lineProgress,
+              height: 4,
+              background: `linear-gradient(90deg, ${accentColor}, ${shiftHue(accentColor, 30)})`,
+              borderRadius: 2,
+              marginBottom: 24,
+              boxShadow: `0 0 ${12 * lineProgress}px ${accentColor}66`,
+            }}
+          />
+        </Sequence>
 
-            return (
-              <span
-                key={i}
-                style={{
-                  fontSize: 56,
-                  fontWeight: 900,
-                  color: isHighlight ? accentColor : textColor,
-                  lineHeight: 1.1,
-                  opacity: wordOpacity,
-                  transform: `scale(${wordScale}) translateY(${wordY}px)`,
-                  display: "inline-block",
-                  textTransform: "uppercase",
-                  letterSpacing: -1,
-                }}
-              >
-                {word}
-              </span>
-            );
-          })}
-        </div>
+        {/* Scene 3: Body text — blur-in reveal */}
+        <Sequence from={bodyStartFrame - Math.round(fps * 0.1)} layout="none">
+          <p
+            style={{
+              fontSize: 24,
+              fontWeight: 400,
+              color: textColor,
+              opacity: bodyAnim.opacity * 0.75,
+              filter: bodyAnim.filter,
+              transform: bodyAnim.transform,
+              textAlign: "center",
+              lineHeight: 1.5,
+              margin: 0,
+              marginBottom: 48,
+              maxWidth: width * 0.75,
+            }}
+          >
+            {body}
+          </p>
+        </Sequence>
 
-        {/* Accent line */}
-        <div
-          style={{
-            width: interpolate(frame, [bodyStart - fps * 0.2, bodyStart], [0, 80], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            }),
-            height: 4,
-            backgroundColor: accentColor,
-            borderRadius: 2,
-            marginBottom: 24,
-          }}
-        />
-
-        {/* Body text */}
-        <p
-          style={{
-            fontSize: 24,
-            fontWeight: 400,
-            color: textColor,
-            opacity: bodyOpacity * 0.75,
-            transform: `translateY(${bodyY}px)`,
-            textAlign: "center",
-            lineHeight: 1.5,
-            margin: 0,
-            marginBottom: 48,
-            maxWidth: width * 0.75,
-          }}
-        >
-          {body}
-        </p>
-
-        {/* CTA */}
-        <div
-          style={{
-            background: `linear-gradient(135deg, ${accentColor}, ${shiftHue(accentColor, 30)})`,
-            color: "#fff",
-            fontSize: 22,
-            fontWeight: 800,
-            padding: "18px 52px",
-            borderRadius: 50,
-            letterSpacing: 1,
-            opacity: ctaOpacity,
-            transform: `scale(${ctaScale})`,
-            boxShadow: `0 8px 32px ${accentColor}55`,
-          }}
-        >
-          {cta}
-        </div>
+        {/* Scene 4: CTA — bouncy pop entrance with glow pulse */}
+        <Sequence from={ctaStartFrame - Math.round(fps * 0.1)} layout="none">
+          <div
+            style={{
+              background: `linear-gradient(135deg, ${accentColor}, ${shiftHue(accentColor, 30)})`,
+              color: "#fff",
+              fontSize: 22,
+              fontWeight: 800,
+              padding: "18px 52px",
+              borderRadius: 50,
+              letterSpacing: 1,
+              opacity: ctaAnim.opacity,
+              transform: ctaAnim.transform,
+              boxShadow: `0 8px 32px ${accentColor}${Math.round(ctaGlow * 255).toString(16).padStart(2, "0")}`,
+            }}
+          >
+            {cta}
+          </div>
+        </Sequence>
       </div>
     </AbsoluteFill>
   );
 }
-

@@ -164,6 +164,23 @@ export default function ContentDetailPage() {
           if (c.aspect_ratio && (c.aspect_ratio === "1:1" || c.aspect_ratio === "4:5" || c.aspect_ratio === "9:16")) {
             setPreviewAspect(c.aspect_ratio as AspectRatio);
           }
+          // Auto-load video style from saved metadata
+          if (c.video_style) {
+            setVideoStyle(c.video_style as VideoStyle);
+            setPreviewMode("video");
+          }
+          // Auto-load accent color from video config
+          if (c.video_config) {
+            try {
+              const vc = typeof c.video_config === "string" ? JSON.parse(c.video_config) : c.video_config;
+              if (vc.accent_color) setColorOverride((prev: { bg?: string; text?: string; accent?: string }) => ({ ...prev, accent: vc.accent_color }));
+              if (vc.aspect_ratio) setPreviewAspect(vc.aspect_ratio as AspectRatio);
+            } catch { /* ok */ }
+          }
+          // Auto-set video mode for video/carousel content
+          if (c.media_type === "video" || c.media_type === "carousel") {
+            setPreviewMode("video");
+          }
           setDefaultsSet(true);
         }
         // Load product for brand colors + screenshots

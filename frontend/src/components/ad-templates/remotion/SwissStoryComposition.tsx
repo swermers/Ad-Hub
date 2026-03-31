@@ -3,13 +3,25 @@ import {
   useCurrentFrame,
   useVideoConfig,
   interpolate,
-  Easing,
   AbsoluteFill,
+  Sequence,
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
 import { TYPE, GRID, PALETTE, headlineSize, isLightColor } from "./swissDesign";
-import { safeTruncate, responsiveFontSize } from "./animationUtils";
+import {
+  safeTruncate,
+  responsiveFontSize,
+  springProgress,
+  springSlideUp,
+  springScale,
+  springStagger,
+  drawProgress,
+  vignetteOverlay,
+  breathe,
+  animatedMeshGradient,
+  shiftHue,
+} from "./animationUtils";
 import { IconArrowRight } from "./icons";
 
 export interface SwissStoryProps {
@@ -58,12 +70,8 @@ export function SwissStoryComposition({
   // 3.0-3.5s: CTA area slides up
   // 3.5-6s: Swipe indicator pulses
 
-  // Vertical accent line — draws from top
-  const vLineHeight = interpolate(frame, [0, fps * 0.8], [0, height * 0.35], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Vertical accent line — spring-driven draw from top
+  const vLineHeight = springProgress(frame, fps, 0, "smooth") * height * 0.35;
 
   // Apply text safety
   const safeHeadline = safeTruncate(headline, 30);
@@ -71,97 +79,91 @@ export function SwissStoryComposition({
 
   // Headline — split into words for staggered entrance
   const words = safeHeadline.split(/\s+/);
-  const wordDelay = 4; // frames between each word
   const headlineStartFrame = fps * 0.3;
 
-  // Horizontal rule
-  const hrWidth = interpolate(frame, [fps * 1.5, fps * 2.0], [0, width - storyMargin * 2], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Word-by-word spring stagger
+  const wordProgressValues = springStagger(
+    frame,
+    fps,
+    words.length,
+    headlineStartFrame,
+    4,
+    "snappy",
+  );
 
-  // Body text
-  const bodyOpacity = interpolate(frame, [fps * 2.0, fps * 2.5], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const bodyY = interpolate(frame, [fps * 2.0, fps * 2.5], [20, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Horizontal rule — draw progress
+  const hrProgress = drawProgress(frame, fps * 1.5, fps * 0.5);
+  const hrWidth = hrProgress * (width - storyMargin * 2);
 
-  // CTA area
-  const ctaY = interpolate(frame, [fps * 3.0, fps * 3.5], [60, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-  const ctaOpacity = interpolate(frame, [fps * 3.0, fps * 3.5], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // Body text — spring slide up
+  const bodyAnim = springSlideUp(frame, fps, fps * 2.0, 20, "snappy");
 
-  // Swipe indicator pulse
-  const swipePulse = frame > fps * 3.5
-    ? interpolate(
-        (frame - fps * 3.5) % (fps * 1.2),
-        [0, fps * 0.6, fps * 1.2],
-        [0, -12, 0],
-      )
-    : 0;
-  const swipeOpacity = frame > fps * 3.5
-    ? interpolate(
-        (frame - fps * 3.5) % (fps * 1.2),
-        [0, fps * 0.6, fps * 1.2],
-        [0.4, 1, 0.4],
-      )
-    : 0;
+  // CTA area — spring slide up
+  const ctaAnim = springSlideUp(frame, fps, fps * 3.0, 60, "smooth");
 
-  // Corner geometric accent — small square
-  const cornerScale = interpolate(frame, [0, fps * 0.4], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  // Swipe indicator — breathing pulse
+  const swipeBreath = breathe(frame, fps * 3.5, fps * 1.2, 0.15);
+  const swipeActive = frame > fps * 3.5;
+
+  // Corner geometric accent — spring scale
+  const cornerAnim = springScale(frame, fps, 0, 0, "snappy");
+
+  // CTA button gradient with hue shift
+  const ctaGradient = `linear-gradient(135deg, ${accentColor}, ${shiftHue(accentColor, 30)})`;
+
+  // Animated mesh gradient background
+  const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.08);
 
   return (
     <AbsoluteFill
       style={{
         width,
         height,
-        backgroundColor,
+        background: meshBg,
         fontFamily: font,
         overflow: "hidden",
       }}
     >
-      {/* Vertical accent line — right side */}
+      {/* Vignette overlay */}
       <div
         style={{
           position: "absolute",
-          right: storyMargin,
-          top: 0,
-          width: 3,
-          height: vLineHeight,
-          backgroundColor: accentColor,
-          opacity: 0.6,
+          inset: 0,
+          background: vignetteOverlay(0.35),
+          pointerEvents: "none",
         }}
       />
 
+      {/* Vertical accent line — right side */}
+      <Sequence from={0}>
+        <div
+          style={{
+            position: "absolute",
+            right: storyMargin,
+            top: 0,
+            width: 3,
+            height: vLineHeight,
+            backgroundColor: accentColor,
+            opacity: 0.6,
+          }}
+        />
+      </Sequence>
+
       {/* Corner square accent — top left */}
-      <div
-        style={{
-          position: "absolute",
-          top: storyMargin,
-          left: storyMargin,
-          width: 20,
-          height: 20,
-          backgroundColor: accentColor,
-          opacity: cornerScale * 0.5,
-          transform: `scale(${cornerScale})`,
-        }}
-      />
+      <Sequence from={0}>
+        <div
+          style={{
+            position: "absolute",
+            top: storyMargin,
+            left: storyMargin,
+            width: 20,
+            height: 20,
+            backgroundColor: accentColor,
+            opacity: cornerAnim.opacity * 0.5,
+            transform: cornerAnim.transform,
+          }}
+        />
+      </Sequence>
 
       {/* Main content — vertically centered */}
       <div
@@ -185,18 +187,9 @@ export function SwissStoryComposition({
           }}
         >
           {words.map((word, i) => {
-            const wordStart = headlineStartFrame + i * wordDelay;
-            const wordEnd = wordStart + fps * 0.3;
-
-            const wordOpacity = interpolate(frame, [wordStart, wordEnd], [0, 1], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            });
-            const wordY = interpolate(frame, [wordStart, wordEnd], [30, 0], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: Easing.out(Easing.cubic),
-            });
+            const progress = wordProgressValues[i];
+            const wordOpacity = Math.min(progress * 1.5, 1);
+            const wordY = 30 * (1 - progress);
 
             return (
               <span
@@ -237,8 +230,8 @@ export function SwissStoryComposition({
             fontWeight: TYPE.body.weight,
             lineHeight: TYPE.body.lineHeight,
             color: textColor,
-            opacity: bodyOpacity * 0.6,
-            transform: `translateY(${bodyY}px)`,
+            opacity: bodyAnim.opacity * 0.6,
+            transform: bodyAnim.transform,
             margin: 0,
             maxWidth: width - storyMargin * 2,
           }}
@@ -254,19 +247,19 @@ export function SwissStoryComposition({
           left: storyMargin,
           right: storyMargin,
           bottom: storyMargin + 40,
-          opacity: ctaOpacity,
-          transform: `translateY(${ctaY}px)`,
+          opacity: ctaAnim.opacity,
+          transform: ctaAnim.transform,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           gap: 16,
         }}
       >
-        {/* CTA button — full width, sharp corners (Swiss) */}
+        {/* CTA button — full width, sharp corners (Swiss), hue-shifted gradient */}
         <div
           style={{
             width: "100%",
-            backgroundColor: accentColor,
+            background: ctaGradient,
             color: isLightColor(accentColor) ? PALETTE.dark : PALETTE.light,
             fontSize: TYPE.cta.size,
             fontWeight: TYPE.cta.weight,
@@ -286,8 +279,8 @@ export function SwissStoryComposition({
             flexDirection: "column",
             alignItems: "center",
             gap: 6,
-            opacity: swipeOpacity,
-            transform: `translateY(${swipePulse}px)`,
+            opacity: swipeActive ? 0.4 + 0.6 * (swipeBreath - 0.85) / 0.3 : 0,
+            transform: `translateY(${swipeActive ? -12 * (swipeBreath - 1) / 0.15 : 0}px) scale(${swipeActive ? swipeBreath : 1})`,
           }}
         >
           {/* Chevron up — rotated arrow */}
@@ -312,7 +305,7 @@ export function SwissStoryComposition({
         </div>
       </div>
 
-      {/* Bottom progress bar */}
+      {/* Bottom progress bar — linear interpolate (intentionally not spring) */}
       <div
         style={{
           position: "absolute",
