@@ -78,7 +78,7 @@ export function NotificationDropdown({
   const [readIds, setReadIds] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try {
-      const stored = localStorage.getItem("adhub_read_notifications");
+      const stored = localStorage.getItem("iterant_read_notifications");
       return stored ? new Set(JSON.parse(stored)) : new Set();
     } catch {
       return new Set();
@@ -90,7 +90,7 @@ export function NotificationDropdown({
     (ids: Set<string>) => {
       try {
         localStorage.setItem(
-          "adhub_read_notifications",
+          "iterant_read_notifications",
           JSON.stringify([...ids])
         );
       } catch {

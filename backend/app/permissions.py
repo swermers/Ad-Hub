@@ -32,7 +32,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 
-# ─── Role hierarchy ──────────────────────────────────────────────────────────
+# ─── Role hierarchy ──────────────────────────────────────────────────────────────────
 
 ROLE_ADMIN = "admin"
 ROLE_VIEWER = "viewer"
@@ -66,7 +66,7 @@ AGENT_DENIED_ACTIONS = {
 }
 
 
-# ─── Current user extraction ─────────────────────────────────────────────────
+# ─── Current user extraction ─────────────────────────────────────────────────────────
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> dict:
     """Extract the current user/agent from the request.
@@ -78,8 +78,8 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> dict:
     """
     auth_header = request.headers.get("Authorization", "")
 
-    # Agent API key auth (prefix: "Bearer adhub_")
-    if auth_header.startswith("Bearer adhub_"):
+    # Agent API key auth (prefix: "Bearer iterant_" or legacy "Bearer adhub_")
+    if auth_header.startswith("Bearer iterant_") or auth_header.startswith("Bearer adhub_"):
         return _resolve_agent_key(auth_header.removeprefix("Bearer "), db)
 
     # Human token auth
@@ -157,7 +157,7 @@ def _resolve_agent_key(key: str, db: Session) -> dict:
     }
 
 
-# ─── Workspace scoping ───────────────────────────────────────────────────────
+# ─── Workspace scoping ─────────────────────────────────────────────────────────────
 
 def get_workspace_id(user: dict = Depends(get_current_user)) -> str | None:
     """Extract workspace_id from the current user for query filtering.
@@ -226,7 +226,7 @@ def scope_product_query(query, model, user: dict, db: Session):
     return query
 
 
-# ─── Permission dependencies (use with Depends()) ────────────────────────────
+# ─── Permission dependencies (use with Depends()) ──────────────────────────────────
 
 def require_admin(user: dict = Depends(get_current_user)):
     """Only admin users can access this endpoint."""

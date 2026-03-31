@@ -17,7 +17,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const token = localStorage.getItem("adhub_token");
+      const token = localStorage.getItem("iterant_token");
       if (!token) {
         setStatus("unauthenticated");
         router.push("/login");
@@ -29,7 +29,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         await api.checkAuth();
         setStatus("authenticated");
       } catch {
-        localStorage.removeItem("adhub_token");
+        localStorage.removeItem("iterant_token");
         setStatus("unauthenticated");
         router.push("/login");
       }

@@ -65,7 +65,7 @@ async def inject_draft(
     The draft sits in Creator Studio / Meta Business Suite until the human
     publishes it. This avoids the API-posted reach penalty on Meta/Instagram.
 
-    For Twitter (which has no draft API), the content stays in Ad-Hub's
+    For Twitter (which has no draft API), the content stays in Iterant's
     approval queue — the human can copy-paste or we post on approval.
     """
     connection = scheduled_post.connection
