@@ -26,7 +26,7 @@ function TopNav() {
     <nav className="fixed top-0 w-full z-50 glass-nav border-b border-white/5 flex justify-between items-center px-8 h-20">
       <div className="flex items-center gap-8 entrance-fade stagger-1">
         <span className="text-2xl font-bold tracking-tighter text-[#E5E1E4]">
-          Ad-Hub
+          Iterant
         </span>
         <div className="hidden md:flex gap-6 ml-4">
           {topLinks.map((link) => {
