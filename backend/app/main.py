@@ -81,7 +81,7 @@ async def lifespan(app: FastAPI):
         logger.info("Background scheduler stopped")
 
 
-app = FastAPI(title="Ad-Hub", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Iterant", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(AuthMiddleware)
 app.add_middleware(
@@ -131,7 +131,7 @@ def health_check():
     return {"status": "ok", "version": "0.2.0"}
 
 
-# ─── Model Settings (in-app model selector) ─────────────────────────────────
+# ─── Model Settings (in-app model selector) ─────────────────────────────────────
 
 AVAILABLE_MODELS = [
     {"id": "claude-opus-4-6", "name": "Opus 4.6", "tier": "premium", "desc": "Best nuance, slower, higher cost"},

@@ -35,7 +35,7 @@ export default function LoginPage() {
         <div className="glass-card rounded-[2rem] p-10 border border-white/10">
           <div className="text-center mb-10">
             <h1 className="text-3xl font-extrabold tracking-tighter text-[#E5E1E4] mb-2">
-              Ad-Hub
+              Iterant
             </h1>
             <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-[#c6c4df]">
               Enter your password to continue
