@@ -20,7 +20,7 @@ router = APIRouter()
 TOKEN_EXPIRY_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 
-# ─── Token signing ────────────────────────────────────────────────────────────
+# ─── Token signing ──────────────────────────────────────────────────────────────────
 
 def _sign(payload: dict) -> str:
     """Create a simple signed token (base64 payload + HMAC signature)."""
@@ -49,7 +49,7 @@ def verify_token(token: str) -> dict | None:
     return payload
 
 
-# ─── Login (backwards-compatible + user-based) ────────────────────────────────
+# ─── Login (backwards-compatible + user-based) ────────────────────────────────────────
 
 class LoginRequest(BaseModel):
     password: str
@@ -104,7 +104,7 @@ def me(user: dict = Depends(get_current_user)):
     }
 
 
-# ─── Agent API Key Management (admin only) ────────────────────────────────────
+# ─── Agent API Key Management (admin only) ────────────────────────────────────────
 
 class CreateAgentKeyRequest(BaseModel):
     label: str = "Default Agent"
@@ -135,7 +135,7 @@ def create_agent_key(
     """Create a new agent API key. The raw key is only shown once."""
     from app.models.user import AgentAPIKey
 
-    raw_key = f"adhub_{secrets.token_urlsafe(32)}"
+    raw_key = f"iterant_{secrets.token_urlsafe(32)}"
     key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
     key_prefix = raw_key[:12]
 
@@ -212,7 +212,7 @@ def revoke_agent_key(
     db.commit()
 
 
-# ─── Seed Default Admin (called on startup) ──────────────────────────────────
+# ─── Seed Default Admin (called on startup) ──────────────────────────────────────
 
 def seed_default_admin(db: Session):
     """Create a default admin user if none exist. Uses AUTH_PASSWORD from env."""
@@ -227,7 +227,7 @@ def seed_default_admin(db: Session):
 
     admin = User(
         id=str(uuid.uuid4()),
-        email="admin@adhub.local",
+        email="admin@iterant.local",
         password_hash=bcrypt.hashpw(settings.auth_password.encode(), bcrypt.gensalt()).decode(),
         display_name="Admin",
         role="admin",
