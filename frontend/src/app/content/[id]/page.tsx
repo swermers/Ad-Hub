@@ -461,6 +461,7 @@ export default function ContentDetailPage() {
     social_post: "Social Post",
     ad_copy: "Ad Copy",
     carousel: "Carousel",
+    video_ad: "Video Ad",
     story: "Story / Reel",
     email: "Email",
     blog_draft: "Blog Draft",
@@ -478,7 +479,7 @@ export default function ContentDetailPage() {
 
   // Determine whether this content type benefits from a visual preview
   const isVisualContent = piece.content_type === "ad_copy" || piece.content_type === "social_post"
-    || piece.content_type === "carousel" || piece.content_type === "story";
+    || piece.content_type === "carousel" || piece.content_type === "story" || piece.content_type === "video_ad";
 
   let metadata: Record<string, unknown> | null = null;
   if (piece.generation_metadata) {

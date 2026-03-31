@@ -15,7 +15,7 @@
  * gradient background, vignette overlay, and Sequence-based scenes.
  */
 
-import { AbsoluteFill, Img, Sequence, useCurrentFrame, interpolate } from "remotion";
+import { AbsoluteFill, Img, Sequence, useCurrentFrame, useVideoConfig, interpolate } from "remotion";
 import type { AspectRatio } from "../types";
 import { ASPECT_DIMENSIONS } from "../types";
 import { TYPE, isLightColor } from "./swissDesign";
@@ -53,8 +53,6 @@ interface SocialProofProps {
   userCount?: string;
 }
 
-const FPS = 30;
-
 export function SocialProofComposition({
   headline,
   body,
@@ -70,6 +68,7 @@ export function SocialProofComposition({
   userCount,
 }: SocialProofProps) {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const { width, height } = ASPECT_DIMENSIONS[aspectRatio];
   const font = brandFont || TYPE.fontFamily;
   const starColor = "#fbbf24";
@@ -80,14 +79,14 @@ export function SocialProofComposition({
   // ─── Timeline (frame offsets for Sequence + spring delays) ───
   const SCENE = {
     bgReveal: 0,
-    quoteMark: Math.round(FPS * 0.3),
-    headlineReveal: Math.round(FPS * 0.8),
-    bodyReveal: Math.round(FPS * 1.5),
-    starsEntrance: Math.round(FPS * 2.5),
-    reviewBadge: Math.round(FPS * 3.5),
-    userCounter: Math.round(FPS * 3.8),
-    verifiedBadge: Math.round(FPS * 4.5),
-    ctaEntrance: Math.round(FPS * 5.5),
+    quoteMark: Math.round(fps * 0.3),
+    headlineReveal: Math.round(fps * 0.8),
+    bodyReveal: Math.round(fps * 1.5),
+    starsEntrance: Math.round(fps * 2.5),
+    reviewBadge: Math.round(fps * 3.5),
+    userCounter: Math.round(fps * 3.8),
+    verifiedBadge: Math.round(fps * 4.5),
+    ctaEntrance: Math.round(fps * 5.5),
   };
 
   const padding = width * 0.08;
@@ -95,32 +94,32 @@ export function SocialProofComposition({
   // ─── Spring animations ───
 
   // Quote mark — bouncy pop
-  const quoteAnim = springScale(frame, FPS, SCENE.quoteMark, 0.5, "bouncy");
+  const quoteAnim = springScale(frame, fps, SCENE.quoteMark, 0.5, "bouncy");
 
   // Headline — blur-in reveal for premium feel
-  const headlineAnim = springBlurIn(frame, FPS, SCENE.headlineReveal, 12, "smooth");
+  const headlineAnim = springBlurIn(frame, fps, SCENE.headlineReveal, 12, "smooth");
 
   // Body text — spring slide up
-  const bodyAnim = springSlideUp(frame, FPS, SCENE.bodyReveal, 25, "snappy");
+  const bodyAnim = springSlideUp(frame, fps, SCENE.bodyReveal, 25, "snappy");
 
   // Stars — staggered spring entrance
-  const starProgressValues = springStagger(frame, FPS, 5, SCENE.starsEntrance, 4, "pop");
+  const starProgressValues = springStagger(frame, fps, 5, SCENE.starsEntrance, 4, "pop");
 
   // Review badge — bouncy scale
-  const badgeAnim = springScale(frame, FPS, SCENE.reviewBadge, 0.8, "bouncy");
+  const badgeAnim = springScale(frame, fps, SCENE.reviewBadge, 0.8, "bouncy");
 
   // Verified badge — bouncy scale
-  const verifiedAnim = springScale(frame, FPS, SCENE.verifiedBadge, 0.7, "bouncy");
+  const verifiedAnim = springScale(frame, fps, SCENE.verifiedBadge, 0.7, "bouncy");
 
   // CTA — spring slide up + breathe pulse
-  const ctaSlide = springSlideUp(frame, FPS, SCENE.ctaEntrance, 30, "snappy");
+  const ctaSlide = springSlideUp(frame, fps, SCENE.ctaEntrance, 30, "snappy");
   const ctaBreathScale = breathe(frame, SCENE.ctaEntrance + 15, 60, 0.02);
 
   // User counter (animates from 0 to target)
-  const counterValue = animatedCounter(frame, SCENE.userCounter, FPS * 1.5, numUsers);
+  const counterValue = animatedCounter(frame, SCENE.userCounter, fps * 1.5, numUsers);
 
   // ─── Background ───
-  const meshBg = animatedMeshGradient(frame, FPS, backgroundColor, accentColor, 0.15);
+  const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.15);
   const vignette = vignetteOverlay(0.5);
 
   // Hue-shifted accent for gradient variety
@@ -148,7 +147,7 @@ export function SocialProofComposition({
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              opacity: interpolate(frame, [SCENE.bgReveal, SCENE.bgReveal + Math.round(FPS * 0.6)], [0, 0.15], {
+              opacity: interpolate(frame, [SCENE.bgReveal, SCENE.bgReveal + Math.round(fps * 0.6)], [0, 0.15], {
                 extrapolateLeft: "clamp", extrapolateRight: "clamp",
               }),
               filter: "blur(30px) saturate(0.6)",
@@ -177,7 +176,7 @@ export function SocialProofComposition({
             alignItems: "center",
             gap: 8,
           }}>
-            <IconUsers size={20} color={`${textColor}80`} progress={drawProgress(frame, SCENE.userCounter, FPS * 0.4)} />
+            <IconUsers size={20} color={`${textColor}80`} progress={drawProgress(frame, SCENE.userCounter, fps * 0.4)} />
             <span style={{
               fontSize: 14,
               fontWeight: 600,
@@ -205,7 +204,7 @@ export function SocialProofComposition({
           border: `1px solid ${accentColor}30`,
           ...verifiedAnim,
         }}>
-          <IconCheck size={14} color={accentColor} progress={drawProgress(frame, SCENE.verifiedBadge, FPS * 0.3)} />
+          <IconCheck size={14} color={accentColor} progress={drawProgress(frame, SCENE.verifiedBadge, fps * 0.3)} />
           <span style={{ fontSize: 11, fontWeight: 700, color: accentColor, textTransform: "uppercase" as const, letterSpacing: 1 }}>
             Verified
           </span>

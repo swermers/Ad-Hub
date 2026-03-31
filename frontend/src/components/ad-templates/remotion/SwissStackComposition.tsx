@@ -137,7 +137,7 @@ export function SwissStackComposition({
 
   // Subtle card glow — breathe utility
   const glowScale = breathe(frame, Math.round(fps * 4), Math.round(fps * 3), 0.03);
-  const glowOpacity = frame > fps * 4 ? (glowScale - 1) / 0.03 * 0.03 : 0;
+  const glowOpacity = frame > fps * 4 ? (glowScale - 1) / 0.03 : 0;
 
   // Stats opacity — spring-based
   const statsOpacity = springProgress(frame, fps, Math.round(fps * 3.0), "snappy");

@@ -11,7 +11,7 @@
  * Duration: 6 seconds @ 30fps
  */
 
-import { AbsoluteFill, useCurrentFrame, Sequence } from "remotion";
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, Sequence } from "remotion";
 import type { AspectRatio } from "../types";
 import { ASPECT_DIMENSIONS } from "../types";
 import { TYPE, isLightColor } from "./swissDesign";
@@ -49,8 +49,6 @@ interface DataHypeProps {
   chartLabels?: string;
 }
 
-const FPS = 30;
-
 export function DataHypeComposition({
   headline,
   body,
@@ -65,6 +63,7 @@ export function DataHypeComposition({
   chartLabels,
 }: DataHypeProps) {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const { width, height } = ASPECT_DIMENSIONS[aspectRatio];
   const font = brandFont || TYPE.fontFamily;
 
@@ -80,38 +79,38 @@ export function DataHypeComposition({
 
   // ─── Timeline (frames) ───
   const PHASE = {
-    bgPulse: [0, FPS * 0.5],
-    statEntrance: [FPS * 0.3, FPS * 1.5],
-    statCount: [FPS * 1.0, FPS * 3.0],
-    headlineReveal: [FPS * 1.5, FPS * 2.5],
-    chartDraw: [FPS * 2.5, FPS * 4.5],
-    trendLine: [FPS * 3.0, FPS * 4.5],
-    ctaEntrance: [FPS * 4.5, FPS * 5.2],
+    bgPulse: [0, fps * 0.5],
+    statEntrance: [fps * 0.3, fps * 1.5],
+    statCount: [fps * 1.0, fps * 3.0],
+    headlineReveal: [fps * 1.5, fps * 2.5],
+    chartDraw: [fps * 2.5, fps * 4.5],
+    trendLine: [fps * 3.0, fps * 4.5],
+    ctaEntrance: [fps * 4.5, fps * 5.2],
   };
 
   // Stat number — spring scale entrance + breathing pulse after count finishes
   const currentNum = animatedCounter(frame, PHASE.statCount[0], PHASE.statCount[1] - PHASE.statCount[0], targetNum);
-  const statAnim = springScale(frame, FPS, PHASE.statEntrance[0], 0.6, "bouncy");
+  const statAnim = springScale(frame, fps, PHASE.statEntrance[0], 0.6, "bouncy");
   const statPulse = breathe(frame, PHASE.statCount[1], 45, 0.025);
 
   // Headline — spring blur-in + spring slide-up
-  const headlineBlur = springBlurIn(frame, FPS, PHASE.headlineReveal[0], 12, "smooth");
-  const headlineSlide = springSlideUp(frame, FPS, PHASE.headlineReveal[0], 30, "smooth");
+  const headlineBlur = springBlurIn(frame, fps, PHASE.headlineReveal[0], 12, "smooth");
+  const headlineSlide = springSlideUp(frame, fps, PHASE.headlineReveal[0], 30, "smooth");
 
   // CTA — spring slide-up
-  const ctaAnim = springSlideUp(frame, FPS, PHASE.ctaEntrance[0], 20, "snappy");
+  const ctaAnim = springSlideUp(frame, fps, PHASE.ctaEntrance[0], 20, "snappy");
 
   // Chart bars — spring stagger
-  const barSprings = springStagger(frame, FPS, labels.length, PHASE.chartDraw[0], 4, "snappy");
+  const barSprings = springStagger(frame, fps, labels.length, PHASE.chartDraw[0], 4, "snappy");
 
   // Trend line draw (kept as-is)
-  const trendProgress = drawProgress(frame, PHASE.trendLine[0], FPS * 1.2);
+  const trendProgress = drawProgress(frame, PHASE.trendLine[0], fps * 1.2);
 
   // Accent glow
   const accentSecondary = shiftHue(accentColor, 40);
 
   // Animated mesh gradient background
-  const bgGradient = animatedMeshGradient(frame, FPS, backgroundColor, accentColor, 0.15);
+  const bgGradient = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.15);
 
   // Vignette overlay
   const vignette = vignetteOverlay(0.5);
@@ -139,7 +138,7 @@ export function DataHypeComposition({
       }} />
 
       {/* Scene 1: Big stat number */}
-      <Sequence from={0} durationInFrames={FPS * 6} name="stat-number">
+      <Sequence from={0} durationInFrames={fps * 6} name="stat-number">
         <div style={{
           position: "absolute",
           top: height * 0.06,
@@ -186,7 +185,7 @@ export function DataHypeComposition({
             border: `1px solid ${accentColor}30`,
             opacity: headlineSlide.opacity,
           }}>
-            <IconTrending size={16} color={accentColor} progress={drawProgress(frame, PHASE.headlineReveal[0], FPS * 0.5)} />
+            <IconTrending size={16} color={accentColor} progress={drawProgress(frame, PHASE.headlineReveal[0], fps * 0.5)} />
             <span style={{ fontSize: 13, fontWeight: 600, color: accentColor }}>
               Growth
             </span>
@@ -195,7 +194,7 @@ export function DataHypeComposition({
       </Sequence>
 
       {/* Scene 2: Headline with blur-in */}
-      <Sequence from={0} durationInFrames={FPS * 6} name="headline">
+      <Sequence from={0} durationInFrames={fps * 6} name="headline">
         <div style={{
           position: "absolute",
           top: height * 0.38,
@@ -216,7 +215,7 @@ export function DataHypeComposition({
       </Sequence>
 
       {/* Scene 3: Bar chart with spring stagger */}
-      <Sequence from={0} durationInFrames={FPS * 6} name="bar-chart">
+      <Sequence from={0} durationInFrames={fps * 6} name="bar-chart">
         <div style={{
           position: "absolute",
           top: chartAreaTop,
@@ -294,7 +293,7 @@ export function DataHypeComposition({
       </Sequence>
 
       {/* Scene 4: CTA with spring slide-up */}
-      <Sequence from={0} durationInFrames={FPS * 6} name="cta">
+      <Sequence from={0} durationInFrames={fps * 6} name="cta">
         <div style={{
           position: "absolute",
           bottom: height * 0.05,

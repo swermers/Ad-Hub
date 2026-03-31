@@ -735,77 +735,82 @@ async def finalize_content(
 
     saved_ids = []
 
-    for piece_data in data.pieces:
-        meta = piece_data.get("metadata", {})
-        meta["source"] = "content_studio_pipeline"
-        meta["weekly_theme"] = data.seed.get("weekly_theme", "")
-        meta["seed"] = data.seed.get("seed", "")
+    try:
+        for piece_data in data.pieces:
+            meta = piece_data.get("metadata", {})
+            meta["source"] = "content_studio_pipeline"
+            meta["weekly_theme"] = data.seed.get("weekly_theme", "")
+            meta["seed"] = data.seed.get("seed", "")
 
-        ct = piece_data.get("content_type", "social_post")
-        content_type_map = {
-            "newsletter": "blog_draft",
-            "video_script": "blog_draft",
-            "x_thread": "social_post",
-            # video_ad and carousel stay as-is
+            ct = piece_data.get("content_type", "social_post")
+            content_type_map = {
+                "newsletter": "blog_draft",
+                "video_script": "blog_draft",
+                "x_thread": "social_post",
+                # video_ad and carousel stay as-is
+            }
+
+            # Determine media type
+            media_type_map = {
+                "video_ad": "video",
+                "carousel": "carousel",
+                "video_script": "text",
+            }
+            media_type = media_type_map.get(ct, "text")
+
+            # Video config
+            video_style = piece_data.get("video_style")
+            video_config = piece_data.get("video_config")
+            aspect_ratio = video_config.get("aspect_ratio") if isinstance(video_config, dict) else None
+
+            piece = ContentPiece(
+                product_id=data.product_id,
+                content_type=content_type_map.get(ct, ct),
+                platform=piece_data.get("platform", "general"),
+                title=piece_data.get("title", ""),
+                body=piece_data.get("body", ""),
+                hook=piece_data.get("hook"),
+                cta=piece_data.get("cta"),
+                funnel_stage=piece_data.get("funnel_stage", "awareness"),
+                status="draft",
+                generation_metadata=json.dumps(meta),
+                media_type=media_type,
+                video_style=video_style,
+                video_config=json.dumps(video_config) if video_config else None,
+                aspect_ratio=aspect_ratio,
+            )
+            db.add(piece)
+            db.flush()
+            saved_ids.append(piece.id)
+
+        # Optionally save the seed to the seed bank
+        seed_id = None
+        if data.save_seed and data.seed.get("seed"):
+            seed = Seed(
+                product_id=data.product_id,
+                seed=data.seed.get("seed", ""),
+                heat=json.dumps(data.seed.get("heat", [])),
+                audience_hook=data.seed.get("audience_hook", ""),
+                template_fit=data.seed.get("template_fit", "A"),
+                subject_line=data.seed.get("subject_line"),
+                metaphor=data.seed.get("metaphor"),
+                weekly_theme=data.seed.get("weekly_theme"),
+                verdict=data.seed.get("verdict", ""),
+                raw_ideas=json.dumps(data.seed.get("raw_ideas", [])),
+                source="content_studio",
+                status="used",
+            )
+            db.add(seed)
+            db.flush()
+            seed_id = seed.id
+
+        db.commit()
+
+        return {
+            "content_ids": saved_ids,
+            "seed_id": seed_id,
+            "pieces_saved": len(saved_ids),
         }
-
-        # Determine media type
-        media_type_map = {
-            "video_ad": "video",
-            "carousel": "carousel",
-            "video_script": "text",
-        }
-        media_type = media_type_map.get(ct, "text")
-
-        # Video config
-        video_style = piece_data.get("video_style")
-        video_config = piece_data.get("video_config")
-
-        piece = ContentPiece(
-            product_id=data.product_id,
-            content_type=content_type_map.get(ct, ct),
-            platform=piece_data.get("platform", "general"),
-            title=piece_data.get("title", ""),
-            body=piece_data.get("body", ""),
-            hook=piece_data.get("hook"),
-            cta=piece_data.get("cta"),
-            funnel_stage=piece_data.get("funnel_stage", "awareness"),
-            status="draft",
-            generation_metadata=json.dumps(meta),
-            media_type=media_type,
-            video_style=video_style,
-            video_config=json.dumps(video_config) if video_config else None,
-            aspect_ratio=video_config.get("aspect_ratio") if video_config else None,
-        )
-        db.add(piece)
-        db.flush()
-        saved_ids.append(piece.id)
-
-    # Optionally save the seed to the seed bank
-    seed_id = None
-    if data.save_seed and data.seed.get("seed"):
-        seed = Seed(
-            product_id=data.product_id,
-            seed=data.seed.get("seed", ""),
-            heat=json.dumps(data.seed.get("heat", [])),
-            audience_hook=data.seed.get("audience_hook", ""),
-            template_fit=data.seed.get("template_fit", "A"),
-            subject_line=data.seed.get("subject_line"),
-            metaphor=data.seed.get("metaphor"),
-            weekly_theme=data.seed.get("weekly_theme"),
-            verdict=data.seed.get("verdict", ""),
-            raw_ideas=json.dumps(data.seed.get("raw_ideas", [])),
-            source="content_studio",
-            status="used",
-        )
-        db.add(seed)
-        db.flush()
-        seed_id = seed.id
-
-    db.commit()
-
-    return {
-        "content_ids": saved_ids,
-        "seed_id": seed_id,
-        "pieces_saved": len(saved_ids),
-    }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save content: {str(e)}")
