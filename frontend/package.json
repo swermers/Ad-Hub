@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@remotion/bundler": "^4.0.438",
     "@remotion/cli": "^4.0.438",
     "@remotion/player": "^4.0.438",
     "@remotion/renderer": "^4.0.438",

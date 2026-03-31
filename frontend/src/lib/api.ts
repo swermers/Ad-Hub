@@ -755,6 +755,23 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  // ─── Video Render ──────────────────────────────────────────────────────
+
+  renderVideo: (data: VideoRenderRequest) =>
+    request<VideoRenderStatus>("/api/video/render", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  renderFromContent: (contentId: string, data?: VideoRenderFromContentRequest) =>
+    request<VideoRenderStatus>(`/api/video/render-content/${contentId}`, {
+      method: "POST",
+      body: JSON.stringify(data || {}),
+    }),
+
+  getRenderStatus: (taskId: string) =>
+    request<VideoRenderStatus>(`/api/video/render/${taskId}`),
 };
 
 // Types
@@ -1810,4 +1827,35 @@ export interface PipelineRefineResult {
   body: string;
   hook: string | null;
   cta: string | null;
+}
+
+// ─── Video Render Types ──────────────────────────────────────────────────
+
+export interface VideoRenderRequest {
+  headline: string;
+  body: string;
+  cta: string;
+  video_style?: string;
+  aspect_ratio?: string;
+  background_color?: string;
+  text_color?: string;
+  accent_color?: string;
+  screenshot_url?: string;
+  slide_headlines?: string;
+  codec?: "h264" | "vp8";
+}
+
+export interface VideoRenderFromContentRequest {
+  video_style?: string;
+  aspect_ratio?: string;
+  codec?: "h264" | "vp8";
+}
+
+export interface VideoRenderStatus {
+  task_id: string;
+  status: "pending" | "rendering" | "completed" | "failed";
+  progress?: number;
+  video_url?: string;
+  error?: string;
+  duration_ms?: number;
 }

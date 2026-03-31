@@ -33,6 +33,7 @@ from app.routers import (
     schedule,
     seeds,
     templates,
+    video_render,
     voice_profiles,
 )
 
@@ -116,6 +117,7 @@ app.include_router(voice_profiles.router, prefix="/api/voice-profiles", tags=["v
 app.include_router(content_pipeline.router, prefix="/api/pipeline", tags=["content-pipeline"])
 app.include_router(content_prompts.router, prefix="/api/products", tags=["content-prompts"])
 app.include_router(dispatch.router, prefix="/api/dispatch", tags=["dispatch"])
+app.include_router(video_render.router, prefix="/api/video", tags=["video-render"])
 
 
 # Serve uploaded files (screenshots, references, generated images, etc.)

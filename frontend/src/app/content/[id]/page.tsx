@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { useRef } from "react";
-import { api, API_BASE, type ContentPiece, type Product, type GenerateImageStatus } from "@/lib/api";
+import { api, API_BASE, type ContentPiece, type Product, type GenerateImageStatus, type VideoRenderStatus } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
 import { VideoPreview, VIDEO_STYLE_OPTIONS, STYLE_CONFIG, FPS, type VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
 import dynamic from "next/dynamic";
@@ -139,6 +139,12 @@ export default function ContentDetailPage() {
   const imageGenPollRef = useRef<NodeJS.Timeout | null>(null);
   const [exportingFrame, setExportingFrame] = useState(false);
   const frameExportRef = useRef<HTMLDivElement>(null);
+  // Video render (MP4 export) state
+  const [renderTaskId, setRenderTaskId] = useState<string | null>(null);
+  const [renderStatus, setRenderStatus] = useState<"idle" | "pending" | "rendering" | "completed" | "failed">("idle");
+  const [renderVideoUrl, setRenderVideoUrl] = useState<string | null>(null);
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const renderPollRef = useRef<NodeJS.Timeout | null>(null);
   // Inline refinement state
   const [refining, setRefining] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
@@ -419,6 +425,56 @@ export default function ContentDetailPage() {
       setExportingFrame(false);
     }
   };
+
+  // ─── Video Render (MP4 Export) ─────────────────────────────────────────
+  const handleRenderVideo = async () => {
+    if (!piece) return;
+    setRenderStatus("pending");
+    setRenderError(null);
+    setRenderVideoUrl(null);
+
+    try {
+      const result = await api.renderFromContent(piece.id, {
+        video_style: videoStyle,
+        aspect_ratio: previewAspect,
+      });
+      setRenderTaskId(result.task_id);
+
+      // Start polling for render completion
+      const poll = setInterval(async () => {
+        try {
+          const status = await api.getRenderStatus(result.task_id);
+          setRenderStatus(status.status);
+
+          if (status.status === "completed" && status.video_url) {
+            clearInterval(poll);
+            renderPollRef.current = null;
+            setRenderVideoUrl(status.video_url);
+          } else if (status.status === "failed") {
+            clearInterval(poll);
+            renderPollRef.current = null;
+            setRenderError(status.error || "Render failed");
+          }
+        } catch {
+          clearInterval(poll);
+          renderPollRef.current = null;
+          setRenderStatus("failed");
+          setRenderError("Lost connection to render server");
+        }
+      }, 2000);
+      renderPollRef.current = poll;
+    } catch (err) {
+      setRenderStatus("failed");
+      setRenderError(err instanceof Error ? err.message : "Failed to start render");
+    }
+  };
+
+  // Cleanup render poll on unmount
+  useEffect(() => {
+    return () => {
+      if (renderPollRef.current) clearInterval(renderPollRef.current);
+    };
+  }, []);
 
   const handleRefine = async () => {
     if (!piece) return;
@@ -1012,6 +1068,30 @@ export default function ContentDetailPage() {
           >
             {exportingFrame ? "Exporting..." : "Export PNG"}
           </button>
+        )}
+        {isVisualContent && previewMode === "video" && (
+          renderStatus === "completed" && renderVideoUrl ? (
+            <a
+              href={`${API_BASE}${renderVideoUrl}`}
+              download
+              className="px-4 py-2 bg-[#4ade80]/10 text-[#4ade80] border border-[#4ade80]/20 rounded-lg text-sm font-medium hover:bg-[#4ade80]/20 transition-colors inline-flex items-center gap-1.5"
+            >
+              <span className="material-symbols-rounded text-sm">download</span>
+              Download MP4
+            </a>
+          ) : (
+            <button
+              onClick={handleRenderVideo}
+              disabled={renderStatus === "pending" || renderStatus === "rendering"}
+              className="px-4 py-2 bg-[#FF9500]/10 text-[#FF9500] border border-[#FF9500]/20 rounded-lg text-sm font-medium hover:bg-[#FF9500]/20 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
+            >
+              <span className="material-symbols-rounded text-sm">movie</span>
+              {renderStatus === "pending" ? "Starting..." : renderStatus === "rendering" ? "Rendering..." : "Export MP4"}
+            </button>
+          )
+        )}
+        {renderStatus === "failed" && renderError && (
+          <span className="text-xs text-[#ffb4ab]">{renderError}</span>
         )}
         {!editing && (
           <button
