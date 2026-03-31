@@ -37,8 +37,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         token = auth_header.removeprefix("Bearer ")
 
-        # Agent API key auth (prefix: "adhub_")
-        if token.startswith("adhub_"):
+        # Agent API key auth (prefix: "iterant_" or legacy "adhub_")
+        if token.startswith("iterant_") or token.startswith("adhub_"):
             if not self._verify_agent_key(token):
                 return JSONResponse(status_code=401, content={"detail": "Invalid agent API key"})
             return await call_next(request)

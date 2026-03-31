@@ -5,9 +5,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     claude_model: str = "claude-sonnet-4-6"  # Default for bulk/pipeline work
     claude_model_premium: str = "claude-opus-4-6"  # For social copy, idea sharpening
-    database_url: str = "sqlite:///./adhub.db"
+    database_url: str = "sqlite:///./iterant.db"
     cors_origins: list[str] = ["http://localhost:3000"]
-    cors_origin_regex: str = r"https://ad-hub.*\.vercel\.app"
+    cors_origin_regex: str = r"https://iterant.*\.vercel\.app"
     chromadb_path: str = "./chroma_data"
 
     # X/Twitter API
