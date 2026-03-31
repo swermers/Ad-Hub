@@ -1,4 +1,4 @@
-# Ad-Hub Roadmap Status
+# Iterant Roadmap Status
 
 ## Completed
 - **Tier 1** — Polish the Core Loop ✓

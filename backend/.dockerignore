@@ -2,7 +2,9 @@ __pycache__
 *.pyc
 .env
 adhub.db
+iterant.db
 test_adhub.db
+test_iterant.db
 chroma_data/
 .ruff_cache
 .pytest_cache

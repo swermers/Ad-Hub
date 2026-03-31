@@ -7,7 +7,7 @@ services:
       - "8000:8000"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - DATABASE_URL=sqlite:////app/data/adhub.db
+      - DATABASE_URL=sqlite:////app/data/iterant.db
       - CHROMADB_PATH=/app/data/chroma_data
       - CORS_ORIGINS=["http://localhost:3000","http://frontend:3000"]
       - CORS_ORIGIN_REGEX=https://.*\.(vercel|railway|render)\.app

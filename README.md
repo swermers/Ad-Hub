@@ -1,4 +1,4 @@
-# Ad-Hub
+# Iterant
 
 AI-powered content & ad automation platform. Ingest your product's website and docs, then generate marketing content across channels using Claude AI.
 
