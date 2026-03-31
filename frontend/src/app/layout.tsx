@@ -3,7 +3,7 @@ import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
-  title: "Ad-Hub | Liquid Precision",
+  title: "Iterant | Content Engine",
   description: "AI-powered content & ad automation platform",
 };
 

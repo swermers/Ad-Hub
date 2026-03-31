@@ -87,7 +87,7 @@ class AgentLog(Base):
     __tablename__ = "agent_logs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    agent_id: Mapped[str] = mapped_column(String(100), default="adhub-agent")  # which agent/skill
+    agent_id: Mapped[str] = mapped_column(String(100), default="iterant-agent")  # which agent/skill
     action_type: Mapped[str] = mapped_column(String(100), nullable=False)
     # Action types:
     #   content_generated, campaign_created, campaign_paused, campaign_resumed,

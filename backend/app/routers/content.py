@@ -26,6 +26,9 @@ class ContentPieceResponse(BaseModel):
     aspect_ratio: str | None
     generation_metadata: str | None
     image_url: str | None
+    media_type: str | None = None
+    video_style: str | None = None
+    video_config: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -23,7 +23,7 @@ COPY backend/ .
 RUN mkdir -p /app/data /app/chroma_data
 
 # Use /app/data for persistent storage
-ENV DATABASE_URL=sqlite:////app/data/adhub.db
+ENV DATABASE_URL=sqlite:////app/data/iterant.db
 ENV CHROMADB_PATH=/app/data/chroma_data
 
 EXPOSE 8000

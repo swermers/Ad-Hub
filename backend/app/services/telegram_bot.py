@@ -73,7 +73,7 @@ class ClawdBot:
 
         # Hidden content ID tag for reply-based refinement
         lines.append("")
-        lines.append(f'<a href="adhub://content/{content_id}"> </a>')
+        lines.append(f'<a href="iterant://content/{content_id}"> </a>')
 
         text = "\n".join(lines)
 
