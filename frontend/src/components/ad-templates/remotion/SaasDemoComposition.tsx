@@ -45,8 +45,6 @@ interface SaasDemoProps {
   features?: string;
 }
 
-const FPS = 30;
-
 export function SaasDemoComposition({
   headline,
   body,
@@ -60,6 +58,7 @@ export function SaasDemoComposition({
   features,
 }: SaasDemoProps) {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const { width, height } = ASPECT_DIMENSIONS[aspectRatio];
   const font = brandFont || TYPE.fontFamily;
   const isDark = !isLightColor(backgroundColor);
@@ -73,18 +72,18 @@ export function SaasDemoComposition({
 
   // ─── Timeline (frames) ───
   const PHASE = {
-    browserEntrance: [0, FPS * 0.8],
-    urlType: [FPS * 0.6, FPS * 1.5],
-    screenshotReveal: [FPS * 1.2, FPS * 2.2],
-    cursorMove: [FPS * 2.2, FPS * 3.5],
-    zoomIn: [FPS * 3.2, FPS * 4.5],
-    featureCallouts: [FPS * 4.0, FPS * 6.0],
-    ctaEntrance: [FPS * 6.0, FPS * 7.0],
-    headlineReveal: [FPS * 5.5, FPS * 7.0],
+    browserEntrance: [0, fps * 0.8],
+    urlType: [fps * 0.6, fps * 1.5],
+    screenshotReveal: [fps * 1.2, fps * 2.2],
+    cursorMove: [fps * 2.2, fps * 3.5],
+    zoomIn: [fps * 3.2, fps * 4.5],
+    featureCallouts: [fps * 4.0, fps * 6.0],
+    ctaEntrance: [fps * 6.0, fps * 7.0],
+    headlineReveal: [fps * 5.5, fps * 7.0],
   };
 
   // Browser frame entrance — spring physics for organic overshoot
-  const browserSpring = springProgress(frame, FPS, 0, "snappy");
+  const browserSpring = springProgress(frame, fps, 0, "snappy");
   const browserScale = 0.92 + 0.08 * browserSpring;
   const browserOpacity = Math.min(browserSpring * 2, 1);
 
@@ -116,16 +115,16 @@ export function SaasDemoComposition({
   const urlText = "app.yourproduct.co".slice(0, urlChars);
 
   // Feature callout progress
-  const iconProgress = drawProgress(frame, PHASE.featureCallouts[0], FPS * 0.6);
+  const iconProgress = drawProgress(frame, PHASE.featureCallouts[0], fps * 0.6);
 
   // CTA entrance — spring slide-up for organic motion
-  const ctaAnim = springSlideUp(frame, FPS, PHASE.ctaEntrance[0], 30, "snappy");
+  const ctaAnim = springSlideUp(frame, fps, PHASE.ctaEntrance[0], 30, "snappy");
 
   // Headline — spring blur-in for premium reveal
-  const headlineBlur = springBlurIn(frame, FPS, PHASE.headlineReveal[0], 12, "smooth");
+  const headlineBlur = springBlurIn(frame, fps, PHASE.headlineReveal[0], 12, "smooth");
 
   // Animated mesh gradient background
-  const meshBg = animatedMeshGradient(frame, FPS, backgroundColor, accentColor, 0.15);
+  const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.15);
 
   // Hue-shifted accent for gradient richness
   const accentShifted = shiftHue(accentColor, 40);
@@ -150,7 +149,7 @@ export function SaasDemoComposition({
       }} />
 
       {/* Scene: Browser entrance + URL typing + screenshot */}
-      <Sequence from={0} durationInFrames={FPS * 8} name="Browser">
+      <Sequence from={0} durationInFrames={fps * 8} name="Browser">
         {/* Browser window */}
         <div style={{
           position: "absolute",
@@ -284,10 +283,10 @@ export function SaasDemoComposition({
       </Sequence>
 
       {/* Feature callouts — spring scale entrances */}
-      <Sequence from={Math.round(PHASE.featureCallouts[0])} durationInFrames={Math.round(FPS * 4)} name="Features">
+      <Sequence from={Math.round(PHASE.featureCallouts[0])} durationInFrames={Math.round(fps * 4)} name="Features">
         {featureList.slice(0, 3).map((feature, i) => {
-          const calloutDelay = PHASE.featureCallouts[0] + i * FPS * 0.5;
-          const anim = springScale(frame, FPS, calloutDelay, 0.7, "bouncy");
+          const calloutDelay = PHASE.featureCallouts[0] + i * fps * 0.5;
+          const anim = springScale(frame, fps, calloutDelay, 0.7, "bouncy");
           const yPos = height * 0.12 + i * 56;
 
           return (
@@ -309,7 +308,7 @@ export function SaasDemoComposition({
               <IconCheck
                 size={18}
                 color={accentColor}
-                progress={drawProgress(frame, calloutDelay + 5, FPS * 0.3)}
+                progress={drawProgress(frame, calloutDelay + 5, fps * 0.3)}
               />
               <span style={{
                 fontSize: 15,
@@ -325,7 +324,7 @@ export function SaasDemoComposition({
       </Sequence>
 
       {/* Bottom section: headline + CTA */}
-      <Sequence from={Math.round(PHASE.headlineReveal[0])} durationInFrames={Math.round(FPS * 8 - PHASE.headlineReveal[0])} name="BottomCTA">
+      <Sequence from={Math.round(PHASE.headlineReveal[0])} durationInFrames={Math.round(fps * 8 - PHASE.headlineReveal[0])} name="BottomCTA">
         <div style={{
           position: "absolute",
           bottom: 0,

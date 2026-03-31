@@ -115,7 +115,7 @@ export function SwissMinimalComposition({
           borderRadius: "50%",
           backgroundColor: accentColor,
           opacity: circleEntrance.opacity * 0.12,
-          transform: `scale(${parseFloat(circleEntrance.transform.replace(/scale\(|\)/g, "")) * circleBreath})`,
+          transform: `scale(${(springProgress(frame, fps, Math.round(fps * 0.3), "bouncy") * 0.2 + 0.8) * circleBreath})`,
         }}
       />
 

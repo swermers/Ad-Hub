@@ -12,7 +12,7 @@
  * Duration: 7 seconds @ 30fps (210 frames)
  */
 
-import { AbsoluteFill, Img, Sequence, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Img, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
 import type { AspectRatio } from "../types";
 import { ASPECT_DIMENSIONS } from "../types";
 import {
@@ -35,8 +35,6 @@ interface ImageFrameOverlayProps {
   aspectRatio?: AspectRatio;
 }
 
-const FPS = 30;
-
 export function ImageFrameOverlayComposition({
   headline,
   body,
@@ -48,6 +46,7 @@ export function ImageFrameOverlayComposition({
   aspectRatio = "1:1",
 }: ImageFrameOverlayProps) {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const { width, height } = ASPECT_DIMENSIONS[aspectRatio];
 
   const padding = width * 0.055;
@@ -62,33 +61,34 @@ export function ImageFrameOverlayComposition({
   // 90-210:  Hold with subtle badge pulse (3.0-7.0s)
 
   // ─── Background zoom (spring) ───
-  const bgProgress = springProgress(frame, FPS, 0, "smooth");
+  const bgProgress = springProgress(frame, fps, 0, "smooth");
   const bgScale = 1.1 - 0.1 * bgProgress;
   const bgOpacity = Math.min(bgProgress * 1.5, 1);
 
   // ─── Badge entrance (spring) ───
-  const badgeScaleAnim = springScale(frame, FPS, 9, 0.3, "bouncy");
-  const badgePositionProgress = springProgress(frame, FPS, 9, "bouncy");
+  const badgeScaleAnim = springScale(frame, fps, 9, 0.3, "bouncy");
+  const badgePositionProgress = springProgress(frame, fps, 9, "bouncy");
   const badgeSlideX = -200 * (1 - badgePositionProgress);
   const badgeSlideY = -120 * (1 - badgePositionProgress);
 
   // Badge rotation settle (spring)
-  const rotationProgress = springProgress(frame, FPS, 24, "smooth");
+  const rotationProgress = springProgress(frame, fps, 24, "smooth");
   const badgeRotation = -5 + 2 * rotationProgress;
 
   // Badge breathing pulse during hold (3.0s-7.0s)
   const breathCycle = breathe(frame, 90, 38, 0.02);
 
-  const finalBadgeScale = parseFloat(badgeScaleAnim.transform.replace(/scale\(|\)/g, "")) * breathCycle;
+  const badgeBaseScale = springProgress(frame, fps, 9, "bouncy") * (1 - 0.3) + 0.3;
+  const finalBadgeScale = badgeBaseScale * breathCycle;
 
   // ─── Glass strip slide up (spring) ───
-  const glassAnim = springSlideUp(frame, FPS, 36, 200, "smooth");
+  const glassAnim = springSlideUp(frame, fps, 36, 200, "smooth");
 
   // ─── Body text (spring slide up) ───
-  const bodyAnim = springSlideUp(frame, FPS, 54, 20, "snappy");
+  const bodyAnim = springSlideUp(frame, fps, 54, 20, "snappy");
 
   // ─── CTA entrance (spring scale) ───
-  const ctaAnim = springScale(frame, FPS, 75, 0.5, "pop");
+  const ctaAnim = springScale(frame, fps, 75, 0.5, "pop");
 
   // ─── CTA gradient with hue shift ───
   const ctaGradient = `linear-gradient(135deg, ${accentColor}, ${shiftHue(accentColor, 30)})`;
