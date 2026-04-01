@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { AuthGuard } from "@/components/AuthGuard";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
+import { isDemo } from "@/lib/api";
 
 function TopNav() {
   const pathname = usePathname();
@@ -83,6 +84,17 @@ function TopNav() {
   );
 }
 
+function DemoBanner() {
+  return (
+    <div className="mx-12 mt-2 mb-0 px-5 py-3 rounded-xl bg-[#FF9500]/10 border border-[#FF9500]/20 flex items-center gap-3">
+      <span className="text-[#FF9500] text-sm font-bold uppercase tracking-widest">Demo</span>
+      <span className="text-[#E5E1E4]/70 text-sm">
+        You&apos;re viewing a read-only demo with sample data. Actions like generating content or posting are disabled.
+      </span>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
@@ -95,6 +107,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <TopNav />
           <Sidebar />
           <main className="ml-72 pt-28 min-h-screen relative overflow-hidden">
+            {isDemo() && <DemoBanner />}
             <div className="px-12 pb-20">{children}</div>
           </main>
         </div>

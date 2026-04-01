@@ -96,12 +96,17 @@ def create_tables():
     _add_column_if_missing("users", "workspace_id", "VARCHAR(36)")
     _add_column_if_missing("agent_api_keys", "workspace_id", "VARCHAR(36)")
 
-    # Seed default workspace and admin user if none exist
+    # Seed default workspace, admin user, and demo data
     from app.routers.auth import seed_default_admin
+    from app.seed_demo import seed_demo_data
+    from app.models.workspace import Workspace
     db = SessionLocal()
     try:
         _seed_default_workspace(db)
         seed_default_admin(db)
+        # Seed demo product for guest/viewer accounts
+        ws = db.query(Workspace).first()
+        seed_demo_data(db, workspace_id=ws.id if ws else None)
     finally:
         db.close()
 

@@ -46,8 +46,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # Human token auth (signed JWT-like token)
         from app.routers.auth import verify_token
 
-        if verify_token(token) is None:
+        payload = verify_token(token)
+        if payload is None:
             return JSONResponse(status_code=401, content={"detail": "Invalid or expired token"})
+
+        # Block viewers from all write operations (they are read-only demo users)
+        if payload.get("role") == "viewer" and request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Demo accounts are read-only. Sign up for full access."},
+            )
 
         return await call_next(request)
 

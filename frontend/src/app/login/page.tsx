@@ -17,8 +17,8 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const { token } = await api.login(password, email || undefined);
-      setToken(token);
+      const res = await api.login(password, email || undefined);
+      setToken(res.token, res.role);
       router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -31,8 +31,8 @@ export default function LoginPage() {
     setError("");
     setGuestLoading(true);
     try {
-      const { token } = await api.guestLogin();
-      setToken(token);
+      const res = await api.guestLogin();
+      setToken(res.token, res.role);
       router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Guest login unavailable");
