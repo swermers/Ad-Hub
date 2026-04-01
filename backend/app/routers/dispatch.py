@@ -682,6 +682,7 @@ async def _handle_telegram_command(text: str, chat_id: str, db: Session) -> dict
     elif cmd == "/setup":
         # /setup <url> <product name>
         # e.g. /setup https://example.com My Product Name
+        # Can also reply to a photo/document with /setup to use it as brand guide
         parts = text.split(maxsplit=2)
         if len(parts) < 3:
             await bot.send_notification(
@@ -689,7 +690,10 @@ async def _handle_telegram_command(text: str, chat_id: str, db: Session) -> dict
                 "Example:\n"
                 "<code>/setup https://myproduct.com My Product</code>\n\n"
                 "This will crawl the website, extract brand identity, "
-                "and set up the product automatically."
+                "and set up the product automatically.\n\n"
+                "<b>With brand guide:</b>\n"
+                "Send a photo or PDF of your brand guide, then reply to it with:\n"
+                "<code>/setup https://mysite.com My Brand</code>"
             )
         else:
             url = parts[1]

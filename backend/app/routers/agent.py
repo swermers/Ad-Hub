@@ -6,11 +6,12 @@ safety guardrails. All responses are JSON, designed for machine consumption.
 """
 
 import json
+import os
 import uuid
 from datetime import datetime, timezone
 
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -237,12 +238,17 @@ def system_status(db: Session = Depends(get_db), user: dict = Depends(get_curren
 # ─── One-Click Product Setup ─────────────────────────────────────────────────
 
 
-def _run_product_setup(task_id: str, product_id: str, website_url: str):
-    """Background task: crawl website → generate brand brief → create brand profile.
+def _run_product_setup(
+    task_id: str,
+    product_id: str,
+    website_url: str,
+    brand_guide_path: str | None = None,
+):
+    """Background task: crawl website → extract brand guide → generate brief → brand profile.
 
     This chains the steps that normally require manual UI clicks into one
-    sequential background job. The bot or Telegram command calls the endpoint,
-    polls status, and the product is fully set up when done.
+    sequential background job. If a brand guide file is provided, it gets
+    priority for brand identity (colors, fonts, voice) over crawl extraction.
     """
     import asyncio
     from app.database import SessionLocal
@@ -256,6 +262,7 @@ def _run_product_setup(task_id: str, product_id: str, website_url: str):
         "product_id": product_id,
         "step": "crawl",
         "pages_crawled": 0,
+        "brand_guide_extracted": False,
         "error": None,
     }
 
@@ -272,7 +279,6 @@ def _run_product_setup(task_id: str, product_id: str, website_url: str):
             pages = asyncio.run(crawl_website(website_url, max_pages=15))
             page_count = len(pages) if pages else 0
 
-            # Save crawled pages and add to vector store
             for page_data in pages:
                 existing = (
                     db.query(CrawledPage)
@@ -293,7 +299,6 @@ def _run_product_setup(task_id: str, product_id: str, website_url: str):
                     ))
             db.commit()
 
-            # Add to vector store for RAG
             vs = get_vectorstore()
             texts = [p["content"] for p in pages if p.get("content")]
             metadatas = [
@@ -303,7 +308,6 @@ def _run_product_setup(task_id: str, product_id: str, website_url: str):
             if texts:
                 vs.add_documents(product_id, texts, metadatas)
 
-            # Extract brand colors/fonts if available
             if pages and "_extracted_colors" in pages[0]:
                 colors = pages[0]["_extracted_colors"]
                 if colors:
@@ -315,42 +319,50 @@ def _run_product_setup(task_id: str, product_id: str, website_url: str):
             db.commit()
 
             _task_status[task_id]["pages_crawled"] = page_count
-            _task_status[task_id]["step"] = "brief"
-            _task_status[task_id]["status"] = "generating_brief"
         except Exception as e:
-            _task_status[task_id] = {
-                "status": "failed",
-                "step": "crawl",
-                "error": f"Crawl failed: {e}",
-                "product_id": product_id,
-            }
-            return
+            # Crawl failure is non-fatal if we have a brand guide
+            _task_status[task_id]["pages_crawled"] = 0
+            if not brand_guide_path:
+                _task_status[task_id] = {
+                    "status": "failed", "step": "crawl",
+                    "error": f"Crawl failed: {e}", "product_id": product_id,
+                }
+                return
 
-        # Step 2: Generate brand brief (reuse ingestion router's pattern)
+        # Step 2: Extract brand guide if provided (HIGHEST PRIORITY for brand identity)
+        if brand_guide_path:
+            _task_status[task_id]["step"] = "brand_guide"
+            _task_status[task_id]["status"] = "extracting_brand_guide"
+            try:
+                _extract_brand_guide_sync(db, product_id, brand_guide_path)
+                _task_status[task_id]["brand_guide_extracted"] = True
+            except Exception as e:
+                _task_status[task_id]["error"] = f"Brand guide extraction failed: {e}"
+                # Continue — crawl data is still useful
+
+        # Step 3: Generate brand brief from crawled content
+        _task_status[task_id]["step"] = "brief"
+        _task_status[task_id]["status"] = "generating_brief"
         try:
             from app.routers.ingestion import _run_brief_generation
             _run_brief_generation(product_id)
-            # Refresh product to get updated brand_brief
             db.refresh(product)
-            _task_status[task_id]["step"] = "brand_profile"
-            _task_status[task_id]["status"] = "creating_brand_profile"
         except Exception as e:
-            _task_status[task_id]["status"] = "partial"
-            _task_status[task_id]["error"] = f"Brief generation failed: {e}"
-            _task_status[task_id]["step"] = "brief"
-            # Continue anyway — crawl data is still useful
+            if not brand_guide_path:
+                _task_status[task_id]["error"] = f"Brief generation failed: {e}"
 
-        # Step 3: Auto-create brand profile if one doesn't exist
+        # Step 4: Ensure brand profile exists
+        _task_status[task_id]["step"] = "brand_profile"
+        _task_status[task_id]["status"] = "creating_brand_profile"
         try:
             if not db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first():
                 db.add(BrandProfile(product_id=product_id))
             product.status = "active"
             db.commit()
         except Exception as e:
-            _task_status[task_id]["status"] = "partial"
             _task_status[task_id]["error"] = f"Brand profile creation failed: {e}"
 
-        # Step 4: Set up autonomous loop config (defaults — all loops off)
+        # Step 5: Set up autonomous loop config
         try:
             from app.models.autonomous_loop import AutonomousLoopConfig
             if not db.query(AutonomousLoopConfig).filter(
@@ -359,14 +371,14 @@ def _run_product_setup(task_id: str, product_id: str, website_url: str):
                 db.add(AutonomousLoopConfig(product_id=product_id))
                 db.commit()
         except Exception:
-            pass  # Non-critical
+            pass
 
-        # Done
         _task_status[task_id] = {
             "status": "completed",
             "product_id": product_id,
             "step": "done",
             "pages_crawled": page_count,
+            "brand_guide_extracted": _task_status[task_id].get("brand_guide_extracted", False),
             "has_brief": product.brand_brief is not None,
             "error": None,
         }
@@ -380,6 +392,7 @@ def _run_product_setup(task_id: str, product_id: str, website_url: str):
                 "product_name": product.name,
                 "website_url": website_url,
                 "pages_crawled": page_count,
+                "brand_guide_uploaded": brand_guide_path is not None,
             }),
         )
         db.add(log)
@@ -387,12 +400,100 @@ def _run_product_setup(task_id: str, product_id: str, website_url: str):
 
     except Exception as e:
         _task_status[task_id] = {
-            "status": "failed",
-            "product_id": product_id,
-            "error": str(e),
+            "status": "failed", "product_id": product_id, "error": str(e),
         }
     finally:
         db.close()
+
+
+def _extract_brand_guide_sync(db, product_id: str, filepath: str):
+    """Extract brand identity from an uploaded brand guide (PDF or image).
+
+    Uses Claude Vision to analyze the file and populate the brand profile
+    with colors, fonts, voice, and rules. Same extraction as the
+    /brand-profile/extract-guide endpoint but callable from background tasks.
+    """
+    import base64
+    from app.models.brand_profile import BrandProfile
+    from app.routers.brand_profile import BRAND_GUIDE_EXTRACTION_PROMPT
+    from app.services.claude_client import call_claude_sync
+
+    ext = os.path.splitext(filepath)[1].lower()
+    media_type_map = {
+        ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".webp": "image/webp", ".gif": "image/gif", ".pdf": "application/pdf",
+    }
+    media_type = media_type_map.get(ext, "application/octet-stream")
+
+    with open(filepath, "rb") as f:
+        content = f.read()
+
+    b64_data = base64.b64encode(content).decode("utf-8")
+    images = [{"media_type": media_type, "data": b64_data}]
+
+    result = call_claude_sync(
+        BRAND_GUIDE_EXTRACTION_PROMPT,
+        system="You are a brand identity expert. Analyze brand guides and extract structured data with precision.",
+        images=images,
+        premium=True,
+    )
+
+    text = result["content"].strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+    extracted = json.loads(text)
+
+    # Get or create brand profile
+    profile = db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first()
+    if not profile:
+        profile = BrandProfile(product_id=product_id)
+        db.add(profile)
+        db.flush()
+
+    # Apply extracted fields
+    json_fields = {
+        "primary_colors": "primary_colors", "secondary_colors": "secondary_colors",
+        "accent_colors": "accent_colors", "approved_fonts": "approved_fonts",
+        "tone_descriptors": "tone_descriptors", "always_use_words": "always_use_words",
+        "never_use_words": "never_use_words", "approved_topics": "approved_topics",
+        "off_limit_topics": "off_limit_topics",
+    }
+    text_fields = {
+        "sentence_style": "sentence_style", "logo_usage_rules": "logo_usage_rules",
+        "photography_style": "photography_style", "emoji_usage": "emoji_usage",
+        "cta_style": "cta_style", "hashtag_strategy": "hashtag_strategy",
+        "regulatory_notes": "regulatory_notes", "linkedin_rules": "linkedin_rules",
+        "instagram_rules": "instagram_rules", "x_rules": "x_rules",
+        "meta_ads_rules": "meta_ads_rules",
+    }
+
+    for k, field in json_fields.items():
+        value = extracted.get(k)
+        if value and isinstance(value, list) and len(value) > 0:
+            setattr(profile, field, json.dumps(value))
+
+    for k, field in text_fields.items():
+        value = extracted.get(k)
+        if value and isinstance(value, str) and value.strip() and value.strip().lower() != "null":
+            setattr(profile, field, value.strip())
+
+    # Also update product-level brand colors from the guide (most accurate source)
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if product:
+        all_colors = []
+        for color_key in ("primary_colors", "secondary_colors", "accent_colors"):
+            colors = extracted.get(color_key, [])
+            if colors:
+                all_colors.extend(colors)
+        if all_colors:
+            product.brand_colors = json.dumps(all_colors[:10])
+
+        fonts = extracted.get("approved_fonts", [])
+        if fonts:
+            product.brand_fonts = json.dumps(fonts)
+
+    profile.version = (profile.version or 0) + 1
+    db.commit()
 
 
 @router.post("/setup-product")
@@ -402,23 +503,15 @@ def setup_product(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """One-click product setup: create product → crawl website → generate brief → brand profile.
+    """One-click product setup (JSON): create product → crawl → brief → brand profile.
 
-    The Pi 5 bot (or any agent) calls this with a name + URL and gets back a task_id.
-    Poll /setup-product-status/{task_id} to track progress through each step.
-
-    When complete, the product is fully set up with:
-    - Crawled website content in the vector store
-    - Auto-generated brand brief (voice, colors, fonts, personas, positioning)
-    - Brand profile initialized
-    - Autonomous loop config ready to enable
+    For setups WITHOUT a brand guide file. Use /setup-product-with-guide
+    for multipart form upload with a brand guide PDF/image.
     """
-    # Normalize URL
     url = data.website_url.strip()
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
-    # Create the product
     product = Product(
         name=data.name,
         website_url=url,
@@ -431,10 +524,8 @@ def setup_product(
     db.commit()
     db.refresh(product)
 
-    # Kick off background setup
     task_id = str(uuid.uuid4())
     _task_status[task_id] = {"status": "pending", "product_id": product.id}
-
     background_tasks.add_task(_run_product_setup, task_id, product.id, url)
 
     return {
@@ -442,6 +533,75 @@ def setup_product(
         "product_id": product.id,
         "status": "pending",
         "message": f"Setting up '{data.name}' — crawling {url}, generating brand brief...",
+    }
+
+
+@router.post("/setup-product-with-guide")
+async def setup_product_with_guide(
+    background_tasks: BackgroundTasks,
+    name: str = Form(...),
+    website_url: str = Form(...),
+    description: str = Form(None),
+    target_audience: str = Form(None),
+    product_type: str = Form("other"),
+    brand_guide: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """One-click product setup WITH brand guide upload.
+
+    Accepts multipart form with an optional brand guide (PDF, PNG, JPG).
+    The brand guide gets priority for brand identity extraction — colors,
+    fonts, voice, and rules are pulled directly from the source of truth.
+
+    Flow: create product → save brand guide → crawl website → extract
+    brand guide via Claude Vision → generate brief → brand profile.
+    """
+    url = website_url.strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+
+    product = Product(
+        name=name,
+        website_url=url,
+        description=description or "",
+        target_audience=target_audience or "",
+        product_type=product_type,
+        status="onboarding",
+    )
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+
+    # Save brand guide file if provided
+    guide_path = None
+    if brand_guide and brand_guide.filename:
+        ext = os.path.splitext(brand_guide.filename)[1].lower()
+        allowed = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
+        if ext not in allowed:
+            raise HTTPException(400, f"Unsupported file type '{ext}'. Use PDF, PNG, JPG, or WEBP.")
+
+        uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "brand_guides")
+        os.makedirs(uploads_dir, exist_ok=True)
+        guide_filename = f"{product.id}_{uuid.uuid4()}{ext}"
+        guide_path = os.path.join(uploads_dir, guide_filename)
+
+        content = await brand_guide.read()
+        with open(guide_path, "wb") as f:
+            f.write(content)
+
+    task_id = str(uuid.uuid4())
+    _task_status[task_id] = {"status": "pending", "product_id": product.id}
+    background_tasks.add_task(_run_product_setup, task_id, product.id, url, guide_path)
+
+    return {
+        "task_id": task_id,
+        "product_id": product.id,
+        "status": "pending",
+        "brand_guide_uploaded": guide_path is not None,
+        "message": f"Setting up '{name}' — "
+                   + ("extracting brand guide, " if guide_path else "")
+                   + f"crawling {url}, generating brand brief...",
     }
 
 
