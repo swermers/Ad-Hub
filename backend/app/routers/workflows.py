@@ -237,3 +237,79 @@ def get_workflow_history(
         .all()
     )
     return [_to_response(w) for w in workflows]
+
+
+# ─── Evolution Endpoints ─────────────────────────────────────────────────────
+
+
+@router.post("/{product_id}/evolve")
+async def trigger_evolution_cycle(
+    product_id: str,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Manually trigger workflow evolution for a product.
+
+    Aggregates performance metrics, analyzes patterns, and creates
+    improved workflow versions for any content type with enough data.
+    """
+    from app.engines.workflow_evolution import run_evolution_cycle
+
+    result = await run_evolution_cycle(db, product_id)
+    return result
+
+
+@router.post("/{product_id}/{workflow_type}/evolve")
+async def trigger_workflow_evolution(
+    product_id: str,
+    workflow_type: str,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Manually trigger evolution for a specific workflow type.
+
+    Analyzes performance data for this content type and creates
+    an improved workflow version if patterns are found.
+    """
+    if workflow_type not in WORKFLOW_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unknown workflow type: {workflow_type}")
+
+    from app.engines.workflow_evolution import evolve_workflow
+
+    result = await evolve_workflow(db, product_id, workflow_type)
+    return result
+
+
+@router.get("/{product_id}/metrics")
+def get_workflow_metrics(
+    product_id: str,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Get performance metrics summary for all workflow versions of a product."""
+    workflows = (
+        db.query(ContentTypeWorkflow)
+        .filter(ContentTypeWorkflow.product_id == product_id)
+        .order_by(ContentTypeWorkflow.workflow_type, ContentTypeWorkflow.version.desc())
+        .all()
+    )
+
+    metrics = {}
+    for w in workflows:
+        if w.workflow_type not in metrics:
+            metrics[w.workflow_type] = []
+
+        metrics[w.workflow_type].append({
+            "version": w.version,
+            "is_active": w.is_active,
+            "total_pieces": w.total_pieces_generated or 0,
+            "avg_engagement_rate": round(w.avg_engagement_rate or 0, 2),
+            "avg_impressions": round(w.avg_impressions or 0, 1),
+            "avg_clicks": round(w.avg_clicks or 0, 1),
+            "win_rate": round(w.win_rate or 0, 1) if w.win_rate else None,
+            "evolution_notes": w.evolution_notes,
+            "parent_version": w.parent_version,
+            "created_at": w.created_at.isoformat() if w.created_at else None,
+        })
+
+    return {"product_id": product_id, "workflow_metrics": metrics}

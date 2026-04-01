@@ -784,6 +784,21 @@ export const api = {
   getWorkflowHistory: (productId: string, workflowType: string) =>
     request<WorkflowConfig[]>(`/api/workflows/${productId}/${workflowType}/history`),
 
+  triggerEvolutionCycle: (productId: string) =>
+    request<Record<string, unknown>>(`/api/workflows/${productId}/evolve`, {
+      method: "POST",
+    }),
+
+  triggerWorkflowEvolution: (productId: string, workflowType: string) =>
+    request<Record<string, unknown>>(`/api/workflows/${productId}/${workflowType}/evolve`, {
+      method: "POST",
+    }),
+
+  getWorkflowMetrics: (productId: string) =>
+    request<{ product_id: string; workflow_metrics: Record<string, unknown[]> }>(
+      `/api/workflows/${productId}/metrics`
+    ),
+
   // ─── Video Render ──────────────────────────────────────────────────────
 
   renderVideo: (data: VideoRenderRequest) =>

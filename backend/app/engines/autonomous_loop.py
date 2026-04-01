@@ -37,6 +37,7 @@ from app.models import (
 from app.models.autonomous_loop import AutonomousLoopConfig
 from app.models.brand_profile import BrandProfile
 from app.models.campaign import AgentLog
+from app.models.content_workflow import ContentTypeWorkflow
 
 logger = logging.getLogger(__name__)
 
@@ -86,20 +87,16 @@ def run_content_loop(db: Session, product_id: str, config: AutonomousLoopConfig)
     db.commit()
 
     try:
-        # Generate content for each platform
-        content_types = ["social_post"]
+        # Generate content for each platform using multi-step flows when available
         platforms = [p for p in active_platforms if p in ("twitter", "linkedin", "meta")]
-
         if not platforms:
             platforms = active_platforms[:3]
 
-        pieces = generate_content_batch_sync(
+        pieces = _generate_with_flows(
+            db=db,
             product=product,
-            content_types=content_types,
+            seed=seed,
             platforms=platforms,
-            count=1,  # 1 variation per platform (we pick the seed, not bulk)
-            funnel_stage="awareness",
-            instructions=f"Core idea: {seed.seed}\nHook: {seed.audience_hook}\nTheme: {seed.weekly_theme or 'General'}",
             brand_profile=brand_profile,
         )
 
@@ -171,6 +168,139 @@ def run_content_loop(db: Session, product_id: str, config: AutonomousLoopConfig)
         db.commit()
         logger.error("Content loop failed for product %s: %s", product_id, e)
         return {"status": "error", "reason": str(e)}
+
+
+def _generate_with_flows(
+    db: Session,
+    product,
+    seed: Seed,
+    platforms: list[str],
+    brand_profile=None,
+) -> list[dict]:
+    """Generate content using multi-step flows when available, fallback to batch generation.
+
+    This bridges the autonomous loop (sync) with the async flow architecture.
+    """
+    import asyncio
+    from app.engines.flows import FlowContext, FlowRegistry
+
+    # Map platform → flow type
+    platform_flow_map = {
+        "twitter": "x_post",
+        "linkedin": "linkedin_post",
+        "meta": "meta_post",
+    }
+
+    # Build shared context
+    product_context = f"Product: {product.name}\nDescription: {product.description}"
+    if product.target_audience:
+        product_context += f"\nTarget Audience: {product.target_audience}"
+
+    voice_context = ""
+    if brand_profile:
+        voice_context = f"Brand tone: {brand_profile.tone_of_voice or ''}"
+
+    seed_dict = {
+        "seed": seed.seed,
+        "audience_hook": seed.audience_hook or "",
+        "weekly_theme": seed.weekly_theme or "",
+    }
+
+    # Load workflow overrides from DB
+    flow_types_needed = [platform_flow_map.get(p, p) for p in platforms]
+    workflow_overrides = {}
+    workflows = (
+        db.query(ContentTypeWorkflow)
+        .filter(
+            ContentTypeWorkflow.product_id == product.id,
+            ContentTypeWorkflow.workflow_type.in_(flow_types_needed),
+            ContentTypeWorkflow.is_active.is_(True),
+        )
+        .all()
+    )
+    for wf in workflows:
+        workflow_overrides[wf.workflow_type] = wf
+
+    # Try to run flows
+    pieces = []
+    fallback_platforms = []
+
+    async def _run_flows():
+        tasks = []
+        for platform in platforms:
+            flow_type = platform_flow_map.get(platform, platform)
+            flow = FlowRegistry.get(flow_type)
+
+            if not flow:
+                fallback_platforms.append(platform)
+                continue
+
+            wf = workflow_overrides.get(flow_type)
+            step_overrides = {}
+            gate_overrides = {}
+            version = 1
+            if wf:
+                version = wf.version
+                if wf.step_prompts:
+                    try:
+                        step_overrides = json.loads(wf.step_prompts)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                if wf.quality_gate_rules:
+                    try:
+                        gate_overrides = json.loads(wf.quality_gate_rules)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+            ctx = FlowContext(
+                seed=seed_dict,
+                draft=None,
+                product_context=product_context,
+                voice_context=voice_context,
+                prompt_set={},
+                workflow_type=flow_type,
+                workflow_version=version,
+                step_prompt_overrides=step_overrides,
+                quality_gate_overrides=gate_overrides,
+            )
+            tasks.append(flow.run(ctx))
+
+        if tasks:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for r in results:
+                if isinstance(r, Exception):
+                    logger.warning("Flow execution failed: %s", r)
+                    continue
+                pieces.append({
+                    "content_type": r.content_type,
+                    "platform": r.platform,
+                    "title": r.title,
+                    "body": r.body,
+                    "hook": r.hook,
+                    "cta": r.cta,
+                    "metadata": json.dumps(r.metadata),
+                    "video_style": r.video_style,
+                    "video_config": r.video_config,
+                })
+
+    asyncio.run(_run_flows())
+
+    # Fallback for platforms without flows
+    if fallback_platforms:
+        from app.engines.generation import generate_content_batch_sync
+
+        fallback_pieces = generate_content_batch_sync(
+            product=product,
+            content_types=["social_post"],
+            platforms=fallback_platforms,
+            count=1,
+            funnel_stage="awareness",
+            instructions=f"Core idea: {seed.seed}\nHook: {seed.audience_hook}\nTheme: {seed.weekly_theme or 'General'}",
+            brand_profile=brand_profile,
+        )
+        pieces.extend(fallback_pieces)
+
+    return pieces
 
 
 def _pick_next_seed(db: Session, product_id: str) -> Seed | None:
@@ -490,12 +620,24 @@ def run_feedback_loop(db: Session, product_id: str, config: AutonomousLoopConfig
             "funnel_stage": piece.funnel_stage,
         })
 
+    # 4. Evolve content workflows based on performance data
+    evolution_result = {}
+    try:
+        import asyncio
+        from app.engines.workflow_evolution import run_evolution_cycle
+
+        evolution_result = asyncio.run(run_evolution_cycle(db, product_id))
+    except Exception as e:
+        logger.warning("Workflow evolution failed for product %s: %s", product_id, e)
+        evolution_result = {"status": "error", "reason": str(e)}
+
     db.commit()
 
     _log_action(db, "feedback_loop_cycle", "seed", product_id, {
         "seeds_boosted": boosted,
         "seeds_archived": archived,
         "winning_patterns_found": len(winning_patterns),
+        "workflow_evolution": evolution_result,
         "insights": insights[:5],
     })
 
@@ -504,6 +646,7 @@ def run_feedback_loop(db: Session, product_id: str, config: AutonomousLoopConfig
         "seeds_boosted": boosted,
         "seeds_archived": archived,
         "winning_patterns": winning_patterns,
+        "workflow_evolution": evolution_result,
     }
 
 
