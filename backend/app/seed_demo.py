@@ -85,6 +85,7 @@ def seed_demo_data(db: Session, workspace_id: str | None):
         created_at=_now - 14 * _day,
     )
     db.add(product)
+    db.flush()  # Flush product first so FK references resolve
 
     # ── Brand Profile ────────────────────────────────────────────────────────
     brand = BrandProfile(
