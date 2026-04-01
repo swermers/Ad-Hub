@@ -27,6 +27,16 @@ _task_status: dict[str, dict] = {}
 # ─── Request / Response Models ────────────────────────────────────────────────
 
 
+class ProductSetupRequest(BaseModel):
+    """One-click product setup from URL."""
+
+    name: str
+    website_url: str
+    description: str | None = None
+    target_audience: str | None = None
+    product_type: str = "other"  # saas, physical, service, other
+
+
 class TranscriptRequest(BaseModel):
     """Voice memo transcript → weekly content."""
 
@@ -222,6 +232,226 @@ def system_status(db: Session = Depends(get_db), user: dict = Depends(get_curren
             for a in recent_actions
         ],
     }
+
+
+# ─── One-Click Product Setup ─────────────────────────────────────────────────
+
+
+def _run_product_setup(task_id: str, product_id: str, website_url: str):
+    """Background task: crawl website → generate brand brief → create brand profile.
+
+    This chains the steps that normally require manual UI clicks into one
+    sequential background job. The bot or Telegram command calls the endpoint,
+    polls status, and the product is fully set up when done.
+    """
+    import asyncio
+    from app.database import SessionLocal
+    from app.engines.ingestion import crawl_website
+    from app.engines.vectorstore import get_vectorstore
+    from app.models.brand_profile import BrandProfile
+    from app.models.crawl import CrawledPage
+
+    _task_status[task_id] = {
+        "status": "crawling",
+        "product_id": product_id,
+        "step": "crawl",
+        "pages_crawled": 0,
+        "error": None,
+    }
+
+    db = SessionLocal()
+    try:
+        product = db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            _task_status[task_id] = {"status": "failed", "error": "Product not found"}
+            return
+
+        # Step 1: Crawl website (same pattern as ingestion router's _run_crawl)
+        page_count = 0
+        try:
+            pages = asyncio.run(crawl_website(website_url, max_pages=15))
+            page_count = len(pages) if pages else 0
+
+            # Save crawled pages and add to vector store
+            for page_data in pages:
+                existing = (
+                    db.query(CrawledPage)
+                    .filter(CrawledPage.product_id == product_id, CrawledPage.url == page_data["url"])
+                    .first()
+                )
+                if existing:
+                    existing.title = page_data["title"]
+                    existing.content = page_data["content"]
+                    existing.page_type = page_data.get("page_type", "unknown")
+                else:
+                    db.add(CrawledPage(
+                        product_id=product_id,
+                        url=page_data["url"],
+                        title=page_data["title"],
+                        content=page_data["content"],
+                        page_type=page_data.get("page_type", "unknown"),
+                    ))
+            db.commit()
+
+            # Add to vector store for RAG
+            vs = get_vectorstore()
+            texts = [p["content"] for p in pages if p.get("content")]
+            metadatas = [
+                {"url": p["url"], "title": p.get("title", ""), "product_id": product_id}
+                for p in pages if p.get("content")
+            ]
+            if texts:
+                vs.add_documents(product_id, texts, metadatas)
+
+            # Extract brand colors/fonts if available
+            if pages and "_extracted_colors" in pages[0]:
+                colors = pages[0]["_extracted_colors"]
+                if colors:
+                    product.brand_colors = json.dumps(colors)
+            if pages and "_extracted_fonts" in pages[0]:
+                fonts = pages[0]["_extracted_fonts"]
+                if fonts:
+                    product.brand_fonts = json.dumps(fonts)
+            db.commit()
+
+            _task_status[task_id]["pages_crawled"] = page_count
+            _task_status[task_id]["step"] = "brief"
+            _task_status[task_id]["status"] = "generating_brief"
+        except Exception as e:
+            _task_status[task_id] = {
+                "status": "failed",
+                "step": "crawl",
+                "error": f"Crawl failed: {e}",
+                "product_id": product_id,
+            }
+            return
+
+        # Step 2: Generate brand brief (reuse ingestion router's pattern)
+        try:
+            from app.routers.ingestion import _run_brief_generation
+            _run_brief_generation(product_id)
+            # Refresh product to get updated brand_brief
+            db.refresh(product)
+            _task_status[task_id]["step"] = "brand_profile"
+            _task_status[task_id]["status"] = "creating_brand_profile"
+        except Exception as e:
+            _task_status[task_id]["status"] = "partial"
+            _task_status[task_id]["error"] = f"Brief generation failed: {e}"
+            _task_status[task_id]["step"] = "brief"
+            # Continue anyway — crawl data is still useful
+
+        # Step 3: Auto-create brand profile if one doesn't exist
+        try:
+            if not db.query(BrandProfile).filter(BrandProfile.product_id == product_id).first():
+                db.add(BrandProfile(product_id=product_id))
+            product.status = "active"
+            db.commit()
+        except Exception as e:
+            _task_status[task_id]["status"] = "partial"
+            _task_status[task_id]["error"] = f"Brand profile creation failed: {e}"
+
+        # Step 4: Set up autonomous loop config (defaults — all loops off)
+        try:
+            from app.models.autonomous_loop import AutonomousLoopConfig
+            if not db.query(AutonomousLoopConfig).filter(
+                AutonomousLoopConfig.product_id == product_id
+            ).first():
+                db.add(AutonomousLoopConfig(product_id=product_id))
+                db.commit()
+        except Exception:
+            pass  # Non-critical
+
+        # Done
+        _task_status[task_id] = {
+            "status": "completed",
+            "product_id": product_id,
+            "step": "done",
+            "pages_crawled": page_count,
+            "has_brief": product.brand_brief is not None,
+            "error": None,
+        }
+
+        log = AgentLog(
+            agent_id="product-setup",
+            action_type="product_setup_complete",
+            resource_type="product",
+            resource_id=product_id,
+            details=json.dumps({
+                "product_name": product.name,
+                "website_url": website_url,
+                "pages_crawled": page_count,
+            }),
+        )
+        db.add(log)
+        db.commit()
+
+    except Exception as e:
+        _task_status[task_id] = {
+            "status": "failed",
+            "product_id": product_id,
+            "error": str(e),
+        }
+    finally:
+        db.close()
+
+
+@router.post("/setup-product")
+def setup_product(
+    data: ProductSetupRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """One-click product setup: create product → crawl website → generate brief → brand profile.
+
+    The Pi 5 bot (or any agent) calls this with a name + URL and gets back a task_id.
+    Poll /setup-product-status/{task_id} to track progress through each step.
+
+    When complete, the product is fully set up with:
+    - Crawled website content in the vector store
+    - Auto-generated brand brief (voice, colors, fonts, personas, positioning)
+    - Brand profile initialized
+    - Autonomous loop config ready to enable
+    """
+    # Normalize URL
+    url = data.website_url.strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+
+    # Create the product
+    product = Product(
+        name=data.name,
+        website_url=url,
+        description=data.description or "",
+        target_audience=data.target_audience or "",
+        product_type=data.product_type,
+        status="onboarding",
+    )
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+
+    # Kick off background setup
+    task_id = str(uuid.uuid4())
+    _task_status[task_id] = {"status": "pending", "product_id": product.id}
+
+    background_tasks.add_task(_run_product_setup, task_id, product.id, url)
+
+    return {
+        "task_id": task_id,
+        "product_id": product.id,
+        "status": "pending",
+        "message": f"Setting up '{data.name}' — crawling {url}, generating brand brief...",
+    }
+
+
+@router.get("/setup-product-status/{task_id}")
+def get_setup_status(task_id: str, current_user: dict = Depends(get_current_user)):
+    """Poll the status of a product setup task."""
+    status = _task_status.get(task_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"task_id": task_id, **status}
 
 
 # ─── Content from Transcript (Voice Memo Pipeline) ───────────────────────────
