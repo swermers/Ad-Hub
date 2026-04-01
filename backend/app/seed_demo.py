@@ -29,7 +29,8 @@ from app.models import (
 )
 
 DEMO_PRODUCT_ID = "00000000-0000-4000-demo-000000000001"
-DEMO_WORKSPACE_SLUG = "default"
+DEMO_WORKSPACE_ID = "00000000-0000-4000-demo-00000000d3m0"
+DEMO_WORKSPACE_SLUG = "demo"
 
 _now = datetime.now(timezone.utc)
 _day = timedelta(days=1)
@@ -40,16 +41,43 @@ def _id():
     return str(uuid.uuid4())
 
 
-def seed_demo_data(db: Session, workspace_id: str | None):
-    """Seed demo product and content. Idempotent - skips if demo product exists."""
+def seed_demo_data(db: Session, workspace_id: str | None = None):
+    """Seed demo product and content in a separate demo workspace.
+
+    Idempotent - skips if demo product already exists.
+    """
+    from app.models.workspace import Workspace
+    from app.models.user import User
+
     existing = db.query(Product).filter(Product.id == DEMO_PRODUCT_ID).first()
     if existing:
         return
 
+    # ── Create dedicated demo workspace (separate from admin workspace) ──────
+    demo_ws = db.query(Workspace).filter(Workspace.id == DEMO_WORKSPACE_ID).first()
+    if not demo_ws:
+        demo_ws = Workspace(
+            id=DEMO_WORKSPACE_ID,
+            name="Demo Workspace",
+            slug=DEMO_WORKSPACE_SLUG,
+            owner_email="guest@iterant.demo",
+            tier="pro",
+            max_products=1,
+            max_generations_per_month=0,
+        )
+        db.add(demo_ws)
+        db.flush()
+
+    # Assign guest user to demo workspace (not admin workspace)
+    guest_user = db.query(User).filter(User.email == "guest@iterant.demo").first()
+    if guest_user and guest_user.workspace_id != DEMO_WORKSPACE_ID:
+        guest_user.workspace_id = DEMO_WORKSPACE_ID
+        db.flush()
+
     # ── Demo Product ─────────────────────────────────────────────────────────
     product = Product(
         id=DEMO_PRODUCT_ID,
-        workspace_id=workspace_id,
+        workspace_id=DEMO_WORKSPACE_ID,
         name="Bloom",
         website_url="https://getbloom.example",
         description=(
