@@ -12,8 +12,8 @@ PUBLIC_PATHS = {"/api/auth/login", "/api/health", "/api/billing/webhook"}
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Skip auth if no password is configured (local dev)
-        if not settings.auth_password:
+        # Skip auth only in local dev when NEITHER password is configured
+        if not settings.auth_password and not settings.guest_password and settings.auth_secret == "change-me-in-production":
             return await call_next(request)
 
         path = request.url.path

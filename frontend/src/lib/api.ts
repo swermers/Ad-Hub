@@ -353,10 +353,15 @@ export const api = {
     }),
 
   // Auth
-  login: (password: string) =>
+  login: (password: string, email?: string) =>
     request<{ token: string }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password, email }),
+    }),
+  guestLogin: () =>
+    request<{ token: string }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ password: "__guest__", guest: true }),
     }),
   checkAuth: () => request<{ ok: boolean }>("/api/auth/me"),
 
