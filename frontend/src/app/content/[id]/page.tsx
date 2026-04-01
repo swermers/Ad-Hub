@@ -1,8 +1,9 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Component } from "react";
 import { useRef } from "react";
+import type { ReactNode, ErrorInfo } from "react";
 import { api, API_BASE, type ContentPiece, type Product, type GenerateImageStatus, type VideoRenderStatus } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
 import { VideoPreview, VIDEO_STYLE_OPTIONS, STYLE_CONFIG, FPS, type VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
@@ -11,8 +12,11 @@ import type { AspectRatio } from "@/components/ad-templates/types";
 import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
 
 const DynamicThumbnail = dynamic(
-  () => import("@remotion/player").then((mod) => mod.Thumbnail),
-  { ssr: false }
+  () => import("@remotion/player").then((mod) => {
+    if (!mod.Thumbnail) throw new Error("Thumbnail not available in this Remotion version");
+    return mod.Thumbnail;
+  }),
+  { ssr: false, loading: () => null }
 );
 import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
 import ContentEditor from "@/components/content-editors";
@@ -115,7 +119,35 @@ function desaturateHex(hex: string, amount: number): string {
   return rgbToHex(nr, ng, nb);
 }
 
+class ContentErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.error("ContentDetail error:", error, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="max-w-5xl p-8">
+          <div className="bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 rounded-xl p-6 text-center">
+            <p className="text-[#ffb4ab] font-medium mb-2">Something went wrong rendering this content.</p>
+            <button onClick={() => this.setState({ hasError: false })} className="text-sm text-[#dbc2ad] underline">Try again</button>
+            {" | "}
+            <button onClick={() => window.history.back()} className="text-sm text-[#dbc2ad] underline">Go back</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function ContentDetailPage() {
+  return <ContentErrorBoundary><ContentDetailInner /></ContentErrorBoundary>;
+}
+
+function ContentDetailInner() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [piece, setPiece] = useState<ContentPiece | null>(null);
