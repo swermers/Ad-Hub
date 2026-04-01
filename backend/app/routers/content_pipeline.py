@@ -47,6 +47,7 @@ class SharpenRequest(BaseModel):
     product_id: str
     raw_text: str  # transcribed voice memo + manual notes combined
     voice_profile_id: str | None = None
+    workflow_type: str | None = None  # routes to content-type-specific flow
 
 
 class SharpenResponse(BaseModel):
@@ -67,6 +68,7 @@ class DraftRequest(BaseModel):
     seed: dict  # the SharpenResponse data
     voice_profile_id: str | None = None
     template_override: str | None = None  # override template_fit from seed
+    workflow_type: str | None = None
 
 
 class DraftResponse(BaseModel):
@@ -89,6 +91,7 @@ class ExpandRequest(BaseModel):
     include_video_ad: bool = False
     include_carousel: bool = False
     include_email: bool = False
+    workflow_type: str | None = None  # routes to content-type-specific flow
 
 
 class QuickExpandRequest(BaseModel):
@@ -103,6 +106,7 @@ class QuickExpandRequest(BaseModel):
     include_video_ad: bool = False
     include_carousel: bool = False
     include_email: bool = False
+    workflow_type: str | None = None
 
 
 class ExpandedPiece(BaseModel):
@@ -370,6 +374,95 @@ Return ONLY the JSON object."""
     return DraftResponse(**parsed)
 
 
+# ─── Flow Helpers ──────────────────────────────────────────────────────────
+
+
+def _load_workflow_overrides(product_id: str, flow_types: list[str], db: Session) -> dict[str, dict]:
+    """Load active workflow prompt overrides from DB for the given product + flow types.
+
+    Returns: {flow_type: {"step_prompts": {...}, "quality_gate_rules": {...}, "version": int}}
+    """
+    from app.models.content_workflow import ContentTypeWorkflow
+
+    overrides = {}
+    if not flow_types:
+        return overrides
+
+    workflows = (
+        db.query(ContentTypeWorkflow)
+        .filter(
+            ContentTypeWorkflow.product_id == product_id,
+            ContentTypeWorkflow.workflow_type.in_(flow_types),
+            ContentTypeWorkflow.is_active == True,  # noqa: E712
+        )
+        .all()
+    )
+
+    for w in workflows:
+        step_prompts = {}
+        gate_rules = {}
+        if w.step_prompts:
+            try:
+                step_prompts = json.loads(w.step_prompts)
+            except json.JSONDecodeError:
+                pass
+        if w.quality_gate_rules:
+            try:
+                gate_rules = json.loads(w.quality_gate_rules)
+            except json.JSONDecodeError:
+                pass
+        overrides[w.workflow_type] = {
+            "step_prompts": step_prompts,
+            "quality_gate_rules": gate_rules,
+            "version": w.version,
+        }
+
+    return overrides
+
+
+async def _run_flow_or_fallback(
+    flow_type: str,
+    fallback_ct: str,
+    fallback_platform: str,
+    seed: dict,
+    draft: dict | None,
+    product_context: str,
+    voice_context: str,
+    prompt_set: dict,
+    workflow_overrides: dict,
+) -> dict:
+    """Run a content flow if registered, otherwise fall back to single-call generation."""
+    from app.engines.flows import FlowContext, FlowRegistry
+
+    flow = FlowRegistry.get(flow_type)
+
+    if flow:
+        ctx = FlowContext(
+            seed=seed,
+            draft=draft,
+            product_context=product_context,
+            voice_context=voice_context,
+            prompt_set=prompt_set,
+            workflow_type=flow_type,
+            workflow_version=workflow_overrides.get("version", 1),
+            step_prompt_overrides=workflow_overrides.get("step_prompts", {}),
+            quality_gate_overrides=workflow_overrides.get("quality_gate_rules", {}),
+        )
+        result = await flow.run(ctx)
+        return result.to_dict()
+
+    # Fallback to single-call generation for unregistered flow types
+    return await generate_content_by_type(
+        content_type=fallback_ct,
+        platform=fallback_platform,
+        seed=seed,
+        draft=draft,
+        product_context=product_context,
+        voice_context=voice_context,
+        prompt_set=prompt_set,
+    )
+
+
 # ─── Step 3: Expand ─────────────────────────────────────────────────────────
 
 
@@ -381,8 +474,9 @@ async def expand_to_platforms(
 ):
     """Expand the newsletter draft into multi-platform content variants.
 
-    Uses content-specific workflows: each content type gets its own dedicated
-    skill sequence with tailored prompts and quality gates, run in parallel.
+    Uses the Flow Registry: each content type gets its own multi-step pipeline
+    with specialized prompts, quality gates, and per-step refinement.
+    All flows run in parallel via asyncio.gather.
     """
     product = db.query(Product).filter(Product.id == data.product_id).first()
     if not product:
@@ -397,41 +491,59 @@ Description: {product.description}
 Target Audience: {product.target_audience or "General audience"}
 {f"Brand: {brand_context}" if brand_context else ""}"""
 
-    # Build the list of pieces to generate
-    pieces_to_gen = []
-    for platform in data.platforms:
-        pieces_to_gen.append({"content_type": "social_post", "platform": platform})
-    if data.include_video_script:
-        pieces_to_gen.append({"content_type": "video_script", "platform": "general"})
-    if data.include_thread:
-        pieces_to_gen.append({"content_type": "x_thread", "platform": "twitter"})
-    if data.include_video_ad:
-        pieces_to_gen.append({"content_type": "video_ad", "platform": "general"})
-    if data.include_carousel:
-        pieces_to_gen.append({"content_type": "carousel", "platform": "general"})
-    if data.include_email:
-        pieces_to_gen.append({"content_type": "email", "platform": "general"})
+    # Map platform → flow_type for social posts
+    PLATFORM_FLOW_MAP = {
+        "twitter": "x_post",
+        "linkedin": "linkedin_post",
+        "meta": "meta_post",
+    }
 
-    # Run all content-specific workflows in parallel
-    tasks = [
-        generate_content_by_type(
-            content_type=spec["content_type"],
-            platform=spec["platform"],
+    # Build the list of flows to run
+    flow_specs = []
+    for platform in data.platforms:
+        flow_type = PLATFORM_FLOW_MAP.get(platform, "meta_post")
+        flow_specs.append({"flow_type": flow_type, "fallback_ct": "social_post", "fallback_platform": platform})
+    if data.include_video_script:
+        flow_specs.append({"flow_type": "video_script", "fallback_ct": "video_script", "fallback_platform": "general"})
+    if data.include_thread:
+        flow_specs.append({"flow_type": "x_thread", "fallback_ct": "x_thread", "fallback_platform": "twitter"})
+    if data.include_video_ad:
+        flow_specs.append({"flow_type": "video_ad", "fallback_ct": "video_ad", "fallback_platform": "general"})
+    if data.include_carousel:
+        flow_specs.append({"flow_type": "carousel", "fallback_ct": "carousel", "fallback_platform": "general"})
+    if data.include_email:
+        flow_specs.append({"flow_type": "email", "fallback_ct": "email", "fallback_platform": "general"})
+
+    # If a specific workflow_type is set, override all flows with that type
+    if data.workflow_type:
+        flow_specs = [{"flow_type": data.workflow_type, "fallback_ct": data.workflow_type, "fallback_platform": "general"}]
+
+    # Load workflow-level prompt overrides from DB
+    workflow_overrides = _load_workflow_overrides(data.product_id, [s["flow_type"] for s in flow_specs], db)
+
+    # Run all flows in parallel
+    tasks = []
+    for spec in flow_specs:
+        tasks.append(_run_flow_or_fallback(
+            flow_type=spec["flow_type"],
+            fallback_ct=spec["fallback_ct"],
+            fallback_platform=spec["fallback_platform"],
             seed=data.seed,
             draft=data.draft,
             product_context=product_context,
             voice_context=voice_context,
             prompt_set=prompt_set,
-        )
-        for spec in pieces_to_gen
-    ]
+            workflow_overrides=workflow_overrides.get(spec["flow_type"], {}),
+        ))
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     pieces = []
     for result in results:
         if isinstance(result, Exception):
-            continue  # skip failed generations
+            import logging
+            logging.getLogger(__name__).warning(f"Flow failed: {result}")
+            continue
         pieces.append(ExpandedPiece(
             content_type=result.get("content_type", "social_post"),
             platform=result.get("platform", "general"),
@@ -459,7 +571,7 @@ async def quick_expand(
 ):
     """Generate platform content directly from seed, skipping the newsletter draft step.
 
-    Uses content-specific workflows run in parallel for each content type.
+    Uses the Flow Registry for multi-step generation per content type.
     """
     product = db.query(Product).filter(Product.id == data.product_id).first()
     if not product:
@@ -474,34 +586,47 @@ Description: {product.description}
 Target Audience: {product.target_audience or "General audience"}
 {f"Brand: {brand_context}" if brand_context else ""}"""
 
-    # Build the list of pieces to generate
-    pieces_to_gen = []
+    PLATFORM_FLOW_MAP = {
+        "twitter": "x_post",
+        "linkedin": "linkedin_post",
+        "meta": "meta_post",
+    }
+
+    # Build flow specs
+    flow_specs = []
     for ct in data.content_types:
         for platform in data.platforms:
-            pieces_to_gen.append({"content_type": ct, "platform": platform})
+            flow_type = PLATFORM_FLOW_MAP.get(platform, ct)
+            flow_specs.append({"flow_type": flow_type, "fallback_ct": ct, "fallback_platform": platform})
     if data.include_video_script:
-        pieces_to_gen.append({"content_type": "video_script", "platform": "general"})
+        flow_specs.append({"flow_type": "video_script", "fallback_ct": "video_script", "fallback_platform": "general"})
     if data.include_thread:
-        pieces_to_gen.append({"content_type": "x_thread", "platform": "twitter"})
+        flow_specs.append({"flow_type": "x_thread", "fallback_ct": "x_thread", "fallback_platform": "twitter"})
     if data.include_video_ad:
-        pieces_to_gen.append({"content_type": "video_ad", "platform": "general"})
+        flow_specs.append({"flow_type": "video_ad", "fallback_ct": "video_ad", "fallback_platform": "general"})
     if data.include_carousel:
-        pieces_to_gen.append({"content_type": "carousel", "platform": "general"})
+        flow_specs.append({"flow_type": "carousel", "fallback_ct": "carousel", "fallback_platform": "general"})
     if data.include_email:
-        pieces_to_gen.append({"content_type": "email", "platform": "general"})
+        flow_specs.append({"flow_type": "email", "fallback_ct": "email", "fallback_platform": "general"})
 
-    # Run all content-specific workflows in parallel (no draft, seed-only)
+    if data.workflow_type:
+        flow_specs = [{"flow_type": data.workflow_type, "fallback_ct": data.workflow_type, "fallback_platform": "general"}]
+
+    workflow_overrides = _load_workflow_overrides(data.product_id, [s["flow_type"] for s in flow_specs], db)
+
     tasks = [
-        generate_content_by_type(
-            content_type=spec["content_type"],
-            platform=spec["platform"],
+        _run_flow_or_fallback(
+            flow_type=spec["flow_type"],
+            fallback_ct=spec["fallback_ct"],
+            fallback_platform=spec["fallback_platform"],
             seed=data.seed,
             draft=None,
             product_context=product_context,
             voice_context=voice_context,
             prompt_set=prompt_set,
+            workflow_overrides=workflow_overrides.get(spec["flow_type"], {}),
         )
-        for spec in pieces_to_gen
+        for spec in flow_specs
     ]
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -509,6 +634,8 @@ Target Audience: {product.target_audience or "General audience"}
     pieces = []
     for result in results:
         if isinstance(result, Exception):
+            import logging
+            logging.getLogger(__name__).warning(f"Flow failed: {result}")
             continue
         pieces.append(ExpandedPiece(
             content_type=result.get("content_type", "social_post"),
