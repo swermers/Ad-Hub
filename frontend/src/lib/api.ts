@@ -756,6 +756,49 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // ─── Workflows ─────────────────────────────────────────────────────────
+
+  listWorkflowTypes: () =>
+    request<WorkflowTypeInfo[]>("/api/workflows/types"),
+
+  getWorkflowTypeInfo: (workflowType: string) =>
+    request<WorkflowTypeInfo>(`/api/workflows/types/${workflowType}`),
+
+  listProductWorkflows: (productId: string) =>
+    request<WorkflowConfig[]>(`/api/workflows/${productId}`),
+
+  getProductWorkflow: (productId: string, workflowType: string) =>
+    request<WorkflowConfig | null>(`/api/workflows/${productId}/${workflowType}`),
+
+  updateProductWorkflow: (productId: string, workflowType: string, data: { step_prompts?: Record<string, string>; quality_gate_rules?: Record<string, string>; is_active?: boolean }) =>
+    request<WorkflowConfig>(`/api/workflows/${productId}/${workflowType}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  resetProductWorkflow: (productId: string, workflowType: string) =>
+    request<{ reset: boolean }>(`/api/workflows/${productId}/${workflowType}`, {
+      method: "DELETE",
+    }),
+
+  getWorkflowHistory: (productId: string, workflowType: string) =>
+    request<WorkflowConfig[]>(`/api/workflows/${productId}/${workflowType}/history`),
+
+  triggerEvolutionCycle: (productId: string) =>
+    request<Record<string, unknown>>(`/api/workflows/${productId}/evolve`, {
+      method: "POST",
+    }),
+
+  triggerWorkflowEvolution: (productId: string, workflowType: string) =>
+    request<Record<string, unknown>>(`/api/workflows/${productId}/${workflowType}/evolve`, {
+      method: "POST",
+    }),
+
+  getWorkflowMetrics: (productId: string) =>
+    request<{ product_id: string; workflow_metrics: Record<string, unknown[]> }>(
+      `/api/workflows/${productId}/metrics`
+    ),
+
   // ─── Video Render ──────────────────────────────────────────────────────
 
   renderVideo: (data: VideoRenderRequest) =>
@@ -1733,6 +1776,7 @@ export interface PipelineSharpenRequest {
   product_id: string;
   raw_text: string;
   voice_profile_id?: string;
+  workflow_type?: string;
 }
 
 export interface PipelineSharpenResult {
@@ -1752,6 +1796,7 @@ export interface PipelineDraftRequest {
   seed: PipelineSharpenResult;
   voice_profile_id?: string;
   template_override?: string;
+  workflow_type?: string;
 }
 
 export interface PipelineDraftResult {
@@ -1772,6 +1817,8 @@ export interface PipelineExpandRequest {
   include_thread?: boolean;
   include_video_ad?: boolean;
   include_carousel?: boolean;
+  include_email?: boolean;
+  workflow_type?: string;
 }
 
 export interface PipelineExpandedPiece {
@@ -1814,6 +1861,36 @@ export interface PipelineQuickExpandRequest {
   include_thread?: boolean;
   include_video_ad?: boolean;
   include_carousel?: boolean;
+  include_email?: boolean;
+  workflow_type?: string;
+}
+
+// ─── Workflow Types ───────────────────────────────────────────────────────────
+
+export interface WorkflowTypeInfo {
+  workflow_type: string;
+  steps: Record<string, string>;
+  step_count: number;
+  quality_gates: string[];
+}
+
+export interface WorkflowConfig {
+  id: string;
+  product_id: string | null;
+  workflow_type: string;
+  version: number;
+  is_active: boolean;
+  step_prompts: Record<string, string> | null;
+  quality_gate_rules: Record<string, string> | null;
+  total_pieces_generated: number;
+  avg_engagement_rate: number | null;
+  avg_impressions: number | null;
+  avg_clicks: number | null;
+  win_rate: number | null;
+  parent_version: number | null;
+  evolution_notes: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PipelineRefineRequest {

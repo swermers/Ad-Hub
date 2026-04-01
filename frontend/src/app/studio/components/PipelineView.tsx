@@ -43,6 +43,7 @@ interface PipelineViewProps {
   hookText: string;
   selectedOutputs: string[];
   autoRun: boolean;
+  workflowType?: string | null;
   onComplete: (result: PipelineFinalizeResult) => void;
   onReset: () => void;
 }
@@ -55,6 +56,7 @@ export default function PipelineView({
   hookText,
   selectedOutputs,
   autoRun,
+  workflowType,
   onComplete,
   onReset,
 }: PipelineViewProps) {
@@ -109,6 +111,7 @@ export default function PipelineView({
         product_id: productId,
         raw_text: input,
         voice_profile_id: voiceProfileId || undefined,
+        workflow_type: workflowType || undefined,
       });
       setSharpenResult(result);
       setStatus("sharpen", "done");
@@ -140,6 +143,7 @@ export default function PipelineView({
         seed: seedData,
         voice_profile_id: voiceProfileId || undefined,
         template_override: templateOverride || undefined,
+        workflow_type: workflowType || undefined,
       });
       setDraftResult(result);
       setStatus("draft", "done");
@@ -178,6 +182,7 @@ export default function PipelineView({
         include_thread: selectedOutputs.includes("x_thread"),
         include_video_ad: selectedOutputs.includes("video_ad"),
         include_carousel: selectedOutputs.includes("carousel"),
+        workflow_type: workflowType || undefined,
       });
       setExpandResult(result.pieces);
       setStatus("expand", "done");
@@ -215,6 +220,7 @@ export default function PipelineView({
         include_thread: selectedOutputs.includes("x_thread"),
         include_video_ad: selectedOutputs.includes("video_ad"),
         include_carousel: selectedOutputs.includes("carousel"),
+        workflow_type: workflowType || undefined,
       });
       setExpandResult(result.pieces);
       setStatus("expand", "done");

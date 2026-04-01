@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.models import ContentPiece, ScheduledPost
+from app.models import ContentPiece, Product, ScheduledPost
 from app.models.campaign import AgentLog
 from app.permissions import get_current_user, require_human
 
@@ -679,6 +679,125 @@ async def _handle_telegram_command(text: str, chat_id: str, db: Session) -> dict
         db.commit()
         await bot.send_notification(f"Kill switch activated. {len(campaigns)} campaigns paused.")
 
+    elif cmd == "/setup":
+        # /setup <url> <product name>
+        # e.g. /setup https://example.com My Product Name
+        # Can also reply to a photo/document with /setup to use it as brand guide
+        parts = text.split(maxsplit=2)
+        if len(parts) < 3:
+            await bot.send_notification(
+                "<b>Usage:</b> <code>/setup &lt;url&gt; &lt;product name&gt;</code>\n\n"
+                "Example:\n"
+                "<code>/setup https://myproduct.com My Product</code>\n\n"
+                "This will crawl the website, extract brand identity, "
+                "and set up the product automatically.\n\n"
+                "<b>With brand guide:</b>\n"
+                "Send a photo or PDF of your brand guide, then reply to it with:\n"
+                "<code>/setup https://mysite.com My Brand</code>"
+            )
+        else:
+            url = parts[1]
+            name = parts[2]
+            await bot.send_notification(
+                f"Setting up <b>{name}</b>...\n"
+                f"Crawling {url} and extracting brand identity.\n"
+                "I'll message you when it's ready."
+            )
+
+            # Create product and run setup in background
+            import threading
+            import asyncio as _asyncio
+
+            product = Product(
+                name=name,
+                website_url=url if url.startswith(("http://", "https://")) else f"https://{url}",
+                status="onboarding",
+            )
+            db.add(product)
+            db.commit()
+            db.refresh(product)
+
+            def _bg_setup():
+                from app.database import SessionLocal
+                from app.engines.ingestion import crawl_website
+                from app.engines.vectorstore import get_vectorstore
+                from app.models.brand_profile import BrandProfile
+                from app.models.autonomous_loop import AutonomousLoopConfig
+                from app.models.crawl import CrawledPage
+
+                bg_db = SessionLocal()
+                try:
+                    crawl_url = product.website_url
+
+                    # Crawl
+                    pages = _asyncio.run(crawl_website(crawl_url, max_pages=15))
+                    page_count = len(pages) if pages else 0
+
+                    # Save pages
+                    for page_data in pages:
+                        bg_db.add(CrawledPage(
+                            product_id=product.id,
+                            url=page_data["url"],
+                            title=page_data["title"],
+                            content=page_data["content"],
+                            page_type=page_data.get("page_type", "unknown"),
+                        ))
+                    bg_db.commit()
+
+                    # Vector store
+                    vs = get_vectorstore()
+                    texts = [p["content"] for p in pages if p.get("content")]
+                    metadatas = [
+                        {"url": p["url"], "title": p.get("title", ""), "product_id": product.id}
+                        for p in pages if p.get("content")
+                    ]
+                    if texts:
+                        vs.add_documents(product.id, texts, metadatas)
+
+                    # Generate brief
+                    try:
+                        from app.routers.ingestion import _run_brief_generation
+                        _run_brief_generation(product.id)
+                    except Exception:
+                        pass  # Brief failure is non-fatal
+
+                    # Auto-create brand profile + loop config
+                    if not bg_db.query(BrandProfile).filter(
+                        BrandProfile.product_id == product.id
+                    ).first():
+                        bg_db.add(BrandProfile(product_id=product.id))
+
+                    if not bg_db.query(AutonomousLoopConfig).filter(
+                        AutonomousLoopConfig.product_id == product.id
+                    ).first():
+                        bg_db.add(AutonomousLoopConfig(product_id=product.id))
+
+                    # Mark product active
+                    p = bg_db.query(Product).filter(Product.id == product.id).first()
+                    if p:
+                        p.status = "active"
+
+                    bg_db.commit()
+
+                    # Notify via Telegram
+                    _asyncio.run(bot.send_notification(
+                        f"<b>{name}</b> is ready!\n\n"
+                        f"Crawled {page_count} pages\n"
+                        f"Brand brief generated\n"
+                        f"Brand profile created\n\n"
+                        f"Send me an idea to start generating content, "
+                        f"or enable the autonomous loop from the dashboard."
+                    ))
+                except Exception as e:
+                    _asyncio.run(bot.send_notification(
+                        f"Setup failed for {name}: {e}\n"
+                        f"Product was created — try crawling manually from the dashboard."
+                    ))
+                finally:
+                    bg_db.close()
+
+            threading.Thread(target=_bg_setup, daemon=True).start()
+
     elif cmd in ("/help", "/start"):
         await bot.send_notification(
             "<b>Clawd Bot</b>\n\n"
@@ -696,6 +815,7 @@ async def _handle_telegram_command(text: str, chat_id: str, db: Session) -> dict
             "<i>\"rewrite tweet 3\"</i>\n"
             "<i>\"too long, cut it in half\"</i>\n\n"
             "<b>Commands:</b>\n"
+            "/setup &lt;url&gt; &lt;name&gt; — Set up a new product from URL\n"
             "/queue — View pending items\n"
             "/kill — Emergency pause all campaigns\n"
             "/help — This message"
@@ -992,13 +1112,20 @@ def approval_queue(
 
     pieces = q.order_by(ContentPiece.created_at.desc()).limit(50).all()
 
+    # Batch-fetch all scheduled posts in one query instead of N+1
+    piece_ids = [p.id for p in pieces]
+    scheduled_map = {}
+    if piece_ids:
+        scheduled_posts = (
+            db.query(ScheduledPost)
+            .filter(ScheduledPost.content_id.in_(piece_ids))
+            .all()
+        )
+        scheduled_map = {sp.content_id: sp for sp in scheduled_posts}
+
     results = []
     for p in pieces:
-        scheduled = (
-            db.query(ScheduledPost)
-            .filter(ScheduledPost.content_id == p.id)
-            .first()
-        )
+        scheduled = scheduled_map.get(p.id)
         results.append({
             "content_id": p.id,
             "product_id": p.product_id,

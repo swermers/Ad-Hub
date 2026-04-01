@@ -35,6 +35,7 @@ from app.routers import (
     templates,
     video_render,
     voice_profiles,
+    workflows,
 )
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,7 @@ app.include_router(content_pipeline.router, prefix="/api/pipeline", tags=["conte
 app.include_router(content_prompts.router, prefix="/api/products", tags=["content-prompts"])
 app.include_router(dispatch.router, prefix="/api/dispatch", tags=["dispatch"])
 app.include_router(video_render.router, prefix="/api/video", tags=["video-render"])
+app.include_router(workflows.router, prefix="/api/workflows", tags=["workflows"])
 
 
 # Serve uploaded files (screenshots, references, generated images, etc.)

@@ -38,6 +38,7 @@ export default function StudioPage() {
   const [templateOverride, setTemplateOverride] = useState<string | null>(null);
   const [autoRun, setAutoRun] = useState(true);
   const [hookText, setHookText] = useState("");
+  const [workflowType, setWorkflowType] = useState<string | null>(null);
 
   // Pipeline result
   const [finalResult, setFinalResult] = useState<PipelineFinalizeResult | null>(null);
@@ -198,6 +199,8 @@ export default function StudioPage() {
                   onAutoRunChange={setAutoRun}
                   hookText={hookText}
                   onHookTextChange={setHookText}
+                  workflowType={workflowType}
+                  onWorkflowTypeChange={setWorkflowType}
                   onBeginSynthesis={handleBeginSynthesis}
                   canBegin={canBegin}
                   isRunning={isRunning}
@@ -225,6 +228,7 @@ export default function StudioPage() {
               hookText={hookText}
               selectedOutputs={selectedOutputs}
               autoRun={autoRun}
+              workflowType={workflowType}
               onComplete={handlePipelineComplete}
               onReset={handleReset}
             />

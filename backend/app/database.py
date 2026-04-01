@@ -59,6 +59,7 @@ def create_tables():
         CompetitorProfile,
         ContentPiece,
         ContentPromptSet,
+        ContentTypeWorkflow,
         CrawledPage,
         EvidenceItem,
         HookPattern,

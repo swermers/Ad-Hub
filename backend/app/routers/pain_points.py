@@ -90,11 +90,17 @@ def _run_research(task_id: str, product_id: str, count: int):
 
 
 @router.get("/{product_id}/pain-points", response_model=list[PainPointResponse])
-def list_pain_points(product_id: str, category: str | None = None, db: Session = Depends(get_db)):
+def list_pain_points(
+    product_id: str,
+    category: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+):
     query = db.query(PainPoint).filter(PainPoint.product_id == product_id)
     if category:
         query = query.filter(PainPoint.category == category)
-    points = query.order_by(PainPoint.severity.desc()).all()
+    points = query.order_by(PainPoint.severity.desc()).offset(offset).limit(limit).all()
     return [_to_response(pp) for pp in points]
 
 
