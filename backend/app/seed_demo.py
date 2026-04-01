@@ -28,7 +28,7 @@ from app.models import (
     TrendSignal,
 )
 
-DEMO_PRODUCT_ID = "demo-00000000-0000-0000-0000-000000000001"
+DEMO_PRODUCT_ID = "00000000-0000-4000-demo-000000000001"
 DEMO_WORKSPACE_SLUG = "default"
 
 _now = datetime.now(timezone.utc)
