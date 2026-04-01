@@ -3,13 +3,23 @@
 Breaks the content pipeline into discrete, approvable steps:
 1. Sharpen — extract the core idea from raw input
 2. Draft — generate the newsletter / primary content
-3. Expand — generate all platform variants (social, video, thread)
+3. Expand — generate platform variants using content-specific workflows
+   Each content type has its own dedicated skill sequence:
+   - Twitter posts: Post Sharpener (specificity/tension/stealable-line)
+   - LinkedIn posts: Professional Tone Gate
+   - Meta posts: Story Hook Gate
+   - Video scripts: Video Converter (breath-blocks)
+   - X threads: Thread Structurer (arc/pacing)
+   - Video ads: Ad Copy + composition style
+   - Carousels: Slide Architect (hook→build→CTA)
+   - Email: Email Formatter (subject/preview/body/CTA)
 4. Finalize — polish and save to database
 
 Each step returns its output for review. The frontend calls the next
 step only after the user approves (or auto-advances if toggled on).
 """
 
+import asyncio
 import json
 import uuid
 
@@ -18,6 +28,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.engines.content_workflows import generate_content_by_type
 from app.models import ContentPiece, Product
 from app.models.brand_profile import BrandProfile
 from app.models.seed_bank import Seed
@@ -77,6 +88,7 @@ class ExpandRequest(BaseModel):
     include_thread: bool = True
     include_video_ad: bool = False
     include_carousel: bool = False
+    include_email: bool = False
 
 
 class QuickExpandRequest(BaseModel):
@@ -90,6 +102,7 @@ class QuickExpandRequest(BaseModel):
     include_thread: bool = False
     include_video_ad: bool = False
     include_carousel: bool = False
+    include_email: bool = False
 
 
 class ExpandedPiece(BaseModel):
@@ -366,12 +379,23 @@ async def expand_to_platforms(
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    """Expand the newsletter draft into multi-platform content variants."""
+    """Expand the newsletter draft into multi-platform content variants.
+
+    Uses content-specific workflows: each content type gets its own dedicated
+    skill sequence with tailored prompts and quality gates, run in parallel.
+    """
     product = db.query(Product).filter(Product.id == data.product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
+    prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
+    brand_context = _get_brand_context(product, db)
+
+    product_context = f"""Product: {product.name}
+Description: {product.description}
+Target Audience: {product.target_audience or "General audience"}
+{f"Brand: {brand_context}" if brand_context else ""}"""
 
     # Build the list of pieces to generate
     pieces_to_gen = []
@@ -385,107 +409,40 @@ async def expand_to_platforms(
         pieces_to_gen.append({"content_type": "video_ad", "platform": "general"})
     if data.include_carousel:
         pieces_to_gen.append({"content_type": "carousel", "platform": "general"})
+    if data.include_email:
+        pieces_to_gen.append({"content_type": "email", "platform": "general"})
 
-    pieces_spec = "\n".join([f"- {p['content_type']} for {p['platform']}" for p in pieces_to_gen])
+    # Run all content-specific workflows in parallel
+    tasks = [
+        generate_content_by_type(
+            content_type=spec["content_type"],
+            platform=spec["platform"],
+            seed=data.seed,
+            draft=data.draft,
+            product_context=product_context,
+            voice_context=voice_context,
+            prompt_set=prompt_set,
+        )
+        for spec in pieces_to_gen
+    ]
 
-    prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
-
-    video_ad_rules = ""
-    if data.include_video_ad or data.include_carousel:
-        video_ad_rules = """
-VIDEO AD RULES (content_type: "video_ad"):
-Generate a short, punchy video ad with composition-ready fields:
-- headline: 5-8 words max, bold and attention-grabbing (this appears on screen)
-- body: 1-2 sentence supporting text (secondary on-screen text)
-- cta: 2-4 word call to action (e.g. "Try It Free", "Learn More")
-- video_style: pick the BEST style for this content from: "swiss-bold", "swiss-stack", "swiss-type", "swiss-grid", "swiss-minimal", "swiss-story", "default", "pas", "kinetic", "saas-demo", "data-hype", "social-proof", "image-overlay"
-  Style guide: "pas" for pain-point content, "data-hype" for stats/numbers, "social-proof" for testimonials, "saas-demo" for product features, "kinetic" for energetic/punchy, "swiss-bold" for editorial statements, "default" for general/elegant
-- video_config: {"aspect_ratio": "1:1" or "9:16" or "4:5", "accent_color": "#hex"}
-  Pick 9:16 for stories/reels, 1:1 for feed posts, 4:5 for portrait feed
-
-CAROUSEL RULES (content_type: "carousel"):
-Generate a multi-slide carousel:
-- headline: overall carousel title (5-8 words)
-- body: pipe-delimited slide headlines, 4-6 slides (e.g. "Slide 1 Title|Slide 2 Title|Slide 3 Title|Slide 4 Title")
-- cta: final slide CTA text
-- video_style: always "swiss-carousel"
-- video_config: {"aspect_ratio": "1:1", "accent_color": "#hex"}
-"""
-
-    system_prompt = f"""You are a content creator expanding a newsletter into platform-specific content.
-
-{voice_context}
-
-{prompt_set["voice_rules"]}
-
-SOCIAL POST RULES:
-{prompt_set["social_post_rules"]}
-
-VIDEO SCRIPT RULES:
-{prompt_set["video_script_rules"]}
-
-X THREAD RULES:
-{prompt_set["x_thread_rules"]}
-{video_ad_rules}"""
-
-    user_prompt = f"""Here is the approved newsletter draft:
-
-Title: {data.draft.get('title', '')}
----
-{data.draft.get('body', '')}
----
-
-Core seed: {data.seed.get('seed', '')}
-Weekly theme: {data.seed.get('weekly_theme', '')}
-
-Generate these content pieces from the newsletter:
-{pieces_spec}
-
-Return ONLY a JSON array:
-[
-    {{
-        "content_type": "social_post|video_script|x_thread|video_ad|carousel",
-        "platform": "twitter|linkedin|meta|general",
-        "title": "short label",
-        "body": "full content text (for video_ad: on-screen supporting text, for carousel: pipe-delimited slide headlines)",
-        "hook": "opening line (for video_ad: the headline shown on screen)",
-        "cta": "call to action",
-        "funnel_stage": "awareness",
-        "metadata": {{
-            "specificity_check": "what the reader sees",
-            "tension_check": "what pulls against what",
-            "stealable_line": "the screenshot-worthy phrase"
-        }},
-        "video_style": "only for video_ad/carousel types, null otherwise",
-        "video_config": {{"aspect_ratio": "1:1", "accent_color": "#hex"}}
-    }}
-]
-
-Return ONLY the JSON array."""
-
-    result = await call_claude(user_prompt, system=system_prompt, max_tokens=6144, premium=True)
-
-    try:
-        text = result["content"].strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1].rsplit("```", 1)[0]
-        parsed = json.loads(text)
-    except (json.JSONDecodeError, IndexError):
-        parsed = []
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
     pieces = []
-    for p in parsed:
+    for result in results:
+        if isinstance(result, Exception):
+            continue  # skip failed generations
         pieces.append(ExpandedPiece(
-            content_type=p.get("content_type", "social_post"),
-            platform=p.get("platform", "general"),
-            title=p.get("title", ""),
-            body=p.get("body", ""),
-            hook=p.get("hook"),
-            cta=p.get("cta"),
-            funnel_stage=p.get("funnel_stage", "awareness"),
-            metadata=p.get("metadata", {}),
-            video_style=p.get("video_style"),
-            video_config=p.get("video_config"),
+            content_type=result.get("content_type", "social_post"),
+            platform=result.get("platform", "general"),
+            title=result.get("title", ""),
+            body=result.get("body", ""),
+            hook=result.get("hook"),
+            cta=result.get("cta"),
+            funnel_stage=result.get("funnel_stage", "awareness"),
+            metadata=result.get("metadata", {}),
+            video_style=result.get("video_style"),
+            video_config=result.get("video_config"),
         ))
 
     return ExpandResponse(pieces=pieces)
@@ -500,13 +457,22 @@ async def quick_expand(
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    """Generate platform content directly from seed, skipping the newsletter draft step."""
+    """Generate platform content directly from seed, skipping the newsletter draft step.
+
+    Uses content-specific workflows run in parallel for each content type.
+    """
     product = db.query(Product).filter(Product.id == data.product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
+    brand_context = _get_brand_context(product, db)
+
+    product_context = f"""Product: {product.name}
+Description: {product.description}
+Target Audience: {product.target_audience or "General audience"}
+{f"Brand: {brand_context}" if brand_context else ""}"""
 
     # Build the list of pieces to generate
     pieces_to_gen = []
@@ -521,111 +487,40 @@ async def quick_expand(
         pieces_to_gen.append({"content_type": "video_ad", "platform": "general"})
     if data.include_carousel:
         pieces_to_gen.append({"content_type": "carousel", "platform": "general"})
+    if data.include_email:
+        pieces_to_gen.append({"content_type": "email", "platform": "general"})
 
-    pieces_spec = "\n".join([f"- {p['content_type']} for {p['platform']}" for p in pieces_to_gen])
+    # Run all content-specific workflows in parallel (no draft, seed-only)
+    tasks = [
+        generate_content_by_type(
+            content_type=spec["content_type"],
+            platform=spec["platform"],
+            seed=data.seed,
+            draft=None,
+            product_context=product_context,
+            voice_context=voice_context,
+            prompt_set=prompt_set,
+        )
+        for spec in pieces_to_gen
+    ]
 
-    brand_context = _get_brand_context(product, db)
-
-    video_ad_rules = ""
-    if data.include_video_ad or data.include_carousel:
-        video_ad_rules = """
-VIDEO AD RULES (content_type: "video_ad"):
-Generate a short, punchy video ad with composition-ready fields:
-- headline: 5-8 words max, bold and attention-grabbing (this appears on screen)
-- body: 1-2 sentence supporting text (secondary on-screen text)
-- cta: 2-4 word call to action (e.g. "Try It Free", "Learn More")
-- video_style: pick the BEST style for this content from: "swiss-bold", "swiss-stack", "swiss-type", "swiss-grid", "swiss-minimal", "swiss-story", "default", "pas", "kinetic", "saas-demo", "data-hype", "social-proof", "image-overlay"
-  Style guide: "pas" for pain-point content, "data-hype" for stats/numbers, "social-proof" for testimonials, "saas-demo" for product features, "kinetic" for energetic/punchy, "swiss-bold" for editorial statements, "default" for general/elegant
-- video_config: {"aspect_ratio": "1:1" or "9:16" or "4:5", "accent_color": "#hex"}
-  Pick 9:16 for stories/reels, 1:1 for feed posts, 4:5 for portrait feed
-
-CAROUSEL RULES (content_type: "carousel"):
-Generate a multi-slide carousel:
-- headline: overall carousel title (5-8 words)
-- body: pipe-delimited slide headlines, 4-6 slides (e.g. "Slide 1 Title|Slide 2 Title|Slide 3 Title|Slide 4 Title")
-- cta: final slide CTA text
-- video_style: always "swiss-carousel"
-- video_config: {"aspect_ratio": "1:1", "accent_color": "#hex"}
-"""
-
-    system_prompt = f"""You are a content creator generating platform-specific content directly from a content seed.
-
-Product: {product.name}
-Description: {product.description}
-Target Audience: {product.target_audience or "General audience"}
-
-{voice_context}
-
-{brand_context}
-
-{prompt_set["voice_rules"]}
-
-SOCIAL POST RULES:
-{prompt_set["social_post_rules"]}
-
-VIDEO SCRIPT RULES:
-{prompt_set["video_script_rules"]}
-
-X THREAD RULES:
-{prompt_set["x_thread_rules"]}
-{video_ad_rules}"""
-
-    user_prompt = f"""Here is the approved content seed:
-
-Core seed: {data.seed.get('seed', '')}
-Heat lines: {json.dumps(data.seed.get('heat', []))}
-Audience hook: {data.seed.get('audience_hook', '')}
-Weekly theme: {data.seed.get('weekly_theme', '')}
-Metaphor: {data.seed.get('metaphor', 'None')}
-
-Generate these content pieces directly from the seed (no newsletter needed):
-{pieces_spec}
-
-Return ONLY a JSON array:
-[
-    {{
-        "content_type": "social_post|video_script|x_thread|video_ad|carousel",
-        "platform": "twitter|linkedin|meta|general",
-        "title": "short label",
-        "body": "full content text (for video_ad: on-screen supporting text, for carousel: pipe-delimited slide headlines)",
-        "hook": "opening line (for video_ad: the headline shown on screen)",
-        "cta": "call to action",
-        "funnel_stage": "awareness",
-        "metadata": {{
-            "specificity_check": "what the reader sees",
-            "tension_check": "what pulls against what",
-            "stealable_line": "the screenshot-worthy phrase"
-        }},
-        "video_style": "only for video_ad/carousel types, null otherwise",
-        "video_config": {{"aspect_ratio": "1:1", "accent_color": "#hex"}}
-    }}
-]
-
-Return ONLY the JSON array."""
-
-    result = await call_claude(user_prompt, system=system_prompt, max_tokens=6144, premium=True)
-
-    try:
-        text = result["content"].strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1].rsplit("```", 1)[0]
-        parsed = json.loads(text)
-    except (json.JSONDecodeError, IndexError):
-        parsed = []
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
     pieces = []
-    for p in parsed:
+    for result in results:
+        if isinstance(result, Exception):
+            continue
         pieces.append(ExpandedPiece(
-            content_type=p.get("content_type", "social_post"),
-            platform=p.get("platform", "general"),
-            title=p.get("title", ""),
-            body=p.get("body", ""),
-            hook=p.get("hook"),
-            cta=p.get("cta"),
-            funnel_stage=p.get("funnel_stage", "awareness"),
-            metadata=p.get("metadata", {}),
-            video_style=p.get("video_style"),
-            video_config=p.get("video_config"),
+            content_type=result.get("content_type", "social_post"),
+            platform=result.get("platform", "general"),
+            title=result.get("title", ""),
+            body=result.get("body", ""),
+            hook=result.get("hook"),
+            cta=result.get("cta"),
+            funnel_stage=result.get("funnel_stage", "awareness"),
+            metadata=result.get("metadata", {}),
+            video_style=result.get("video_style"),
+            video_config=result.get("video_config"),
         ))
 
     return ExpandResponse(pieces=pieces)

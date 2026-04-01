@@ -236,6 +236,8 @@ def list_variations(
     product_id: str,
     batch_id: str | None = None,
     status: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
     db: Session = Depends(get_db),
 ):
     query = db.query(AdVariation).filter(AdVariation.product_id == product_id)
@@ -243,7 +245,7 @@ def list_variations(
         query = query.filter(AdVariation.batch_id == batch_id)
     if status:
         query = query.filter(AdVariation.status == status)
-    variations = query.order_by(AdVariation.created_at.desc()).all()
+    variations = query.order_by(AdVariation.created_at.desc()).offset(offset).limit(limit).all()
     return [_to_response(v) for v in variations]
 
 

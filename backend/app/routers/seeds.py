@@ -106,6 +106,8 @@ def create_seed(body: SeedCreate, db: Session = Depends(get_db)):
 def list_seeds(
     product_id: str | None = None,
     status: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
@@ -116,7 +118,7 @@ def list_seeds(
         q = q.filter(Seed.product_id == product_id)
     if status:
         q = q.filter(Seed.status == status)
-    seeds = q.order_by(Seed.priority.desc(), Seed.created_at.desc()).all()
+    seeds = q.order_by(Seed.priority.desc(), Seed.created_at.desc()).offset(offset).limit(limit).all()
     return [_seed_to_dict(s) for s in seeds]
 
 

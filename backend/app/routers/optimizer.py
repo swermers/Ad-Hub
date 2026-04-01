@@ -104,9 +104,17 @@ def get_optimization_log(product_id: str, limit: int = 50, db: Session = Depends
         .limit(limit)
         .all()
     )
+
+    # Batch-fetch all related variations in one query instead of N+1
+    variation_ids = [log.ad_variation_id for log in logs if log.ad_variation_id]
+    variations_map = {}
+    if variation_ids:
+        variations = db.query(AdVariation).filter(AdVariation.id.in_(variation_ids)).all()
+        variations_map = {v.id: v for v in variations}
+
     results = []
     for log in logs:
-        variation = db.query(AdVariation).filter(AdVariation.id == log.ad_variation_id).first() if log.ad_variation_id else None
+        variation = variations_map.get(log.ad_variation_id)
         results.append({
             "id": log.id,
             "product_id": log.product_id,

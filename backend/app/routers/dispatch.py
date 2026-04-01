@@ -992,13 +992,20 @@ def approval_queue(
 
     pieces = q.order_by(ContentPiece.created_at.desc()).limit(50).all()
 
+    # Batch-fetch all scheduled posts in one query instead of N+1
+    piece_ids = [p.id for p in pieces]
+    scheduled_map = {}
+    if piece_ids:
+        scheduled_posts = (
+            db.query(ScheduledPost)
+            .filter(ScheduledPost.content_id.in_(piece_ids))
+            .all()
+        )
+        scheduled_map = {sp.content_id: sp for sp in scheduled_posts}
+
     results = []
     for p in pieces:
-        scheduled = (
-            db.query(ScheduledPost)
-            .filter(ScheduledPost.content_id == p.id)
-            .first()
-        )
+        scheduled = scheduled_map.get(p.id)
         results.append({
             "content_id": p.id,
             "product_id": p.product_id,
