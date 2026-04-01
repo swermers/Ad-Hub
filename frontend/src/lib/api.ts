@@ -5,12 +5,23 @@ function getToken(): string | null {
   return localStorage.getItem("adhub_token");
 }
 
-export function setToken(token: string) {
+export function setToken(token: string, role?: string) {
   localStorage.setItem("adhub_token", token);
+  if (role) localStorage.setItem("adhub_role", role);
 }
 
 export function clearToken() {
   localStorage.removeItem("adhub_token");
+  localStorage.removeItem("adhub_role");
+}
+
+export function getUserRole(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("adhub_role");
+}
+
+export function isDemo(): boolean {
+  return getUserRole() === "viewer";
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -353,10 +364,15 @@ export const api = {
     }),
 
   // Auth
-  login: (password: string) =>
-    request<{ token: string }>("/api/auth/login", {
+  login: (password: string, email?: string) =>
+    request<{ token: string; role: string }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password, email }),
+    }),
+  guestLogin: () =>
+    request<{ token: string; role: string }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ password: "__guest__", guest: true }),
     }),
   checkAuth: () => request<{ ok: boolean }>("/api/auth/me"),
 

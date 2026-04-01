@@ -12,8 +12,8 @@ PUBLIC_PATHS = {"/api/auth/login", "/api/health", "/api/billing/webhook"}
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Skip auth if no password is configured (local dev)
-        if not settings.auth_password:
+        # Skip auth only in local dev when NEITHER password is configured
+        if not settings.auth_password and not settings.guest_password and settings.auth_secret == "change-me-in-production":
             return await call_next(request)
 
         path = request.url.path
@@ -46,8 +46,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # Human token auth (signed JWT-like token)
         from app.routers.auth import verify_token
 
-        if verify_token(token) is None:
+        payload = verify_token(token)
+        if payload is None:
             return JSONResponse(status_code=401, content={"detail": "Invalid or expired token"})
+
+        # Block viewers from all write operations (they are read-only demo users)
+        if payload.get("role") == "viewer" and request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Demo accounts are read-only. Sign up for full access."},
+            )
 
         return await call_next(request)
 

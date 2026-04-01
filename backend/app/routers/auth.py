@@ -54,6 +54,7 @@ def verify_token(token: str) -> dict | None:
 class LoginRequest(BaseModel):
     password: str
     email: str | None = None
+    guest: bool = False
 
 
 class LoginResponse(BaseModel):
@@ -66,7 +67,29 @@ class LoginResponse(BaseModel):
 def login(body: LoginRequest, db: Session = Depends(get_db)):
     from app.models.user import User
 
-    # Try user-based login first (if email provided)
+    # Guest demo login
+    if body.guest:
+        if not settings.guest_password:
+            raise HTTPException(500, "Guest access not configured")
+        if not hmac.compare_digest(body.password, settings.guest_password):
+            raise HTTPException(401, "Invalid guest password")
+        # Find or use the seeded guest user
+        guest_user = db.query(User).filter(User.email == "guest@iterant.demo").first()
+        if guest_user:
+            token = _sign({
+                "user_id": guest_user.id,
+                "role": guest_user.role,
+                "exp": int(time.time()) + TOKEN_EXPIRY_SECONDS,
+            })
+            return LoginResponse(token=token, role=guest_user.role, display_name=guest_user.display_name)
+        # Fallback: issue a viewer token without user record
+        token = _sign({
+            "role": "viewer",
+            "exp": int(time.time()) + TOKEN_EXPIRY_SECONDS,
+        })
+        return LoginResponse(token=token, role="viewer", display_name="Guest")
+
+    # User-based login (email + password)
     if body.email:
         user = db.query(User).filter(User.email == body.email).first()
         if not user:
@@ -215,22 +238,33 @@ def revoke_agent_key(
 # ─── Seed Default Admin (called on startup) ──────────────────────────────────────
 
 def seed_default_admin(db: Session):
-    """Create a default admin user if none exist. Uses AUTH_PASSWORD from env."""
+    """Create default admin and guest users if they don't exist."""
     from app.models.user import User
 
-    existing = db.query(User).first()
-    if existing:
-        return  # Users already exist, don't seed
+    # Seed admin user
+    if settings.auth_password:
+        existing_admin = db.query(User).filter(User.email == "admin@iterant.local").first()
+        if not existing_admin:
+            admin = User(
+                id=str(uuid.uuid4()),
+                email="admin@iterant.local",
+                password_hash=bcrypt.hashpw(settings.auth_password.encode(), bcrypt.gensalt()).decode(),
+                display_name="Admin",
+                role="admin",
+            )
+            db.add(admin)
+            db.commit()
 
-    if not settings.auth_password:
-        return  # No password configured, skip seeding
-
-    admin = User(
-        id=str(uuid.uuid4()),
-        email="admin@iterant.local",
-        password_hash=bcrypt.hashpw(settings.auth_password.encode(), bcrypt.gensalt()).decode(),
-        display_name="Admin",
-        role="admin",
-    )
-    db.add(admin)
-    db.commit()
+    # Seed guest/demo user
+    if settings.guest_password:
+        existing_guest = db.query(User).filter(User.email == "guest@iterant.demo").first()
+        if not existing_guest:
+            guest = User(
+                id=str(uuid.uuid4()),
+                email="guest@iterant.demo",
+                password_hash=bcrypt.hashpw(settings.guest_password.encode(), bcrypt.gensalt()).decode(),
+                display_name="Guest",
+                role="viewer",
+            )
+            db.add(guest)
+            db.commit()

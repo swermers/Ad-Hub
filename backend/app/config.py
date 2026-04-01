@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     # Auth
     auth_password: str = ""
     auth_secret: str = "change-me-in-production"
+    guest_password: str = ""
 
     # Scheduler
     scheduler_enabled: bool = True
