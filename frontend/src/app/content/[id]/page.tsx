@@ -1375,7 +1375,6 @@ function ContentDetailInner() {
               accentColor={accentColor}
               screenshotUrl={screenshotUrl}
             />
-          )}
         </div>
       )}
     </div>
