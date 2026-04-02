@@ -25,10 +25,10 @@ class Seed(Base):
     heat: Mapped[str] = mapped_column(Text, default="[]")  # JSON array of strongest lines
     audience_hook: Mapped[str] = mapped_column(Text, default="")
     template_fit: Mapped[str] = mapped_column(String(50), default="A")
-    subject_line: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    subject_line: Mapped[str | None] = mapped_column(Text, nullable=True)
     metaphor: Mapped[str | None] = mapped_column(Text, nullable=True)
-    weekly_theme: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    verdict: Mapped[str] = mapped_column(String(100), default="Strong enough to build on")
+    weekly_theme: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verdict: Mapped[str] = mapped_column(Text, default="Strong enough to build on")
 
     # Source
     raw_transcript: Mapped[str | None] = mapped_column(Text, nullable=True)  # original voice memo text

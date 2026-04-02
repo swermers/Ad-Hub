@@ -103,8 +103,11 @@ def create_tables():
     _make_column_nullable("content_pieces", "product_id")
     _make_column_nullable("seeds", "product_id")
 
-    # Widen template_fit column (was VARCHAR(10), Claude returns longer values)
+    # Widen seed columns that Claude overflows (was VARCHAR, now TEXT)
     _widen_column("seeds", "template_fit", "VARCHAR(50)")
+    _widen_column("seeds", "verdict", "TEXT")
+    _widen_column("seeds", "subject_line", "TEXT")
+    _widen_column("seeds", "weekly_theme", "TEXT")
 
     # Seed default workspace, admin user, and demo data
     from app.routers.auth import seed_default_admin
