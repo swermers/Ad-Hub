@@ -858,7 +858,7 @@ async def finalize_content(
                 seed=data.seed.get("seed", ""),
                 heat=json.dumps(data.seed.get("heat", [])),
                 audience_hook=data.seed.get("audience_hook", ""),
-                template_fit=data.seed.get("template_fit", "A"),
+                template_fit=data.seed.get("template_fit", "A")[:50],
                 subject_line=data.seed.get("subject_line"),
                 metaphor=data.seed.get("metaphor"),
                 weekly_theme=data.seed.get("weekly_theme"),

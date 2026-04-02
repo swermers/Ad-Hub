@@ -24,7 +24,7 @@ class Seed(Base):
     seed: Mapped[str] = mapped_column(Text, nullable=False)  # the one-sentence core observation
     heat: Mapped[str] = mapped_column(Text, default="[]")  # JSON array of strongest lines
     audience_hook: Mapped[str] = mapped_column(Text, default="")
-    template_fit: Mapped[str] = mapped_column(String(10), default="A")  # A, B, C, D
+    template_fit: Mapped[str] = mapped_column(String(50), default="A")
     subject_line: Mapped[str | None] = mapped_column(String(255), nullable=True)
     metaphor: Mapped[str | None] = mapped_column(Text, nullable=True)
     weekly_theme: Mapped[str | None] = mapped_column(String(500), nullable=True)

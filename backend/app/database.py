@@ -103,6 +103,9 @@ def create_tables():
     _make_column_nullable("content_pieces", "product_id")
     _make_column_nullable("seeds", "product_id")
 
+    # Widen template_fit column (was VARCHAR(10), Claude returns longer values)
+    _widen_column("seeds", "template_fit", "VARCHAR(50)")
+
     # Seed default workspace, admin user, and demo data
     from app.routers.auth import seed_default_admin
     from app.seed_demo import seed_demo_data
@@ -172,3 +175,14 @@ def _make_column_nullable(table: str, column: str):
             with engine.begin() as conn:
                 conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {column} DROP NOT NULL"))
             logger.info("Made %s.%s nullable", table, column)
+
+
+def _widen_column(table: str, column: str, new_type: str):
+    """Widen an existing column type (PostgreSQL only, no-op on SQLite)."""
+    if not _is_sqlite:
+        with engine.begin() as conn:
+            try:
+                conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {new_type}"))
+                logger.info("Widened %s.%s to %s", table, column, new_type)
+            except Exception:
+                pass  # Column already correct type or doesn't exist
