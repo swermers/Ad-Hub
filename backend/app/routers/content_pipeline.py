@@ -139,17 +139,28 @@ class FinalizeRequest(BaseModel):
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
 
-def _get_voice_context(voice_profile_id: str | None, user_id: str, db: Session) -> str:
-    """Build voice context string from a voice profile."""
-    if not voice_profile_id:
-        # Try default profile
+def _get_voice_context(voice_profile_id: str | None, user_id: str, db: Session, product_id: str | None = None) -> str:
+    """Build voice context string from a voice profile.
+
+    Resolution: explicit voice_profile_id > product voice profile > user default.
+    """
+    profile = None
+    if voice_profile_id:
+        profile = db.query(VoiceProfile).filter(VoiceProfile.id == voice_profile_id).first()
+    if not profile and product_id:
+        # Try product-specific voice profile
+        profile = (
+            db.query(VoiceProfile)
+            .filter(VoiceProfile.product_id == product_id, VoiceProfile.user_id == user_id)
+            .first()
+        )
+    if not profile:
+        # Fall back to user's default profile
         profile = (
             db.query(VoiceProfile)
             .filter(VoiceProfile.user_id == user_id, VoiceProfile.is_default == True)  # noqa: E712
             .first()
         )
-    else:
-        profile = db.query(VoiceProfile).filter(VoiceProfile.id == voice_profile_id).first()
 
     if not profile:
         return ""
@@ -264,7 +275,7 @@ async def sharpen_idea(
             raise HTTPException(status_code=404, detail="Product not found")
 
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
-    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
+    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db, product_id=data.product_id)
     brand_context = _get_brand_context(product, db)
 
     system_prompt = f"""You are a content strategist and idea sharpener.
@@ -325,7 +336,7 @@ async def create_draft(
             raise HTTPException(status_code=404, detail="Product not found")
 
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
-    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
+    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db, product_id=data.product_id)
     brand_context = _get_brand_context(product, db)
     template = data.template_override or data.seed.get("template_fit", "A")
 
@@ -496,7 +507,7 @@ async def expand_to_platforms(
         if not product:
             raise HTTPException(status_code=404, detail="Product not found")
 
-    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
+    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db, product_id=data.product_id)
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
     brand_context = _get_brand_context(product, db)
 
@@ -591,7 +602,7 @@ async def quick_expand(
         if not product:
             raise HTTPException(status_code=404, detail="Product not found")
 
-    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
+    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db, product_id=data.product_id)
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
     brand_context = _get_brand_context(product, db)
 
@@ -697,7 +708,7 @@ async def refine_content(
     if piece.product_id:
         product = db.query(Product).filter(Product.id == piece.product_id).first()
 
-    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
+    voice_context = _get_voice_context(data.voice_profile_id, user["id"], db, product_id=piece.product_id)
     brand_context = _get_brand_context(product, db)
 
     system_prompt = f"""You are a content editor refining existing content.

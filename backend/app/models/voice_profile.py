@@ -1,8 +1,11 @@
-"""Voice Profile — personal writing voice & style definitions.
+"""Voice Profile — writing voice & style definitions.
 
-Unlike BrandProfile (product-scoped), VoiceProfile is user-scoped.
-It captures how the creator writes: tone, vocabulary, sentence style,
-and writing samples that the content pipeline uses to match their voice.
+VoiceProfile can be scoped to a user (personal brand) or a product (product brand).
+- User-only: personal brand voice for profile-mode content
+- User + product: product-specific voice that overrides personal voice when generating
+  content for that product
+
+The content pipeline uses voice profiles to match tone, vocabulary, and style.
 """
 
 import uuid
@@ -19,10 +22,11 @@ class VoiceProfile(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    product_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("products.id", ondelete="CASCADE"), nullable=True)
 
     # Identity
-    name: Mapped[str] = mapped_column(String(255), nullable=False)  # e.g. "Personal Brand", "Company Voice"
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)  # short description of this voice
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Tone & Style
     tone_keywords: Mapped[str | None] = mapped_column(Text)  # JSON: ["warm", "observational", "grounded"]

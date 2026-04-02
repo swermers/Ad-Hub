@@ -20,6 +20,7 @@ router = APIRouter()
 
 class VoiceProfileCreate(BaseModel):
     name: str
+    product_id: str | None = None
     description: str | None = None
     tone_keywords: list[str] = []
     style_rules: str | None = None
@@ -35,6 +36,7 @@ class VoiceProfileCreate(BaseModel):
 
 class VoiceProfileUpdate(BaseModel):
     name: str | None = None
+    product_id: str | None = None
     description: str | None = None
     tone_keywords: list[str] | None = None
     style_rules: str | None = None
@@ -78,6 +80,7 @@ def _profile_to_dict(p: VoiceProfile) -> dict:
     return {
         "id": p.id,
         "user_id": p.user_id,
+        "product_id": p.product_id,
         "name": p.name,
         "description": p.description,
         "tone_keywords": _parse_json(p.tone_keywords),
