@@ -9,7 +9,10 @@ Steps:
 """
 
 import json
-from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry
+from app.engines.flows import (
+    ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry,
+    editor_gate_parser, editor_gate_check,
+)
 
 
 def _subject_system(ctx: FlowContext) -> str:
@@ -121,32 +124,65 @@ Your current task: review this newsletter draft for voice consistency and qualit
 
 def _voice_user(ctx: FlowContext) -> str:
     draft = ctx.get_step_result("draft_sections") or {}
-    return f"""Review this newsletter for voice consistency:
+    template = ctx.seed.get("template_fit", "A")
+    return f"""Review this newsletter draft:
 
-{draft.get('body', '')[:2000]}
+---
+{draft.get('body', '')[:3000]}
+---
 
-Check:
-1. VOICE MATCH: Does it sound like the creator's voice? (1-10)
-2. AI TELLS: Any phrases that scream "AI wrote this"? List them.
-3. READABILITY: Can someone read this in under 5 minutes? (1-10)
-4. FLOW: Do sections connect naturally? (1-10)
+Seed: {ctx.seed.get('seed', '')}
+Template: {template}
+Metaphor: {ctx.seed.get('metaphor', 'None')}
 
-If voice score < 7, rewrite the weak sections.
+Score each dimension 1-5. Pass threshold: 22/25.
 
-Return ONLY JSON: {{"scores": {{"voice": 8, "readability": 8, "flow": 8}}, "average": 8.0, "passed": true,
-"ai_tells": [], "rewritten_body": null}}"""
+| Dimension | What You're Measuring |
+|---|---|
+| Voice match | Does this sound like the creator? Would they send this without edits? |
+| Observation vs. prescription | Is it noticing patterns or telling the reader what to do? |
+| Psychological curiosity | Does it explore the WHY behind behavior, not just the WHAT? |
+| Energy/cost framing | Does it frame struggle as expensive, not wrong? |
+| Grounding | Is the piece anchored in something specific — a scene, a moment, a metaphor? |
 
+Template {template} structure checks:
+{"- First-person opening? ONE central metaphor, bolded? 'the mechanics' and 'the weight' lowercase headers? Reflective close?" if template == "A" else ""}
+{"- Relatable scenario hook? Bold insight? 3-5 actionable steps? Sign-off?" if template == "B" else ""}
+{"- Specific anecdote with sensory details? Personal-to-universal bridge? Light-touch application?" if template == "C" else ""}
+{"- Observation (2-3 sentences)? Reframe? Questions? Short (3-5 paragraphs total)?" if template == "D" else ""}
 
-def _voice_parser(result: dict, ctx: FlowContext) -> dict:
-    from app.engines.flows import _default_parse
-    parsed = _default_parse(result)
-    if parsed.get("rewritten_body"):
-        ctx.step_results["draft_sections"]["body"] = parsed["rewritten_body"]
-    return parsed
+Auto-fail conditions:
+- Wrong sign-off (not matching voice profile)
+- More than 3 AI fingerprints
+- Brand copy in body text
+- Wrong template structure entirely
 
-
-def _voice_check(result: dict, ctx: FlowContext) -> bool:
-    return result.get("passed", False) or result.get("average", 0) >= 7
+Return ONLY a JSON object:
+{{
+    "overall_score": 22,
+    "passed": true,
+    "scores": {{
+        "voice_match": 5,
+        "observation_vs_prescription": 4,
+        "psychological_curiosity": 5,
+        "energy_cost_framing": 4,
+        "grounding": 4
+    }},
+    "template_alignment": {{
+        "template": "{template}",
+        "structure_adherence": "Strong",
+        "missing_elements": []
+    }},
+    "violations": [],
+    "ai_fingerprints": [],
+    "metaphor_check": {{
+        "metaphor": "",
+        "integrity": "",
+        "recommendation": ""
+    }},
+    "priority_fixes": [],
+    "strongest_moments": []
+}}"""
 
 
 def _cta_system(ctx: FlowContext) -> str:
@@ -183,7 +219,7 @@ class NewsletterFlow(ContentFlow):
         FlowStep(name="subject_lines", system_prompt_builder=_subject_system, user_prompt_builder=_subject_user, max_tokens=1024),
         FlowStep(name="preview_text", system_prompt_builder=_preview_system, user_prompt_builder=_preview_user, max_tokens=512),
         FlowStep(name="draft_sections", system_prompt_builder=_draft_system, user_prompt_builder=_draft_user, max_tokens=4096, premium=True),
-        FlowStep(name="voice_check", system_prompt_builder=_voice_system, user_prompt_builder=_voice_user, parser=_voice_parser, quality_gate=_voice_check, max_tokens=3072, premium=True),
+        FlowStep(name="voice_check", system_prompt_builder=_voice_system, user_prompt_builder=_voice_user, parser=editor_gate_parser, quality_gate=editor_gate_check, max_tokens=3072, premium=True),
         FlowStep(name="cta_optimization", system_prompt_builder=_cta_system, user_prompt_builder=_cta_user, max_tokens=2048),
     ]
 
@@ -211,7 +247,11 @@ class NewsletterFlow(ContentFlow):
                 "subject_line": subject, "subject_variants": [s.get("text") for s in subject_list],
                 "preview_text": preview.get("preview_text", ""),
                 "ps_line": cta_result.get("ps_line"),
-                "voice_scores": voice.get("scores", {}),
+                "editor_score": voice.get("overall_score"),
+                "editor_scores": voice.get("scores", {}),
+                "editor_passed": voice.get("passed", False),
+                "template_alignment": voice.get("template_alignment", {}),
+                "metaphor_check": voice.get("metaphor_check", {}),
                 "source": "newsletter_flow",
             },
             steps_completed=steps_done, quality_gates_passed=gates_passed,

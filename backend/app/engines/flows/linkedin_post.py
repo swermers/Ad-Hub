@@ -7,7 +7,10 @@ Steps:
   4. Engagement Gate  → Strong hook? Clear value? Conversation-starting close?
 """
 
-from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry
+from app.engines.flows import (
+    ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry,
+    editor_gate_parser, editor_gate_check,
+)
 
 
 # ─── Step 1: Angle Selection ──────────────────────────────────────────────
@@ -174,54 +177,55 @@ Your current task: evaluate this post against the voice profile and quality gate
 
 def _gate_user(ctx: FlowContext) -> str:
     draft = ctx.get_step_result("draft") or {}
-    return f"""Evaluate this LinkedIn post:
+    body = draft.get("body", "")
+    return f"""Review this LinkedIn post:
 
 ---
-{draft.get('body', '')}
+{body}
 ---
 
-Score each criterion (1-10) and explain:
-1. HOOK STRENGTH: Does the first line make you want to click "see more"?
-2. VALUE DENSITY: Does every paragraph earn its place?
-3. CONVERSATION TRIGGER: Will the closing question actually get comments?
-4. AUTHORITY: Does the writer sound like they know what they're talking about?
-5. SCROLL-STOP: Would you stop scrolling to read this in a sea of AI-generated content?
+Seed: {ctx.seed.get('seed', '')}
+Audience hook: {ctx.seed.get('audience_hook', '')}
 
-If average score < 7, rewrite the post to fix the weaknesses.
+Score each dimension 1-5. Pass threshold: 22/25.
+
+| Dimension | What You're Measuring |
+|---|---|
+| Voice match | Does this sound like the creator? Would they post this without edits? |
+| Specificity | Is there at least one concrete moment/example the reader can picture? |
+| Tension | Does the post hold two ideas that pull against each other? |
+| Stealable line | Is there one phrase someone would screenshot or share? |
+| Platform compliance | Hook under 140 chars? 200-600 words? Line breaks? Conversation-starting close? |
+
+Auto-fail conditions:
+- Contains words from the voice profile's banned list
+- More than 2 AI fingerprints
+- Newsletter-style sign-off on a social post
+- No identifiable stealable line
+- "Most people don't understand X" or "I just had a realization" openers
 
 Return ONLY a JSON object:
 {{
-    "scores": {{"hook": 8, "value": 7, "conversation": 8, "authority": 9, "scroll_stop": 7}},
-    "average": 7.8,
+    "overall_score": 22,
     "passed": true,
-    "feedback": "what worked and what could improve",
-    "rewritten_body": null,
-    "rewritten_hook": null,
-    "rewritten_cta": null
-}}
-
-Set rewritten_body/hook/cta to the improved versions if average < 7, otherwise null."""
-
-
-def _gate_parser(result: dict, ctx: FlowContext) -> dict:
-    from app.engines.flows import _default_parse
-    parsed = _default_parse(result)
-
-    # If gate rewrote the post, update the draft
-    if parsed.get("rewritten_body"):
-        draft = ctx.get_step_result("draft") or {}
-        draft["body"] = parsed["rewritten_body"]
-        if parsed.get("rewritten_hook"):
-            draft["hook"] = parsed["rewritten_hook"]
-        if parsed.get("rewritten_cta"):
-            draft["cta"] = parsed["rewritten_cta"]
-        ctx.step_results["draft"] = draft
-
-    return parsed
-
-
-def _gate_check(result: dict, ctx: FlowContext) -> bool:
-    return result.get("passed", False) or result.get("average", 0) >= 7
+    "scores": {{
+        "voice_match": 5,
+        "specificity": 4,
+        "tension": 5,
+        "stealable_line": 4,
+        "platform_compliance": 4
+    }},
+    "violations": [],
+    "ai_fingerprints": [],
+    "three_filters": {{
+        "specificity": "description of the specific moment",
+        "tension": "what pulls against what",
+        "stealable_line": "the screenshot-worthy phrase"
+    }},
+    "priority_fixes": [],
+    "strongest_moments": [],
+    "feedback": ""
+}}"""
 
 
 # ─── Assemble Flow ─────────────────────────────────────────────────────────
@@ -253,8 +257,8 @@ class LinkedInPostFlow(ContentFlow):
             name="engagement_gate",
             system_prompt_builder=_gate_system,
             user_prompt_builder=_gate_user,
-            parser=_gate_parser,
-            quality_gate=_gate_check,
+            parser=editor_gate_parser,
+            quality_gate=editor_gate_check,
             max_tokens=3072,
             premium=True,
         ),
@@ -276,9 +280,10 @@ class LinkedInPostFlow(ContentFlow):
                 "workflow_type": "linkedin_post",
                 "workflow_version": ctx.workflow_version,
                 "steps_completed": steps_done,
-                "quality_scores": gate.get("scores", {}),
-                "quality_average": gate.get("average"),
-                "quality_feedback": gate.get("feedback"),
+                "editor_score": gate.get("overall_score"),
+                "editor_scores": gate.get("scores", {}),
+                "editor_passed": gate.get("passed", False),
+                "three_filters": gate.get("three_filters", {}),
                 "angle": (ctx.get_step_result("angle_selection") or {}).get("angle"),
                 "hook_type": (ctx.get_step_result("angle_selection") or {}).get("hook_type"),
             },

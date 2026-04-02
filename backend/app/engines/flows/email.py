@@ -8,7 +8,10 @@ Steps:
 """
 
 import json
-from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry
+from app.engines.flows import (
+    ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry,
+    editor_gate_parser, editor_gate_check,
+)
 
 
 def _subject_system(ctx: FlowContext) -> str:
@@ -108,27 +111,54 @@ Your current task: check email quality — scannability, single CTA, human voice
 def _readability_user(ctx: FlowContext) -> str:
     cta = ctx.get_step_result("cta_optimization") or {}
     subject = ctx.get_step_result("subject_preview") or {}
+    body = cta.get('final_body', '')
+    ps = cta.get('ps_line', '')
+
     return f"""Review this email:
 
 Subject: {subject.get('subject', '')}
 Preview: {subject.get('preview', '')}
 
-{cta.get('final_body', '')}
+{body}
 
-P.S. {cta.get('ps_line', '')}
+{f"P.S. {ps}" if ps else ""}
 
-Score (1-10):
-1. SCANNABILITY: Can someone get the gist in 10 seconds?
-2. SINGLE CTA: Is there exactly one clear ask?
-3. HUMAN VOICE: Does it sound like a person, not a template?
-4. VALUE FIRST: Is value delivered before the ask?
+Seed: {ctx.seed.get('seed', '')}
 
-Return ONLY JSON: {{"scores": {{"scannability": 8, "single_cta": 9, "human_voice": 8, "value_first": 8}},
-"average": 8.25, "passed": true, "feedback": "..."}}"""
+Score each dimension 1-5. Pass threshold: 22/25.
 
+| Dimension | What You're Measuring |
+|---|---|
+| Voice match | Does this sound like the creator, not a marketing template? |
+| Format compliance | Subject 6-10 words? Preview under 90 chars? Body 150-300 words? One CTA? |
+| Coherence | Does the email deliver on the subject line's promise? |
+| Quality | Opens personal/direct? Value before ask? P.S. adds value? |
+| AI-free | No AI fingerprints? No "hope this email finds you well"? |
 
-def _readability_check(result: dict, ctx: FlowContext) -> bool:
-    return result.get("passed", False) or result.get("average", 0) >= 7
+Auto-fail conditions:
+- Multiple CTAs (dilutes all of them)
+- Subject line over 10 words
+- Preview text repeats the subject
+- Opens with "Hope this email finds you well" or similar template language
+- 3+ AI fingerprints
+
+Return ONLY a JSON object:
+{{
+    "overall_score": 22,
+    "passed": true,
+    "scores": {{
+        "voice_match": 5,
+        "format_compliance": 4,
+        "coherence": 5,
+        "quality": 4,
+        "ai_free": 4
+    }},
+    "violations": [],
+    "ai_fingerprints": [],
+    "priority_fixes": [],
+    "strongest_moments": [],
+    "notes": ""
+}}"""
 
 
 class EmailFlow(ContentFlow):
@@ -138,7 +168,7 @@ class EmailFlow(ContentFlow):
         FlowStep(name="subject_preview", system_prompt_builder=_subject_system, user_prompt_builder=_subject_user, max_tokens=512),
         FlowStep(name="body_paragraphs", system_prompt_builder=_body_system, user_prompt_builder=_body_user, max_tokens=2048),
         FlowStep(name="cta_optimization", system_prompt_builder=_cta_system, user_prompt_builder=_cta_user, max_tokens=2048),
-        FlowStep(name="readability_gate", system_prompt_builder=_readability_system, user_prompt_builder=_readability_user, quality_gate=_readability_check, max_tokens=1024),
+        FlowStep(name="readability_gate", system_prompt_builder=_readability_system, user_prompt_builder=_readability_user, parser=editor_gate_parser, quality_gate=editor_gate_check, max_tokens=1536, premium=True),
     ]
 
     def build_result(self, ctx, steps_done, gates_passed, gates_failed, total_calls):
@@ -159,7 +189,10 @@ class EmailFlow(ContentFlow):
             metadata={"workflow_type": "email", "workflow_version": ctx.workflow_version,
                        "steps_completed": steps_done,
                        "subject_line": subject.get("subject"), "preview_text": subject.get("preview"),
-                       "ps_line": ps, "readability_scores": readability.get("scores", {})},
+                       "ps_line": ps,
+                       "editor_score": readability.get("overall_score"),
+                       "editor_scores": readability.get("scores", {}),
+                       "editor_passed": readability.get("passed", False)},
             steps_completed=steps_done, quality_gates_passed=gates_passed,
             quality_gates_failed=gates_failed, total_llm_calls=total_calls,
         )
