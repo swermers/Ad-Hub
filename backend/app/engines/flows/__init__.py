@@ -44,6 +44,10 @@ class FlowContext:
     workflow_type: str = ""
     workflow_version: int = 1
 
+    # Loaded skill content (from skill_loader) — rich, enforceable agent instructions
+    drafter_skill: str = ""
+    editor_skill: str = ""
+
     # Step overrides from ContentTypeWorkflow (loaded from DB or defaults)
     step_prompt_overrides: dict[str, str] = field(default_factory=dict)
     quality_gate_overrides: dict[str, str] = field(default_factory=dict)

@@ -13,6 +13,17 @@ from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, Fl
 # ─── Step 1: Angle Selection ──────────────────────────────────────────────
 
 def _angle_system(ctx: FlowContext) -> str:
+    # Use loaded skill content if available, otherwise fall back to inline prompt
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: find the most compelling professional ANGLE from the source material.
+Do NOT draft the post yet — just identify the angle."""
+
     return f"""You are a LinkedIn content strategist. You find the most compelling professional angle from raw ideas.
 
 {ctx.product_context}
@@ -47,6 +58,14 @@ Return ONLY a JSON object:
 # ─── Step 2: Hook + Structure ─────────────────────────────────────────────
 
 def _structure_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: craft 3 opening hook variations and outline the post structure.
+LinkedIn shows ~140 characters before "see more". That first line IS the ad for the rest of the post."""
+
     return f"""You are a LinkedIn copywriter. You craft opening hooks that stop professionals mid-scroll.
 
 {ctx.voice_context}
@@ -81,6 +100,15 @@ Return ONLY a JSON object:
 # ─── Step 3: Draft Post ──────────────────────────────────────────────────
 
 def _draft_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: write the FULL LinkedIn post using the angle and hook structure from previous steps."""
+
     return f"""You are writing a LinkedIn post. Professional but not corporate. First-person, authentic.
 
 {ctx.product_context}
@@ -131,6 +159,14 @@ Return ONLY a JSON object:
 # ─── Step 4: Engagement Gate ─────────────────────────────────────────────
 
 def _gate_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Platform: LinkedIn
+Your current task: evaluate this post against the voice profile and quality gates."""
+
     return f"""You are a LinkedIn algorithm expert and engagement coach. Evaluate this post ruthlessly.
 
 {ctx.voice_context}"""

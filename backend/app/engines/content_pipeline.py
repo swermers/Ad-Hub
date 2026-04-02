@@ -20,6 +20,7 @@ from app.engines.prompt_defaults import (
     DEFAULT_WEEKLY_MIX,
     load_prompt_set,
 )
+from app.engines.skill_loader import get_skill
 from app.engines.vectorstore import get_vectorstore
 from app.services.claude_client import call_claude, call_claude_sync
 
@@ -36,12 +37,23 @@ async def extract_content_brief(transcript: str, product, prompt_set: dict | Non
     voice_rules = ps.get("voice_rules", DEFAULT_VOICE_RULES)
     idea_prompt = ps.get("idea_sharpener_prompt", "")
 
-    # If no custom idea sharpener prompt, use the default from prompt_defaults
     if not idea_prompt:
         from app.engines.prompt_defaults import DEFAULT_IDEA_SHARPENER_PROMPT
         idea_prompt = DEFAULT_IDEA_SHARPENER_PROMPT
 
-    system_prompt = f"""You are a content strategist and idea sharpener.
+    # Use the rich Idea Sharpener skill if available
+    idea_sharpener_skill = get_skill("IDEA_SHARPENER_SKILL")
+
+    if idea_sharpener_skill:
+        system_prompt = f"""{idea_sharpener_skill}
+
+Product Context:
+- Name: {product.name}
+- Description: {product.description}
+- Target Audience: {product.target_audience or "General audience"}
+- Brand Voice: {product.brand_voice or "Authentic and conversational."}"""
+    else:
+        system_prompt = f"""You are a content strategist and idea sharpener.
 
 Product Context:
 - Name: {product.name}
@@ -73,7 +85,18 @@ def _extract_content_brief_sync(transcript: str, product, prompt_set: dict | Non
         from app.engines.prompt_defaults import DEFAULT_IDEA_SHARPENER_PROMPT
         idea_prompt = DEFAULT_IDEA_SHARPENER_PROMPT
 
-    system_prompt = f"""You are a content strategist and idea sharpener.
+    idea_sharpener_skill = get_skill("IDEA_SHARPENER_SKILL")
+
+    if idea_sharpener_skill:
+        system_prompt = f"""{idea_sharpener_skill}
+
+Product Context:
+- Name: {product.name}
+- Description: {product.description}
+- Target Audience: {product.target_audience or "General audience"}
+- Brand Voice: {product.brand_voice or "Authentic and conversational."}"""
+    else:
+        system_prompt = f"""You are a content strategist and idea sharpener.
 
 Product Context:
 - Name: {product.name}

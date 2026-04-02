@@ -34,6 +34,7 @@ from app.models.brand_profile import BrandProfile
 from app.models.seed_bank import Seed
 from app.models.voice_profile import VoiceProfile
 from app.permissions import get_current_user
+from app.engines.skill_loader import get_skill
 from app.services.claude_client import call_claude
 
 router = APIRouter()
@@ -143,8 +144,8 @@ class FinalizeRequest(BaseModel):
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
 
-def _get_voice_context(voice_profile_id: str | None, user_id: str, db: Session, product_id: str | None = None) -> str:
-    """Build voice context string from a voice profile.
+def _resolve_voice_profile(voice_profile_id: str | None, user_id: str, db: Session, product_id: str | None = None) -> VoiceProfile | None:
+    """Resolve the best voice profile for this request.
 
     Resolution: explicit voice_profile_id > product voice profile > user default.
     """
@@ -152,24 +153,52 @@ def _get_voice_context(voice_profile_id: str | None, user_id: str, db: Session, 
     if voice_profile_id:
         profile = db.query(VoiceProfile).filter(VoiceProfile.id == voice_profile_id).first()
     if not profile and product_id:
-        # Try product-specific voice profile
         profile = (
             db.query(VoiceProfile)
             .filter(VoiceProfile.product_id == product_id, VoiceProfile.user_id == user_id)
             .first()
         )
     if not profile:
-        # Fall back to user's default profile
         profile = (
             db.query(VoiceProfile)
             .filter(VoiceProfile.user_id == user_id, VoiceProfile.is_default == True)  # noqa: E712
             .first()
         )
+    return profile
+
+
+def _get_voice_context(voice_profile_id: str | None, user_id: str, db: Session, product_id: str | None = None) -> str:
+    """Build voice context string from a voice profile.
+
+    Uses the agent skill architecture's approach: if the voice profile has a
+    full style_rules field (e.g. a markdown voice guide), pass that as the
+    primary constraint wrapped in <voice_profile> tags. The structured fields
+    (tone_keywords, words_to_avoid, etc.) serve as quick-reference metadata
+    that supplements the full guide.
+
+    The voice profile goes BEFORE content-type skills in prompt assembly
+    because models weight earlier instructions more heavily.
+    """
+    profile = _resolve_voice_profile(voice_profile_id, user_id, db, product_id)
 
     if not profile:
         return ""
 
-    parts = [f"CREATOR VOICE PROFILE: {profile.name}"]
+    # If the profile has a full style_rules guide, use it as the primary voice block.
+    # This is the rich, structured voice guide — the model's main reference.
+    if profile.style_rules and len(profile.style_rules.strip()) > 100:
+        # Full voice guide available — wrap it as the dominant constraint
+        parts = [f"<voice_profile>\n# {profile.name}\n"]
+        parts.append(profile.style_rules)
+
+        # Append structured metadata as quick-reference supplements
+        _append_structured_fields(parts, profile)
+
+        parts.append("</voice_profile>")
+        return "\n".join(parts)
+
+    # Fallback: no rich style_rules, build from structured fields
+    parts = [f"<voice_profile>\nCREATOR VOICE PROFILE: {profile.name}"]
 
     if profile.description:
         parts.append(f"Description: {profile.description}")
@@ -187,24 +216,35 @@ def _get_voice_context(voice_profile_id: str | None, user_id: str, db: Session, 
     if profile.sentence_style:
         parts.append(f"Sentence Style: {profile.sentence_style}")
 
+    _append_structured_fields(parts, profile)
+
+    parts.append("</voice_profile>")
+    return "\n".join(parts)
+
+
+def _append_structured_fields(parts: list[str], profile: VoiceProfile) -> None:
+    """Append structured voice profile fields as quick-reference metadata."""
     if profile.favorite_phrases:
         try:
             phrases = json.loads(profile.favorite_phrases)
-            parts.append(f"Signature Phrases: {', '.join(phrases)}")
+            if phrases:
+                parts.append(f"\nSignature Phrases: {', '.join(phrases)}")
         except json.JSONDecodeError:
             pass
 
     if profile.words_to_avoid:
         try:
             avoid = json.loads(profile.words_to_avoid)
-            parts.append(f"Words to AVOID: {', '.join(avoid)}")
+            if avoid:
+                parts.append(f"\nWords to ALWAYS AVOID: {', '.join(avoid)}")
         except json.JSONDecodeError:
             pass
 
     if profile.words_to_use:
         try:
             use = json.loads(profile.words_to_use)
-            parts.append(f"Words to USE: {', '.join(use)}")
+            if use:
+                parts.append(f"\nWords to USE: {', '.join(use)}")
         except json.JSONDecodeError:
             pass
 
@@ -212,13 +252,11 @@ def _get_voice_context(voice_profile_id: str | None, user_id: str, db: Session, 
         try:
             samples = json.loads(profile.writing_samples)
             if samples:
-                parts.append("Writing Samples (match this voice):")
+                parts.append("\nWriting Samples (match this voice):")
                 for i, s in enumerate(samples[:3], 1):
                     parts.append(f"  Sample {i}: {s[:500]}")
         except json.JSONDecodeError:
             pass
-
-    return "\n".join(parts)
 
 
 def _get_brand_context(product: Product | None, db: Session) -> str:
@@ -282,7 +320,25 @@ async def sharpen_idea(
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db, product_id=data.product_id)
     brand_context = _get_brand_context(product, db)
 
-    system_prompt = f"""You are a content strategist and idea sharpener.
+    # Load the Idea Sharpener skill — rich, structured agent instructions
+    idea_sharpener_skill = get_skill("IDEA_SHARPENER_SKILL")
+
+    # Prompt assembly order (per agent skill architecture):
+    # 1. ROLE DEFINITION (skill) — what this agent does
+    # 2. VOICE PROFILE — the dominant constraint
+    # 3. CONTENT TYPE SKILL — structural rules (embedded in skill for sharpener)
+    # 4. PRODUCT CONTEXT — supplementary info
+    if idea_sharpener_skill:
+        system_prompt = f"""{idea_sharpener_skill}
+
+{voice_context}
+
+{brand_context}
+
+{_get_product_context(product)}"""
+    else:
+        # Fallback to legacy assembly if skill file not found
+        system_prompt = f"""You are a content strategist and idea sharpener.
 
 {_get_product_context(product)}
 
@@ -346,7 +402,35 @@ async def create_draft(
 
     template_instructions = prompt_set["template_instructions"]
 
-    system_prompt = f"""You are a content writer. Write in the creator's authentic voice.
+    # Load the Newsletter Drafter skill — rich drafting rules + quality gates
+    newsletter_skill = get_skill("NEWSLETTER_DRAFTER_SKILL")
+
+    # Prompt assembly order (per agent skill architecture):
+    # 1. ROLE DEFINITION (skill) — what this agent does
+    # 2. VOICE PROFILE — the dominant constraint
+    # 3. CONTENT TYPE SKILL — structural rules (template instructions)
+    # 4. PRODUCT CONTEXT — supplementary info
+    if newsletter_skill:
+        system_prompt = f"""{newsletter_skill}
+
+{voice_context}
+
+{brand_context}
+
+{_get_product_context(product)}
+
+CONTENT BRIEF:
+Seed: {data.seed.get('seed', '')}
+Heat: {json.dumps(data.seed.get('heat', []))}
+Audience Hook: {data.seed.get('audience_hook', '')}
+Metaphor: {data.seed.get('metaphor', 'None')}
+Weekly Theme: {data.seed.get('weekly_theme', '')}
+
+TEMPLATE INSTRUCTIONS:
+{template_instructions.get(template, template_instructions.get("A", ""))}"""
+    else:
+        # Fallback to legacy assembly if skill file not found
+        system_prompt = f"""You are a content writer. Write in the creator's authentic voice.
 
 {_get_product_context(product)}
 
@@ -459,10 +543,16 @@ async def _run_flow_or_fallback(
 ) -> dict:
     """Run a content flow if registered, otherwise fall back to single-call generation."""
     from app.engines.flows import FlowContext, FlowRegistry
+    from app.engines.skill_loader import get_skill, get_skill_for_flow
 
     flow = FlowRegistry.get(flow_type)
 
     if flow:
+        # Load the appropriate drafter + editor skills for this flow type
+        drafter_name, editor_name = get_skill_for_flow(flow_type)
+        drafter_skill = get_skill(drafter_name) if drafter_name else ""
+        editor_skill = get_skill(editor_name) if editor_name else ""
+
         ctx = FlowContext(
             seed=seed,
             draft=draft,
@@ -471,6 +561,8 @@ async def _run_flow_or_fallback(
             prompt_set=prompt_set,
             workflow_type=flow_type,
             workflow_version=workflow_overrides.get("version", 1),
+            drafter_skill=drafter_skill,
+            editor_skill=editor_skill,
             step_prompt_overrides=workflow_overrides.get("step_prompts", {}),
             quality_gate_overrides=workflow_overrides.get("quality_gate_rules", {}),
         )
