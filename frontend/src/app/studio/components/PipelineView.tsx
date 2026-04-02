@@ -165,24 +165,12 @@ export default function PipelineView({
     setStatus("expand", "running");
     setCurrentStep("expand");
 
-    const platforms = selectedOutputs.includes("social")
-      ? ["twitter", "linkedin", "meta"]
-      : ["twitter", "linkedin"];
-
-    const contentTypes = ["social_post"];
-
     try {
       const result = await api.pipelineQuickExpand({
         product_id: productId || undefined,
         seed: seedData,
         voice_profile_id: voiceProfileId || undefined,
-        platforms,
-        content_types: contentTypes,
-        include_video_script: selectedOutputs.includes("video_script"),
-        include_thread: selectedOutputs.includes("x_thread"),
-        include_video_ad: selectedOutputs.includes("video_ad"),
-        include_carousel: selectedOutputs.includes("carousel"),
-        workflow_type: workflowType || undefined,
+        flows: selectedOutputs,
       });
       setExpandResult(result.pieces);
       setStatus("expand", "done");
@@ -215,12 +203,7 @@ export default function PipelineView({
         seed: seedData,
         draft: draftData,
         voice_profile_id: voiceProfileId || undefined,
-        platforms: platforms.length > 0 ? platforms : ["twitter", "linkedin"],
-        include_video_script: selectedOutputs.includes("video_script"),
-        include_thread: selectedOutputs.includes("x_thread"),
-        include_video_ad: selectedOutputs.includes("video_ad"),
-        include_carousel: selectedOutputs.includes("carousel"),
-        workflow_type: workflowType || undefined,
+        flows: selectedOutputs,
       });
       setExpandResult(result.pieces);
       setStatus("expand", "done");

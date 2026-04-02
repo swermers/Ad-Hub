@@ -5,12 +5,15 @@ import { motion } from "framer-motion";
 import { api, type Product, type VoiceProfileItem, type WorkflowTypeInfo } from "@/lib/api";
 
 const OUTPUT_TYPES = [
-  { id: "newsletter", label: "Newsletter", icon: "mail" },
-  { id: "social", label: "Social Posts", icon: "forum" },
-  { id: "video_ad", label: "Video Ad", icon: "videocam" },
-  { id: "carousel", label: "Carousel", icon: "view_carousel" },
-  { id: "video_script", label: "Video Script", icon: "movie" },
-  { id: "x_thread", label: "X Thread", icon: "tag" },
+  { id: "linkedin_post", label: "LinkedIn", icon: "business_center", hasImage: true },
+  { id: "x_post", label: "X Post", icon: "alternate_email", hasImage: true },
+  { id: "x_thread", label: "X Thread", icon: "tag", hasImage: false },
+  { id: "newsletter", label: "Newsletter", icon: "mail", hasImage: true },
+  { id: "meta_post", label: "Meta / FB", icon: "public", hasImage: true },
+  { id: "carousel", label: "Carousel", icon: "view_carousel", hasImage: true },
+  { id: "story", label: "Story / Reel", icon: "phone_iphone", hasImage: true },
+  { id: "email", label: "Email", icon: "forward_to_inbox", hasImage: false },
+  { id: "video_script", label: "Video Script", icon: "movie", hasImage: false },
 ];
 
 const TEMPLATE_OPTIONS = [
@@ -240,40 +243,58 @@ export default function StudioParameters({
         transition={{ duration: 0.6, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
         className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-5"
       >
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50 mb-4">
-          Output Types
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50">
+            Outputs
+          </h3>
+          <button
+            onClick={() => {
+              if (selectedOutputs.length === OUTPUT_TYPES.length) {
+                onOutputsChange([]);
+              } else {
+                onOutputsChange(OUTPUT_TYPES.map((t) => t.id));
+              }
+            }}
+            className="text-[10px] uppercase tracking-wider text-[#E5E1E4]/30 hover:text-[#FF9500] transition-colors"
+          >
+            {selectedOutputs.length === OUTPUT_TYPES.length ? "Clear all" : "Select all"}
+          </button>
+        </div>
 
         {/* Output Type Multi-Select */}
-        <div className="grid grid-cols-2 gap-2.5 mb-5">
+        <div className="grid grid-cols-3 gap-2 mb-5">
           {OUTPUT_TYPES.map((t) => {
             const active = selectedOutputs.includes(t.id);
             return (
               <motion.button
                 key={t.id}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => toggleOutput(t.id)}
-                className={`flex items-center gap-2.5 p-3 rounded-xl transition-all text-left ${
+                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
                   active
-                    ? "border-2 border-[#FF9500] bg-[#FF9500]/10 shadow-[0_0_16px_rgba(255,149,0,0.08)]"
+                    ? "border-2 border-[#FF9500] bg-[#FF9500]/10"
                     : "border border-[#353437] bg-[#1b1b1d]/50 hover:border-[#554334]"
                 }`}
               >
                 <span
-                  className={`material-symbols-outlined text-xl ${
+                  className={`material-symbols-outlined text-lg ${
                     active ? "text-[#FF9500]" : "text-[#E5E1E4]/40"
                   }`}
                 >
                   {t.icon}
                 </span>
                 <span
-                  className={`text-xs font-medium ${
-                    active ? "text-[#FF9500]" : "text-[#E5E1E4]/60"
+                  className={`text-[10px] font-medium leading-tight text-center ${
+                    active ? "text-[#FF9500]" : "text-[#E5E1E4]/50"
                   }`}
                 >
                   {t.label}
                 </span>
+                {t.hasImage && active && (
+                  <span className="absolute top-1.5 right-1.5 material-symbols-outlined text-[11px] text-[#FF9500]/60" title="Includes image">
+                    image
+                  </span>
+                )}
               </motion.button>
             );
           })}

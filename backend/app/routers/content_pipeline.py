@@ -85,13 +85,15 @@ class ExpandRequest(BaseModel):
     seed: dict
     draft: dict  # the DraftResponse data
     voice_profile_id: str | None = None
-    platforms: list[str] = ["twitter", "linkedin", "meta"]
-    include_video_script: bool = True
-    include_thread: bool = True
+    flows: list[str] = ["linkedin_post", "x_post", "meta_post"]
+    # Legacy fields (ignored if flows is set)
+    platforms: list[str] = []
+    include_video_script: bool = False
+    include_thread: bool = False
     include_video_ad: bool = False
     include_carousel: bool = False
     include_email: bool = False
-    workflow_type: str | None = None  # routes to content-type-specific flow
+    workflow_type: str | None = None
 
 
 class QuickExpandRequest(BaseModel):
@@ -99,8 +101,10 @@ class QuickExpandRequest(BaseModel):
     product_id: str | None = None
     seed: dict
     voice_profile_id: str | None = None
-    platforms: list[str] = ["twitter", "linkedin", "meta"]
-    content_types: list[str] = ["social_post"]
+    flows: list[str] = ["linkedin_post", "x_post", "meta_post"]
+    # Legacy fields (ignored if flows is set)
+    platforms: list[str] = []
+    content_types: list[str] = []
     include_video_script: bool = False
     include_thread: bool = False
     include_video_ad: bool = False
@@ -514,32 +518,40 @@ async def expand_to_platforms(
     product_context = f"""{_get_product_context(product)}
 {f"Brand: {brand_context}" if brand_context else ""}"""
 
-    # Map platform → flow_type for social posts
-    PLATFORM_FLOW_MAP = {
-        "twitter": "x_post",
-        "linkedin": "linkedin_post",
-        "meta": "meta_post",
+    # Flow type → platform/content_type mapping
+    FLOW_META = {
+        "linkedin_post": {"ct": "social_post", "platform": "linkedin"},
+        "x_post": {"ct": "social_post", "platform": "twitter"},
+        "x_thread": {"ct": "x_thread", "platform": "twitter"},
+        "meta_post": {"ct": "social_post", "platform": "meta"},
+        "newsletter": {"ct": "blog_draft", "platform": "general"},
+        "carousel": {"ct": "carousel", "platform": "general"},
+        "story": {"ct": "story", "platform": "instagram"},
+        "email": {"ct": "email", "platform": "general"},
+        "video_script": {"ct": "video_script", "platform": "general"},
+        "video_ad": {"ct": "video_ad", "platform": "general"},
     }
 
-    # Build the list of flows to run
+    # Build flow specs from the flows list (new) or legacy fields (old)
     flow_specs = []
-    for platform in data.platforms:
-        flow_type = PLATFORM_FLOW_MAP.get(platform, "meta_post")
-        flow_specs.append({"flow_type": flow_type, "fallback_ct": "social_post", "fallback_platform": platform})
-    if data.include_video_script:
-        flow_specs.append({"flow_type": "video_script", "fallback_ct": "video_script", "fallback_platform": "general"})
-    if data.include_thread:
-        flow_specs.append({"flow_type": "x_thread", "fallback_ct": "x_thread", "fallback_platform": "twitter"})
-    if data.include_video_ad:
-        flow_specs.append({"flow_type": "video_ad", "fallback_ct": "video_ad", "fallback_platform": "general"})
-    if data.include_carousel:
-        flow_specs.append({"flow_type": "carousel", "fallback_ct": "carousel", "fallback_platform": "general"})
-    if data.include_email:
-        flow_specs.append({"flow_type": "email", "fallback_ct": "email", "fallback_platform": "general"})
-
-    # If a specific workflow_type is set, override all flows with that type
-    if data.workflow_type:
-        flow_specs = [{"flow_type": data.workflow_type, "fallback_ct": data.workflow_type, "fallback_platform": "general"}]
+    if data.flows:
+        for flow_type in data.flows:
+            meta = FLOW_META.get(flow_type, {"ct": flow_type, "platform": "general"})
+            flow_specs.append({"flow_type": flow_type, "fallback_ct": meta["ct"], "fallback_platform": meta["platform"]})
+    else:
+        # Legacy: map platforms + boolean flags
+        PLATFORM_FLOW_MAP = {"twitter": "x_post", "linkedin": "linkedin_post", "meta": "meta_post"}
+        for platform in data.platforms:
+            ft = PLATFORM_FLOW_MAP.get(platform, "meta_post")
+            flow_specs.append({"flow_type": ft, "fallback_ct": "social_post", "fallback_platform": platform})
+        if data.include_video_script:
+            flow_specs.append({"flow_type": "video_script", "fallback_ct": "video_script", "fallback_platform": "general"})
+        if data.include_thread:
+            flow_specs.append({"flow_type": "x_thread", "fallback_ct": "x_thread", "fallback_platform": "twitter"})
+        if data.include_carousel:
+            flow_specs.append({"flow_type": "carousel", "fallback_ct": "carousel", "fallback_platform": "general"})
+        if data.include_email:
+            flow_specs.append({"flow_type": "email", "fallback_ct": "email", "fallback_platform": "general"})
 
     # Load workflow-level prompt overrides from DB
     workflow_overrides = _load_workflow_overrides(data.product_id, [s["flow_type"] for s in flow_specs], db)
@@ -609,31 +621,39 @@ async def quick_expand(
     product_context = f"""{_get_product_context(product)}
 {f"Brand: {brand_context}" if brand_context else ""}"""
 
-    PLATFORM_FLOW_MAP = {
-        "twitter": "x_post",
-        "linkedin": "linkedin_post",
-        "meta": "meta_post",
+    # Flow type → platform/content_type mapping
+    FLOW_META = {
+        "linkedin_post": {"ct": "social_post", "platform": "linkedin"},
+        "x_post": {"ct": "social_post", "platform": "twitter"},
+        "x_thread": {"ct": "x_thread", "platform": "twitter"},
+        "meta_post": {"ct": "social_post", "platform": "meta"},
+        "newsletter": {"ct": "blog_draft", "platform": "general"},
+        "carousel": {"ct": "carousel", "platform": "general"},
+        "story": {"ct": "story", "platform": "instagram"},
+        "email": {"ct": "email", "platform": "general"},
+        "video_script": {"ct": "video_script", "platform": "general"},
+        "video_ad": {"ct": "video_ad", "platform": "general"},
     }
 
-    # Build flow specs
     flow_specs = []
-    for ct in data.content_types:
-        for platform in data.platforms:
-            flow_type = PLATFORM_FLOW_MAP.get(platform, ct)
-            flow_specs.append({"flow_type": flow_type, "fallback_ct": ct, "fallback_platform": platform})
-    if data.include_video_script:
-        flow_specs.append({"flow_type": "video_script", "fallback_ct": "video_script", "fallback_platform": "general"})
-    if data.include_thread:
-        flow_specs.append({"flow_type": "x_thread", "fallback_ct": "x_thread", "fallback_platform": "twitter"})
-    if data.include_video_ad:
-        flow_specs.append({"flow_type": "video_ad", "fallback_ct": "video_ad", "fallback_platform": "general"})
-    if data.include_carousel:
-        flow_specs.append({"flow_type": "carousel", "fallback_ct": "carousel", "fallback_platform": "general"})
-    if data.include_email:
-        flow_specs.append({"flow_type": "email", "fallback_ct": "email", "fallback_platform": "general"})
-
-    if data.workflow_type:
-        flow_specs = [{"flow_type": data.workflow_type, "fallback_ct": data.workflow_type, "fallback_platform": "general"}]
+    if data.flows:
+        for flow_type in data.flows:
+            meta = FLOW_META.get(flow_type, {"ct": flow_type, "platform": "general"})
+            flow_specs.append({"flow_type": flow_type, "fallback_ct": meta["ct"], "fallback_platform": meta["platform"]})
+    else:
+        PLATFORM_FLOW_MAP = {"twitter": "x_post", "linkedin": "linkedin_post", "meta": "meta_post"}
+        for ct in data.content_types:
+            for platform in data.platforms:
+                ft = PLATFORM_FLOW_MAP.get(platform, ct)
+                flow_specs.append({"flow_type": ft, "fallback_ct": ct, "fallback_platform": platform})
+        if data.include_video_script:
+            flow_specs.append({"flow_type": "video_script", "fallback_ct": "video_script", "fallback_platform": "general"})
+        if data.include_thread:
+            flow_specs.append({"flow_type": "x_thread", "fallback_ct": "x_thread", "fallback_platform": "twitter"})
+        if data.include_carousel:
+            flow_specs.append({"flow_type": "carousel", "fallback_ct": "carousel", "fallback_platform": "general"})
+        if data.include_email:
+            flow_specs.append({"flow_type": "email", "fallback_ct": "email", "fallback_platform": "general"})
 
     workflow_overrides = _load_workflow_overrides(data.product_id, [s["flow_type"] for s in flow_specs], db)
 

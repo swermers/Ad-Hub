@@ -1828,12 +1828,7 @@ export interface PipelineExpandRequest {
   seed: PipelineSharpenResult;
   draft: PipelineDraftResult;
   voice_profile_id?: string;
-  platforms?: string[];
-  include_video_script?: boolean;
-  include_thread?: boolean;
-  include_video_ad?: boolean;
-  include_carousel?: boolean;
-  include_email?: boolean;
+  flows?: string[];
   workflow_type?: string;
 }
 
@@ -1872,13 +1867,7 @@ export interface PipelineQuickExpandRequest {
   product_id?: string;
   seed: PipelineSharpenResult;
   voice_profile_id?: string;
-  platforms?: string[];
-  content_types?: string[];
-  include_video_script?: boolean;
-  include_thread?: boolean;
-  include_video_ad?: boolean;
-  include_carousel?: boolean;
-  include_email?: boolean;
+  flows?: string[];
   workflow_type?: string;
 }
 
