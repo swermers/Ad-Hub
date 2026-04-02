@@ -6,18 +6,28 @@ import { useRef } from "react";
 import type { ReactNode, ErrorInfo } from "react";
 import { api, API_BASE, type ContentPiece, type Product, type GenerateImageStatus, type VideoRenderStatus } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
-import { VideoPreview, VIDEO_STYLE_OPTIONS, STYLE_CONFIG, FPS, type VideoStyle } from "@/components/ad-templates/remotion/VideoPreview";
 import dynamic from "next/dynamic";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
 
-const DynamicThumbnail = dynamic(
-  () => import("@remotion/player").then((mod) => {
-    if (!mod.Thumbnail) throw new Error("Thumbnail not available in this Remotion version");
-    return mod.Thumbnail;
-  }),
-  { ssr: false, loading: () => null }
+// Remotion components loaded dynamically - they crash with React 19 on static import
+const VideoPreview = dynamic(
+  () => import("@/components/ad-templates/remotion/VideoPreview").then((mod) => mod.VideoPreview),
+  { ssr: false, loading: () => <div className="animate-pulse bg-white/5 rounded-xl" style={{ width: 400, height: 400 }} /> }
 );
+
+// These are type/config-only imports - safe to import at module level
+let VIDEO_STYLE_OPTIONS: { value: string; label: string }[] = [];
+let STYLE_CONFIG: Record<string, { component: React.ComponentType<unknown>; durationSeconds: number; forceAspect?: AspectRatio }> = {} as Record<string, never>;
+let FPS = 30;
+type VideoStyle = string;
+
+// Load config values async (non-React, just data)
+import("@/components/ad-templates/remotion/VideoPreview").then((mod) => {
+  VIDEO_STYLE_OPTIONS = mod.VIDEO_STYLE_OPTIONS;
+  STYLE_CONFIG = mod.STYLE_CONFIG as typeof STYLE_CONFIG;
+  FPS = mod.FPS;
+}).catch(() => { /* Remotion unavailable */ });
 import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
 import ContentEditor from "@/components/content-editors";
 
@@ -451,7 +461,7 @@ function ContentDetailInner() {
       await new Promise((r) => setTimeout(r, 200));
       const el = frameExportRef.current;
       if (!el) throw new Error("Frame render element not found");
-      const config = STYLE_CONFIG[videoStyle];
+      const config = STYLE_CONFIG[videoStyle] || {};
       const effectiveAspect = config.forceAspect || previewAspect;
       const dims = ASPECT_DIMENSIONS[effectiveAspect];
       const { toPng } = await import("html-to-image");
@@ -1348,38 +1358,12 @@ function ContentDetailInner() {
           )}
         </div>
       )}
-      {/* Hidden full-resolution frame for PNG export — only mount when actively exporting */}
+      {/* Hidden full-resolution frame for PNG export — always use static template */}
       {isVisualContent && exportingFrame && (
         <div
           ref={frameExportRef}
           style={{ position: "absolute", left: "-9999px", top: 0 }}
         >
-          {previewMode === "video" ? (
-            <DynamicThumbnail
-              component={STYLE_CONFIG[videoStyle].component}
-              inputProps={{
-                headline,
-                body: bodyText,
-                cta: ctaText,
-                backgroundColor: bgColor,
-                textColor,
-                accentColor,
-                screenshotUrl,
-                aspectRatio: STYLE_CONFIG[videoStyle].forceAspect || previewAspect,
-                brandFont,
-                slideHeadlines,
-              }}
-              compositionWidth={ASPECT_DIMENSIONS[STYLE_CONFIG[videoStyle].forceAspect || previewAspect].width}
-              compositionHeight={ASPECT_DIMENSIONS[STYLE_CONFIG[videoStyle].forceAspect || previewAspect].height}
-              durationInFrames={FPS * STYLE_CONFIG[videoStyle].durationSeconds}
-              fps={FPS}
-              frameToDisplay={0}
-              style={{
-                width: ASPECT_DIMENSIONS[STYLE_CONFIG[videoStyle].forceAspect || previewAspect].width,
-                height: ASPECT_DIMENSIONS[STYLE_CONFIG[videoStyle].forceAspect || previewAspect].height,
-              }}
-            />
-          ) : (
             <TemplateRenderer
               templateType={previewTemplate}
               headline={headline}
