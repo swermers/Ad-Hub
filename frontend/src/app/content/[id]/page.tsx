@@ -764,7 +764,7 @@ function ContentDetailInner() {
                   accentColor={accentColor}
                   screenshotUrl={screenshotUrl}
                   aspectRatio={previewAspect}
-                  videoStyle={videoStyle}
+                  videoStyle={videoStyle as never}
                   previewWidth={previewWidth}
                   brandFont={brandFont}
                   slideHeadlines={slideHeadlines}
