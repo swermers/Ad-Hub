@@ -243,11 +243,15 @@ export default function StudioParameters({
         transition={{ duration: 0.6, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
         className="glass-prism rounded-2xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl p-5"
       >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50">
-            Outputs
-          </h3>
-          <button
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50 mb-4">
+          Outputs
+        </h3>
+
+        {/* Output Type Multi-Select */}
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          {/* All button */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={() => {
               if (selectedOutputs.length === OUTPUT_TYPES.length) {
                 onOutputsChange([]);
@@ -255,14 +259,27 @@ export default function StudioParameters({
                 onOutputsChange(OUTPUT_TYPES.map((t) => t.id));
               }
             }}
-            className="text-[10px] uppercase tracking-wider text-[#E5E1E4]/30 hover:text-[#FF9500] transition-colors"
+            className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
+              selectedOutputs.length === OUTPUT_TYPES.length
+                ? "border-2 border-[#FF9500] bg-[#FF9500]/10"
+                : "border border-[#353437] bg-[#1b1b1d]/50 hover:border-[#554334]"
+            }`}
           >
-            {selectedOutputs.length === OUTPUT_TYPES.length ? "Clear all" : "Select all"}
-          </button>
-        </div>
-
-        {/* Output Type Multi-Select */}
-        <div className="grid grid-cols-3 gap-2 mb-5">
+            <span
+              className={`material-symbols-outlined text-lg ${
+                selectedOutputs.length === OUTPUT_TYPES.length ? "text-[#FF9500]" : "text-[#E5E1E4]/40"
+              }`}
+            >
+              select_all
+            </span>
+            <span
+              className={`text-[10px] font-medium leading-tight text-center ${
+                selectedOutputs.length === OUTPUT_TYPES.length ? "text-[#FF9500]" : "text-[#E5E1E4]/50"
+              }`}
+            >
+              All
+            </span>
+          </motion.button>
           {OUTPUT_TYPES.map((t) => {
             const active = selectedOutputs.includes(t.id);
             return (
