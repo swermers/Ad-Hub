@@ -44,7 +44,7 @@ export default function StudioPage() {
   const [finalResult, setFinalResult] = useState<PipelineFinalizeResult | null>(null);
 
   /* ── Derived ── */
-  const canBegin = rawText.trim().length > 10 && productId.length > 0;
+  const canBegin = rawText.trim().length > 10 && (productId.length > 0 || !!voiceProfileId);
   const isRunning = phase === "pipeline";
 
   /* ── Handlers ── */
@@ -221,7 +221,7 @@ export default function StudioPage() {
             className="max-w-3xl mx-auto"
           >
             <PipelineView
-              productId={productId}
+              productId={productId || undefined}
               rawText={rawText}
               voiceProfileId={voiceProfileId}
               templateOverride={templateOverride}
