@@ -1789,7 +1789,7 @@ export interface VoiceProfileParsed {
 // ─── Content Pipeline (Stepped) ───────────────────────────────────────────────
 
 export interface PipelineSharpenRequest {
-  product_id: string;
+  product_id?: string;
   raw_text: string;
   voice_profile_id?: string;
   workflow_type?: string;
@@ -1808,7 +1808,7 @@ export interface PipelineSharpenResult {
 }
 
 export interface PipelineDraftRequest {
-  product_id: string;
+  product_id?: string;
   seed: PipelineSharpenResult;
   voice_profile_id?: string;
   template_override?: string;
@@ -1824,7 +1824,7 @@ export interface PipelineDraftResult {
 }
 
 export interface PipelineExpandRequest {
-  product_id: string;
+  product_id?: string;
   seed: PipelineSharpenResult;
   draft: PipelineDraftResult;
   voice_profile_id?: string;
@@ -1855,7 +1855,8 @@ export interface PipelineExpandResult {
 }
 
 export interface PipelineFinalizeRequest {
-  product_id: string;
+  product_id?: string;
+  voice_profile_id?: string;
   seed: PipelineSharpenResult;
   pieces: PipelineExpandedPiece[];
   save_seed?: boolean;
@@ -1868,7 +1869,7 @@ export interface PipelineFinalizeResult {
 }
 
 export interface PipelineQuickExpandRequest {
-  product_id: string;
+  product_id?: string;
   seed: PipelineSharpenResult;
   voice_profile_id?: string;
   platforms?: string[];

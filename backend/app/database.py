@@ -95,6 +95,8 @@ def create_tables():
     _add_column_if_missing("products", "workspace_id", "VARCHAR(36)")
     _add_column_if_missing("users", "workspace_id", "VARCHAR(36)")
     _add_column_if_missing("agent_api_keys", "workspace_id", "VARCHAR(36)")
+    _add_column_if_missing("content_pieces", "voice_profile_id", "VARCHAR(36)")
+    _add_column_if_missing("seeds", "voice_profile_id", "VARCHAR(36)")
 
     # Seed default workspace, admin user, and demo data
     from app.routers.auth import seed_default_admin

@@ -44,7 +44,7 @@ router = APIRouter()
 
 class SharpenRequest(BaseModel):
     """Raw input → sharpened idea seed."""
-    product_id: str
+    product_id: str | None = None
     raw_text: str  # transcribed voice memo + manual notes combined
     voice_profile_id: str | None = None
     workflow_type: str | None = None  # routes to content-type-specific flow
@@ -64,7 +64,7 @@ class SharpenResponse(BaseModel):
 
 class DraftRequest(BaseModel):
     """Sharpened seed → newsletter/primary draft."""
-    product_id: str
+    product_id: str | None = None
     seed: dict  # the SharpenResponse data
     voice_profile_id: str | None = None
     template_override: str | None = None  # override template_fit from seed
@@ -81,7 +81,7 @@ class DraftResponse(BaseModel):
 
 class ExpandRequest(BaseModel):
     """Newsletter draft → multi-platform content variants."""
-    product_id: str
+    product_id: str | None = None
     seed: dict
     draft: dict  # the DraftResponse data
     voice_profile_id: str | None = None
@@ -96,7 +96,7 @@ class ExpandRequest(BaseModel):
 
 class QuickExpandRequest(BaseModel):
     """Sharpened seed → platform content directly (skip newsletter draft)."""
-    product_id: str
+    product_id: str | None = None
     seed: dict
     voice_profile_id: str | None = None
     platforms: list[str] = ["twitter", "linkedin", "meta"]
@@ -129,7 +129,8 @@ class ExpandResponse(BaseModel):
 
 class FinalizeRequest(BaseModel):
     """Save approved content pieces to the database."""
-    product_id: str
+    product_id: str | None = None
+    voice_profile_id: str | None = None
     seed: dict
     pieces: list[dict]  # list of ExpandedPiece-like dicts (may have user edits)
     save_seed: bool = True  # also save to seed bank
@@ -205,8 +206,10 @@ def _get_voice_context(voice_profile_id: str | None, user_id: str, db: Session) 
     return "\n".join(parts)
 
 
-def _get_brand_context(product: Product, db: Session) -> str:
-    """Get brand profile context for a product."""
+def _get_brand_context(product: Product | None, db: Session) -> str:
+    """Get brand profile context for a product. Returns empty if no product."""
+    if not product:
+        return ""
     bp = db.query(BrandProfile).filter(BrandProfile.product_id == product.id).first()
     if not bp:
         return ""
@@ -233,6 +236,13 @@ def _get_brand_context(product: Product, db: Session) -> str:
     return "\n".join(parts)
 
 
+def _get_product_context(product: Product | None) -> str:
+    """Build product context block for prompts. Empty string if no product."""
+    if not product:
+        return "Mode: Personal brand content (no specific product)"
+    return f"""{_get_product_context(product)}"""
+
+
 # Load per-product prompt sets with generic defaults
 from app.engines.prompt_defaults import load_prompt_set  # noqa: E402
 
@@ -247,9 +257,11 @@ async def sharpen_idea(
     user: dict = Depends(get_current_user),
 ):
     """Extract the core idea from raw voice memo + notes input."""
-    product = db.query(Product).filter(Product.id == data.product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+    product = None
+    if data.product_id:
+        product = db.query(Product).filter(Product.id == data.product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
 
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
@@ -257,9 +269,7 @@ async def sharpen_idea(
 
     system_prompt = f"""You are a content strategist and idea sharpener.
 
-Product: {product.name}
-Description: {product.description}
-Target Audience: {product.target_audience or "General audience"}
+{_get_product_context(product)}
 
 {voice_context}
 
@@ -308,9 +318,11 @@ async def create_draft(
     user: dict = Depends(get_current_user),
 ):
     """Generate the primary newsletter/content draft from the sharpened seed."""
-    product = db.query(Product).filter(Product.id == data.product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+    product = None
+    if data.product_id:
+        product = db.query(Product).filter(Product.id == data.product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
 
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
@@ -478,17 +490,17 @@ async def expand_to_platforms(
     with specialized prompts, quality gates, and per-step refinement.
     All flows run in parallel via asyncio.gather.
     """
-    product = db.query(Product).filter(Product.id == data.product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+    product = None
+    if data.product_id:
+        product = db.query(Product).filter(Product.id == data.product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
 
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
     brand_context = _get_brand_context(product, db)
 
-    product_context = f"""Product: {product.name}
-Description: {product.description}
-Target Audience: {product.target_audience or "General audience"}
+    product_context = f"""{_get_product_context(product)}
 {f"Brand: {brand_context}" if brand_context else ""}"""
 
     # Map platform → flow_type for social posts
@@ -573,17 +585,17 @@ async def quick_expand(
 
     Uses the Flow Registry for multi-step generation per content type.
     """
-    product = db.query(Product).filter(Product.id == data.product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+    product = None
+    if data.product_id:
+        product = db.query(Product).filter(Product.id == data.product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
 
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
     brand_context = _get_brand_context(product, db)
 
-    product_context = f"""Product: {product.name}
-Description: {product.description}
-Target Audience: {product.target_audience or "General audience"}
+    product_context = f"""{_get_product_context(product)}
 {f"Brand: {brand_context}" if brand_context else ""}"""
 
     PLATFORM_FLOW_MAP = {
@@ -681,17 +693,16 @@ async def refine_content(
     if not piece:
         raise HTTPException(status_code=404, detail="Content piece not found")
 
-    product = db.query(Product).filter(Product.id == piece.product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+    product = None
+    if piece.product_id:
+        product = db.query(Product).filter(Product.id == piece.product_id).first()
 
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db)
     brand_context = _get_brand_context(product, db)
 
     system_prompt = f"""You are a content editor refining existing content.
 
-Product: {product.name}
-Target Audience: {product.target_audience or "General audience"}
+{_get_product_context(product)}
 
 {voice_context}
 
@@ -751,9 +762,11 @@ async def finalize_content(
     user: dict = Depends(get_current_user),
 ):
     """Save the approved content pieces to the database."""
-    product = db.query(Product).filter(Product.id == data.product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+    product = None
+    if data.product_id:
+        product = db.query(Product).filter(Product.id == data.product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
 
     saved_ids = []
 
@@ -786,7 +799,8 @@ async def finalize_content(
             aspect_ratio = video_config.get("aspect_ratio") if isinstance(video_config, dict) else None
 
             piece = ContentPiece(
-                product_id=data.product_id,
+                product_id=data.product_id or None,
+                voice_profile_id=data.voice_profile_id,
                 content_type=content_type_map.get(ct, ct),
                 platform=piece_data.get("platform", "general"),
                 title=piece_data.get("title", ""),
@@ -809,7 +823,8 @@ async def finalize_content(
         seed_id = None
         if data.save_seed and data.seed.get("seed"):
             seed = Seed(
-                product_id=data.product_id,
+                product_id=data.product_id or None,
+                voice_profile_id=data.voice_profile_id,
                 seed=data.seed.get("seed", ""),
                 heat=json.dumps(data.seed.get("heat", [])),
                 audience_hook=data.seed.get("audience_hook", ""),
