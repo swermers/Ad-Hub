@@ -99,6 +99,10 @@ def create_tables():
     _add_column_if_missing("seeds", "voice_profile_id", "VARCHAR(36)")
     _add_column_if_missing("voice_profiles", "product_id", "VARCHAR(36)")
 
+    # Make product_id nullable for profile-only content generation
+    _make_column_nullable("content_pieces", "product_id")
+    _make_column_nullable("seeds", "product_id")
+
     # Seed default workspace, admin user, and demo data
     from app.routers.auth import seed_default_admin
     from app.seed_demo import seed_demo_data
@@ -154,3 +158,14 @@ def _add_column_if_missing(table: str, column: str, col_type: str):
         with engine.begin() as conn:
             conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
         logger.info("Added column %s.%s", table, column)
+
+
+def _make_column_nullable(table: str, column: str):
+    """Make an existing column nullable (PostgreSQL only, no-op on SQLite)."""
+    if not _is_sqlite:
+        insp = inspect(engine)
+        cols = {c["name"]: c for c in insp.get_columns(table)}
+        if column in cols and not cols[column].get("nullable", True):
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {column} DROP NOT NULL"))
+            logger.info("Made %s.%s nullable", table, column)
