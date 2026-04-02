@@ -11,8 +11,11 @@ class ContentPiece(Base):
     __tablename__ = "content_pieces"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    product_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("products.id", ondelete="CASCADE"), nullable=False
+    product_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("products.id", ondelete="CASCADE"), nullable=True
+    )
+    voice_profile_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("voice_profiles.id", ondelete="SET NULL"), nullable=True
     )
     content_type: Mapped[str] = mapped_column(String(50), nullable=False)
     platform: Mapped[str] = mapped_column(String(50), default="general")
@@ -26,11 +29,11 @@ class ContentPiece(Base):
     aspect_ratio: Mapped[str | None] = mapped_column(String(10))
     generation_metadata: Mapped[str | None] = mapped_column(Text)
     image_url: Mapped[str | None] = mapped_column(Text)
-    media_type: Mapped[str | None] = mapped_column(String(20))  # "text", "video", "carousel", "image"
-    video_style: Mapped[str | None] = mapped_column(String(50))  # Remotion composition style
-    video_config: Mapped[str | None] = mapped_column(Text)  # JSON: colors, aspect_ratio, etc.
+    media_type: Mapped[str | None] = mapped_column(String(20))
+    video_style: Mapped[str | None] = mapped_column(String(50))
+    video_config: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
 
-    product: Mapped["Product"] = relationship(back_populates="content_pieces")  # noqa: F821
+    product: Mapped["Product | None"] = relationship(back_populates="content_pieces")  # noqa: F821

@@ -17,7 +17,8 @@ class Seed(Base):
     __tablename__ = "seeds"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    product_id: Mapped[str] = mapped_column(String(36), ForeignKey("products.id"), nullable=False)
+    product_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("products.id"), nullable=True)
+    voice_profile_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("voice_profiles.id"), nullable=True)
 
     # Core seed data (from Idea Sharpener)
     seed: Mapped[str] = mapped_column(Text, nullable=False)  # the one-sentence core observation

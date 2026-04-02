@@ -238,6 +238,11 @@ def revoke_agent_key(
 def seed_default_admin(db: Session):
     """Create default admin and guest users if they don't exist."""
     from app.models.user import User
+    from app.models.workspace import Workspace
+
+    # Get default workspace for admin assignment
+    default_ws = db.query(Workspace).filter(Workspace.slug == "default").first()
+    default_ws_id = default_ws.id if default_ws else None
 
     # Seed admin user
     if settings.auth_password:
@@ -249,8 +254,13 @@ def seed_default_admin(db: Session):
                 password_hash=bcrypt.hashpw(settings.auth_password.encode(), bcrypt.gensalt()).decode(),
                 display_name="Admin",
                 role="admin",
+                workspace_id=default_ws_id,
             )
             db.add(admin)
+            db.commit()
+        elif not existing_admin.workspace_id and default_ws_id:
+            # Fix existing admin with no workspace
+            existing_admin.workspace_id = default_ws_id
             db.commit()
 
     # Seed guest/demo user
