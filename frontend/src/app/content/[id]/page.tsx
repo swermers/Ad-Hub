@@ -143,6 +143,19 @@ class ContentErrorBoundary extends Component<{ children: ReactNode }, { hasError
   }
 }
 
+class VideoErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; fallback: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: Error) { console.warn("Video preview unavailable:", error.message); }
+  render() {
+    if (this.state.hasError) return <>{this.props.fallback}</>;
+    return this.props.children;
+  }
+}
+
 export default function ContentDetailPage() {
   return <ContentErrorBoundary><ContentDetailInner /></ContentErrorBoundary>;
 }
@@ -712,20 +725,41 @@ function ContentDetailInner() {
 
             {/* The visual render — Video (primary) or Static (fallback) */}
             {previewMode === "video" ? (
-              <VideoPreview
-                headline={headline}
-                body={bodyText}
-                cta={ctaText}
-                backgroundColor={bgColor}
-                textColor={textColor}
-                accentColor={accentColor}
-                screenshotUrl={screenshotUrl}
-                aspectRatio={previewAspect}
-                videoStyle={videoStyle}
-                previewWidth={previewWidth}
-                brandFont={brandFont}
-                slideHeadlines={slideHeadlines}
-              />
+              <VideoErrorBoundary fallback={
+                <div
+                  className="rounded-xl overflow-hidden shadow-lg border border-white/10"
+                  style={{ width: previewWidth, height: previewHeight }}
+                >
+                  <div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left" }}>
+                    <TemplateRenderer
+                      templateType={previewTemplate}
+                      headline={headline}
+                      body={bodyText}
+                      cta={ctaText}
+                      aspectRatio={previewAspect}
+                      backgroundColor={bgColor}
+                      textColor={textColor}
+                      accentColor={accentColor}
+                      screenshotUrl={screenshotUrl}
+                    />
+                  </div>
+                </div>
+              }>
+                <VideoPreview
+                  headline={headline}
+                  body={bodyText}
+                  cta={ctaText}
+                  backgroundColor={bgColor}
+                  textColor={textColor}
+                  accentColor={accentColor}
+                  screenshotUrl={screenshotUrl}
+                  aspectRatio={previewAspect}
+                  videoStyle={videoStyle}
+                  previewWidth={previewWidth}
+                  brandFont={brandFont}
+                  slideHeadlines={slideHeadlines}
+                />
+              </VideoErrorBoundary>
             ) : (
               <div
                 className="rounded-xl overflow-hidden shadow-lg border border-white/10"
