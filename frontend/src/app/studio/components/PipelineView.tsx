@@ -36,7 +36,7 @@ type StepId = "sharpen" | "draft" | "expand" | "finalize";
 type StepStatus = "pending" | "running" | "done" | "error";
 
 interface PipelineViewProps {
-  productId: string;
+  productId?: string;
   rawText: string;
   voiceProfileId: string | null;
   templateOverride: string | null;
@@ -108,7 +108,7 @@ export default function PipelineView({
     try {
       const input = hookText ? `${rawText}\n\nContextual angle: ${hookText}` : rawText;
       const result = await api.pipelineSharpen({
-        product_id: productId,
+        product_id: productId || undefined,
         raw_text: input,
         voice_profile_id: voiceProfileId || undefined,
         workflow_type: workflowType || undefined,
@@ -139,7 +139,7 @@ export default function PipelineView({
 
     try {
       const result = await api.pipelineDraft({
-        product_id: productId,
+        product_id: productId || undefined,
         seed: seedData,
         voice_profile_id: voiceProfileId || undefined,
         template_override: templateOverride || undefined,
@@ -173,7 +173,7 @@ export default function PipelineView({
 
     try {
       const result = await api.pipelineQuickExpand({
-        product_id: productId,
+        product_id: productId || undefined,
         seed: seedData,
         voice_profile_id: voiceProfileId || undefined,
         platforms,
@@ -211,7 +211,7 @@ export default function PipelineView({
 
     try {
       const result = await api.pipelineExpand({
-        product_id: productId,
+        product_id: productId || undefined,
         seed: seedData,
         draft: draftData,
         voice_profile_id: voiceProfileId || undefined,
@@ -267,7 +267,8 @@ export default function PipelineView({
 
     try {
       const result = await api.pipelineFinalize({
-        product_id: productId,
+        product_id: productId || undefined,
+        voice_profile_id: voiceProfileId || undefined,
         seed: seedData,
         pieces: allPieces,
         save_seed: true,
