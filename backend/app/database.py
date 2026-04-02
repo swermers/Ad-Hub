@@ -106,11 +106,14 @@ def create_tables():
     # Seed default workspace, admin user, and demo data
     from app.routers.auth import seed_default_admin
     from app.seed_demo import seed_demo_data
+    from app.engines.workflow_defaults import seed_v1_workflows
     from app.models.workspace import Workspace
     db = SessionLocal()
     try:
         _seed_default_workspace(db)
         seed_default_admin(db)
+        # Seed v1 workflow defaults so evolution engine has a baseline
+        seed_v1_workflows(db)
         # Seed demo product for guest/viewer accounts
         ws = db.query(Workspace).first()
         seed_demo_data(db, workspace_id=ws.id if ws else None)

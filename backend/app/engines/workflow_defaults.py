@@ -118,3 +118,46 @@ def get_workflow_info(workflow_type: str) -> dict | None:
 def get_all_workflow_info() -> list[dict]:
     """Get info for all workflow types."""
     return [get_workflow_info(wt) for wt in WORKFLOW_TYPES]
+
+
+def seed_v1_workflows(db) -> int:
+    """Seed v1 workflow defaults to ContentTypeWorkflow table.
+
+    Creates global (product_id=NULL) v1 rows for each workflow type
+    so the evolution engine has a baseline to evolve from.
+    Returns the number of rows created.
+    """
+    import json
+    from app.models.content_workflow import ContentTypeWorkflow
+
+    created = 0
+    for wt in WORKFLOW_TYPES:
+        existing = (
+            db.query(ContentTypeWorkflow)
+            .filter(
+                ContentTypeWorkflow.workflow_type == wt,
+                ContentTypeWorkflow.product_id.is_(None),
+                ContentTypeWorkflow.version == 1,
+            )
+            .first()
+        )
+        if existing:
+            continue
+
+        steps = WORKFLOW_STEP_DESCRIPTIONS.get(wt, {})
+        gates = WORKFLOW_QUALITY_GATES.get(wt, [])
+
+        row = ContentTypeWorkflow(
+            product_id=None,
+            workflow_type=wt,
+            version=1,
+            is_active=True,
+            step_prompts=json.dumps({step: desc for step, desc in steps.items()}),
+            quality_gate_rules=json.dumps({gate: "default" for gate in gates}),
+        )
+        db.add(row)
+        created += 1
+
+    if created:
+        db.commit()
+    return created

@@ -163,6 +163,15 @@ async def _dispatch_post(connection: PlatformConnection, content: ContentPiece) 
             message=content.body,
         )
 
+    elif platform == "linkedin":
+        from app.services.linkedin_client import LinkedInClient
+
+        client = LinkedInClient(
+            access_token=connection.access_token,
+            profile_id=connection.platform_account_id or "",
+        )
+        return await client.post_to_feed(text=content.body)
+
     else:
         raise ValueError(f"Unsupported platform: {platform}")
 
@@ -189,15 +198,21 @@ async def _dispatch_draft(
         )
 
     elif platform == "twitter":
-        # Twitter API doesn't support drafts — hold in our system.
-        # Return a synthetic result; the content stays in pending_approval
-        # and gets posted directly when the human approves.
         return {
             "platform_post_id": None,
             "published": False,
             "held_locally": True,
             "reason": "Twitter has no draft API — held for direct post on approval",
         }
+
+    elif platform == "linkedin":
+        from app.services.linkedin_client import LinkedInClient
+
+        client = LinkedInClient(
+            access_token=connection.access_token,
+            profile_id=connection.platform_account_id or "",
+        )
+        return await client.create_draft_post(text=content.body)
 
     else:
         raise ValueError(f"Unsupported platform for drafts: {platform}")
@@ -217,16 +232,17 @@ async def _dispatch_publish(connection: PlatformConnection, platform_post_id: st
         return await client.publish_draft(platform_post_id)
 
     elif platform == "twitter":
-        # Twitter drafts were held locally — do a direct post now
-        from app.services.twitter_client import TwitterClient
-
-        client = TwitterClient(
-            access_token=connection.access_token,
-            access_token_secret=connection.refresh_token or "",
-        )
-        # We need the content, but we only have the post_id here.
-        # The caller should have already posted via _dispatch_post for Twitter.
         raise ValueError("Twitter drafts should be published via direct post, not publish_draft")
+
+    elif platform == "linkedin":
+        from app.services.linkedin_client import LinkedInClient
+
+        client = LinkedInClient(
+            access_token=connection.access_token,
+            profile_id=connection.platform_account_id or "",
+        )
+        # LinkedIn drafts are held locally — post directly now
+        return await client.post_to_feed(text=platform_post_id)  # post_id here is draft content
 
     else:
         raise ValueError(f"Unsupported platform for publish: {platform}")
@@ -261,6 +277,15 @@ async def collect_metrics_for_post(
                 ad_account_id=connection.platform_account_id or "",
             )
             return await client.get_post_insights(scheduled_post.platform_post_id)
+
+        elif platform == "linkedin":
+            from app.services.linkedin_client import LinkedInClient
+
+            client = LinkedInClient(
+                access_token=connection.access_token,
+                profile_id=connection.platform_account_id or "",
+            )
+            return await client.get_post_metrics(scheduled_post.platform_post_id)
 
         return {}
 
