@@ -348,8 +348,7 @@ async def create_draft(
 
     system_prompt = f"""You are a content writer. Write in the creator's authentic voice.
 
-Product: {product.name}
-Target Audience: {product.target_audience or "General audience"}
+{_get_product_context(product)}
 
 {voice_context}
 
