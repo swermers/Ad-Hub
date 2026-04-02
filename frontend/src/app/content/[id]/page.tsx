@@ -17,7 +17,7 @@ const VideoPreview = dynamic(
 );
 
 // These are type/config-only imports - safe to import at module level
-let VIDEO_STYLE_OPTIONS: { value: string; label: string }[] = [];
+let VIDEO_STYLE_OPTIONS: { value: string; label: string; description: string }[] = [];
 let STYLE_CONFIG: Record<string, { component: React.ComponentType<unknown>; durationSeconds: number; forceAspect?: AspectRatio }> = {} as Record<string, never>;
 let FPS = 30;
 type VideoStyle = string;
