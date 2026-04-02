@@ -1314,8 +1314,8 @@ function ContentDetailInner() {
           )}
         </div>
       )}
-      {/* Hidden full-resolution frame for PNG export */}
-      {isVisualContent && (
+      {/* Hidden full-resolution frame for PNG export — only mount when actively exporting */}
+      {isVisualContent && exportingFrame && (
         <div
           ref={frameExportRef}
           style={{ position: "absolute", left: "-9999px", top: 0 }}

@@ -372,7 +372,7 @@ export const api = {
   guestLogin: () =>
     request<{ token: string; role: string }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ password: "__guest__", guest: true }),
+      body: JSON.stringify({ password: "demo", guest: true }),
     }),
   checkAuth: () => request<{ ok: boolean }>("/api/auth/me"),
 
