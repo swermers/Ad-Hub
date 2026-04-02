@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { GettingStarted } from "@/components/GettingStarted";
+import { clearToken } from "@/lib/api";
 
 const navSections = [
   {
@@ -44,20 +45,38 @@ const navSections = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [guideOpen, setGuideOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    clearToken();
     router.push("/login");
   };
 
   return (
-    <aside className="h-screen w-72 fixed left-0 top-0 z-40 glass-sidebar flex flex-col py-8 px-4 gap-2 border-r border-white/5 pt-24">
+    <aside
+      className={`h-screen w-72 fixed left-0 top-0 z-40 glass-sidebar flex flex-col py-6 md:py-8 px-4 gap-2 border-r border-white/5 pt-20 md:pt-24 transition-transform duration-300 ease-out ${
+        mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      }`}
+    >
+      {/* Close button - mobile only */}
+      <button
+        onClick={onClose}
+        className="md:hidden absolute top-5 right-3 p-1.5 text-[#E5E1E4]/50 hover:text-[#E5E1E4] hover:bg-white/10 rounded-lg transition-all"
+        aria-label="Close menu"
+      >
+        <span className="material-symbols-outlined text-lg">close</span>
+      </button>
+
       {/* Brand Section */}
-      <div className="px-4 mb-8 entrance-fade stagger-2">
+      <div className="px-4 mb-6 md:mb-8 entrance-fade stagger-2">
         <div className="text-lg font-bold text-[#FF9500]">Iterant</div>
         <div className="text-[11px] uppercase tracking-[0.1em] font-medium text-[#E5E1E4]/40">
           Content Engine
@@ -65,7 +84,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav Links */}
-      <nav className="flex-1 space-y-4 overflow-y-auto pr-2">
+      <nav className="flex-1 space-y-3 md:space-y-4 overflow-y-auto pr-2 -mr-2">
         {navSections.map((section, sectionIdx) => {
           let itemCounter = 0;
           return (
@@ -121,7 +140,17 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom Links */}
-      <div className="mt-auto pt-8 border-t border-white/5 flex flex-col gap-1 entrance-fade stagger-3">
+      <div className="mt-auto pt-6 md:pt-8 border-t border-white/5 flex flex-col gap-1 entrance-fade stagger-3">
+        {/* New Product - mobile only (hidden in top nav on small screens) */}
+        <Link
+          href="/products/new"
+          className="sm:hidden flex items-center gap-3 px-4 py-2 text-[#FF9500] hover:bg-[#FF9500]/10 transition-all duration-200 rounded-lg w-full text-left"
+        >
+          <span className="material-symbols-outlined">add_circle</span>
+          <span className="text-[11px] uppercase tracking-[0.1em] font-medium">
+            New Product
+          </span>
+        </Link>
         <button
           onClick={() => setGuideOpen(true)}
           className="flex items-center gap-3 px-4 py-2 text-[#E5E1E4]/50 hover:text-[#E5E1E4] transition-all duration-200 rounded-lg w-full text-left"
