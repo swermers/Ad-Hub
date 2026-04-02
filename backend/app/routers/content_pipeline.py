@@ -540,6 +540,7 @@ async def _run_flow_or_fallback(
     voice_context: str,
     prompt_set: dict,
     workflow_overrides: dict,
+    voice_quality_score: int = 100,
 ) -> dict:
     """Run a content flow if registered, otherwise fall back to single-call generation."""
     from app.engines.flows import FlowContext, FlowRegistry
@@ -563,6 +564,7 @@ async def _run_flow_or_fallback(
             workflow_version=workflow_overrides.get("version", 1),
             drafter_skill=drafter_skill,
             editor_skill=editor_skill,
+            voice_quality_score=voice_quality_score,
             step_prompt_overrides=workflow_overrides.get("step_prompts", {}),
             quality_gate_overrides=workflow_overrides.get("quality_gate_rules", {}),
         )
@@ -605,6 +607,10 @@ async def expand_to_platforms(
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db, product_id=data.product_id)
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
     brand_context = _get_brand_context(product, db)
+
+    # Get voice profile quality score for score-aware editor gates
+    voice_profile = _resolve_voice_profile(data.voice_profile_id, user["id"], db, product_id=data.product_id)
+    voice_quality_score = voice_profile.quality_score if voice_profile and voice_profile.quality_score else 100
 
     product_context = f"""{_get_product_context(product)}
 {f"Brand: {brand_context}" if brand_context else ""}"""
@@ -660,6 +666,7 @@ async def expand_to_platforms(
             voice_context=voice_context,
             prompt_set=prompt_set,
             workflow_overrides=workflow_overrides.get(spec["flow_type"], {}),
+            voice_quality_score=voice_quality_score,
         ))
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -708,6 +715,10 @@ async def quick_expand(
     voice_context = _get_voice_context(data.voice_profile_id, user["id"], db, product_id=data.product_id)
     prompt_set = load_prompt_set(data.product_id, db, voice_profile_id=data.voice_profile_id)
     brand_context = _get_brand_context(product, db)
+
+    # Get voice profile quality score for score-aware editor gates
+    voice_profile = _resolve_voice_profile(data.voice_profile_id, user["id"], db, product_id=data.product_id)
+    voice_quality_score = voice_profile.quality_score if voice_profile and voice_profile.quality_score else 100
 
     product_context = f"""{_get_product_context(product)}
 {f"Brand: {brand_context}" if brand_context else ""}"""
@@ -759,6 +770,7 @@ async def quick_expand(
             voice_context=voice_context,
             prompt_set=prompt_set,
             workflow_overrides=workflow_overrides.get(spec["flow_type"], {}),
+            voice_quality_score=voice_quality_score,
         )
         for spec in flow_specs
     ]

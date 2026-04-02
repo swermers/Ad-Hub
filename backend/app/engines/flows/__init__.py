@@ -48,6 +48,10 @@ class FlowContext:
     drafter_skill: str = ""
     editor_skill: str = ""
 
+    # Voice profile quality score (0-100) — affects editor pass thresholds
+    # 90+: full enforcement (22/25), 70-89: softer gates (20/25), <70: guidance only
+    voice_quality_score: int = 100
+
     # Step overrides from ContentTypeWorkflow (loaded from DB or defaults)
     step_prompt_overrides: dict[str, str] = field(default_factory=dict)
     quality_gate_overrides: dict[str, str] = field(default_factory=dict)
@@ -258,15 +262,29 @@ EDITOR_HARD_FLOOR = 15
 
 
 def editor_gate_check(result: dict, ctx: FlowContext) -> bool:
-    """Standard 22/25 pass/fail check used by all editor steps.
+    """Score-aware 22/25 pass/fail check used by all editor steps.
 
-    Returns True if the draft passes (score >= 22 and no auto-fail).
-    Returns False to trigger a revision retry.
+    The pass threshold adjusts based on voice profile quality:
+    - 90%+ profile: full enforcement (22/25)
+    - 70-89% profile: softer gates (20/25)
+    - Below 70%: even softer (18/25) since voice matching is inherently weaker
+
+    Returns True if the draft passes, False to trigger a revision retry.
     """
     if result.get("passed") is True:
         return True
+
     score = result.get("overall_score", 0)
-    return score >= EDITOR_PASS_THRESHOLD
+
+    # Adjust threshold based on voice profile quality
+    if ctx.voice_quality_score >= 90:
+        threshold = EDITOR_PASS_THRESHOLD  # 22
+    elif ctx.voice_quality_score >= 70:
+        threshold = 20
+    else:
+        threshold = EDITOR_REVISION_FLOOR  # 18
+
+    return score >= threshold
 
 
 def editor_gate_parser(result: dict, ctx: FlowContext) -> dict:
