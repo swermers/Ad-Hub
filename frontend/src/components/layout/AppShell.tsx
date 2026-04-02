@@ -75,9 +75,9 @@ function TopNav() {
               onUnreadCountChange={handleUnreadCountChange}
             />
           </div>
-          <button className="p-2 text-[#E5E1E4]/70 hover:bg-white/10 rounded-full transition-all hover-lift">
+          <Link href="/settings" className="p-2 text-[#E5E1E4]/70 hover:bg-white/10 rounded-full transition-all hover-lift inline-flex">
             <span className="material-symbols-outlined">account_circle</span>
-          </button>
+          </Link>
         </div>
       </div>
     </nav>

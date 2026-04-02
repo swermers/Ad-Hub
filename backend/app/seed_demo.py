@@ -17,8 +17,12 @@ from app.models import (
     BrandProfile,
     Campaign,
     CampaignAdVariation,
+    CompetitorProfile,
     ContentPiece,
+    EvidenceItem,
     HookPattern,
+    IntelligenceBrief,
+    IntelligenceConfig,
     PainPoint,
     PerformanceMetric,
     PlatformConnection,
@@ -27,6 +31,10 @@ from app.models import (
     Seed,
     TrendSignal,
 )
+from app.models.bulk_ads import OptimizationConfig, OptimizationLog
+from app.models.campaign import AgentLog, SafetyGuardrail
+from app.models.autonomous_loop import AutonomousLoopConfig
+from app.models.content_prompts import ContentPromptSet
 
 DEMO_PRODUCT_ID = "00000000-0000-4000-demo-000000000001"
 DEMO_WORKSPACE_ID = "00000000-0000-4000-demo-00000000d3m0"
@@ -51,6 +59,10 @@ def seed_demo_data(db: Session, workspace_id: str | None = None):
 
     existing = db.query(Product).filter(Product.id == DEMO_PRODUCT_ID).first()
     if existing:
+        # Fix workspace if demo product was seeded into wrong workspace
+        if existing.workspace_id != DEMO_WORKSPACE_ID:
+            existing.workspace_id = DEMO_WORKSPACE_ID
+            db.commit()
         return
 
     # ── Create dedicated demo workspace (separate from admin workspace) ──────

@@ -67,12 +67,10 @@ class LoginResponse(BaseModel):
 def login(body: LoginRequest, db: Session = Depends(get_db)):
     from app.models.user import User
 
-    # Guest demo login
+    # Guest demo login — no password needed, just check feature is enabled
     if body.guest:
         if not settings.guest_password:
             raise HTTPException(500, "Guest access not configured")
-        if not hmac.compare_digest(body.password, settings.guest_password):
-            raise HTTPException(401, "Invalid guest password")
         # Find or use the seeded guest user
         guest_user = db.query(User).filter(User.email == "guest@iterant.demo").first()
         if guest_user:
