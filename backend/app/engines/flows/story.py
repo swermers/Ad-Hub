@@ -30,6 +30,9 @@ Return ONLY JSON: {{"frame_count": 4, "frames": [
 
 def _copy_system(ctx: FlowContext) -> str:
     return f"""You write Story copy. MAX 15 words per frame. If it takes more than 3 seconds to read, it's too long.
+
+{ctx.voice_context}
+
 {ctx.prompt_set.get("voice_rules", "")}"""
 
 
@@ -47,7 +50,9 @@ Return ONLY JSON: {{"frames": [
 
 
 def _visual_system(ctx: FlowContext) -> str:
-    return """You direct visual treatment for Stories. Think like a creative director."""
+    return f"""You direct visual treatment for Stories. Think like a creative director.
+
+{ctx.voice_context}"""
 
 
 def _visual_user(ctx: FlowContext) -> str:

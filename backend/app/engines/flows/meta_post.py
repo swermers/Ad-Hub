@@ -34,6 +34,9 @@ Return ONLY JSON: {{"angle": "one sentence", "opening_scene": "the specific mome
 
 def _draft_system(ctx: FlowContext) -> str:
     return f"""You write Meta posts. Conversational, personal, 1-3 paragraphs. Like talking to a friend at coffee.
+
+{ctx.voice_context}
+
 {ctx.prompt_set.get("voice_rules", "")}
 {ctx.prompt_set.get("social_post_rules", "")}
 No hashtags. No corporate speak. First person."""
@@ -53,7 +56,9 @@ Return ONLY JSON: {{"title": "...", "body": "full post", "hook": "opening line",
 
 
 def _hooks_system(ctx: FlowContext) -> str:
-    return """You optimize Meta posts for engagement — saves, shares, comments. Subtle, not manipulative."""
+    return f"""You optimize Meta posts for engagement — saves, shares, comments. Subtle, not manipulative.
+
+{ctx.voice_context}"""
 
 
 def _hooks_user(ctx: FlowContext) -> str:

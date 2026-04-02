@@ -29,6 +29,9 @@ Return ONLY JSON: {{"subject": "...", "preview": "...", "open_driver": "curiosit
 
 def _body_system(ctx: FlowContext) -> str:
     return f"""You write marketing emails. Conversational, scannable, 3-5 short paragraphs.
+
+{ctx.voice_context}
+
 {ctx.prompt_set.get("voice_rules", "")}
 Write like a person emailing a colleague, not a newsletter blasting a list."""
 
@@ -45,7 +48,9 @@ Return ONLY JSON: {{"body": "full email body in markdown", "tone": "conversation
 
 
 def _cta_system(ctx: FlowContext) -> str:
-    return """You optimize email CTAs. One clear CTA — don't dilute with multiple asks. Optional P.S. for secondary hook."""
+    return f"""You optimize email CTAs. One clear CTA — don't dilute with multiple asks. Optional P.S. for secondary hook.
+
+{ctx.voice_context}"""
 
 
 def _cta_user(ctx: FlowContext) -> str:
@@ -62,7 +67,9 @@ Return ONLY JSON: {{"cta_button": "...", "ps_line": "...", "final_body": "email 
 
 
 def _readability_system(ctx: FlowContext) -> str:
-    return """You check email quality. Scannable? Single CTA? Sounds human?"""
+    return f"""You check email quality. Scannable? Single CTA? Sounds human?
+
+{ctx.voice_context}"""
 
 
 def _readability_user(ctx: FlowContext) -> str:

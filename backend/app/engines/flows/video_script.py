@@ -33,6 +33,9 @@ Return ONLY JSON: {{"hooks": [{{"text": "...", "strategy": "open_loop|pattern_in
 
 def _blocks_system(ctx: FlowContext) -> str:
     return f"""You convert ideas into breath blocks — chunks a speaker can deliver in one breath (2-4 sentences).
+
+{ctx.voice_context}
+
 {ctx.prompt_set.get("video_script_rules", "")}
 {ctx.prompt_set.get("voice_rules", "")}
 
@@ -61,7 +64,9 @@ Return ONLY JSON: {{"blocks": [{{"text": "...", "estimated_seconds": 15, "energy
 
 
 def _cta_system(ctx: FlowContext) -> str:
-    return """You write video CTAs and suggest thumbnail concepts. The CTA should feel like a natural conclusion."""
+    return f"""You write video CTAs and suggest thumbnail concepts. The CTA should feel like a natural conclusion.
+
+{ctx.voice_context}"""
 
 
 def _cta_user(ctx: FlowContext) -> str:
@@ -79,7 +84,9 @@ Return ONLY JSON: {{"cta_text": "...", "cta_seconds": 6, "thumbnail_concept": "d
 
 
 def _cadence_system(ctx: FlowContext) -> str:
-    return """You check spoken-word cadence. Read the script aloud mentally. Flag anything that sounds unnatural."""
+    return f"""You check spoken-word cadence. Read the script aloud mentally. Flag anything that sounds unnatural.
+
+{ctx.voice_context}"""
 
 
 def _cadence_user(ctx: FlowContext) -> str:

@@ -279,36 +279,6 @@ export default function StudioParameters({
           })}
         </div>
 
-        {/* Workflow Type Selector */}
-        {workflowTypes.length > 0 && (
-          <div className="mb-5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50 mb-2.5">
-              Content Flow
-            </label>
-            <select
-              value={workflowType || ""}
-              onChange={(e) => onWorkflowTypeChange(e.target.value || null)}
-              className="w-full rounded-xl border border-[#353437] bg-[#1b1b1d]/80 px-3 py-2.5 text-sm text-[#E5E1E4] focus:border-[#FF9500] focus:outline-none"
-            >
-              <option value="">Auto (based on output types)</option>
-              {workflowTypes.map((wt) => (
-                <option key={wt.workflow_type} value={wt.workflow_type}>
-                  {wt.workflow_type.replace(/_/g, " ")} ({wt.step_count} steps
-                  {wt.quality_gates.length > 0
-                    ? `, ${wt.quality_gates.length} gate${wt.quality_gates.length > 1 ? "s" : ""}`
-                    : ""}
-                  )
-                </option>
-              ))}
-            </select>
-            {workflowType && (
-              <p className="mt-1.5 text-[10px] text-[#E5E1E4]/30">
-                Multi-step flow with quality gates
-              </p>
-            )}
-          </div>
-        )}
-
         {/* Template Override */}
         <div className="mb-5">
           <label className="block text-xs font-semibold uppercase tracking-wider text-[#E5E1E4]/50 mb-2.5">

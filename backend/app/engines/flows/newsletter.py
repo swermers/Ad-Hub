@@ -32,7 +32,9 @@ Return ONLY JSON: {{"subjects": [{{"text": "...", "angle": "...", "predicted_ope
 
 
 def _preview_system(ctx: FlowContext) -> str:
-    return """You write email preview text — the line that shows next to the subject in inbox. Complements, doesn't repeat."""
+    return f"""You write email preview text — the line that shows next to the subject in inbox. Complements, doesn't repeat.
+
+{ctx.voice_context}"""
 
 
 def _preview_user(ctx: FlowContext) -> str:
@@ -112,7 +114,9 @@ def _voice_check(result: dict, ctx: FlowContext) -> bool:
 
 
 def _cta_system(ctx: FlowContext) -> str:
-    return """You optimize newsletter CTAs. Natural, not salesy. Placed at the right moments."""
+    return f"""You optimize newsletter CTAs. Natural, not salesy. Placed at the right moments.
+
+{ctx.voice_context}"""
 
 
 def _cta_user(ctx: FlowContext) -> str:

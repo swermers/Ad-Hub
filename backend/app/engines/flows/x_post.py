@@ -31,7 +31,9 @@ Return ONLY JSON: {{"tweets": [{{"text": "...", "strategy": "...", "strength": "
 
 
 def _pick_system(ctx: FlowContext) -> str:
-    return """You are selecting the strongest tweet from candidates. Be ruthless."""
+    return f"""You are selecting the strongest tweet from candidates. Be ruthless.
+
+{ctx.voice_context}"""
 
 
 def _pick_user(ctx: FlowContext) -> str:
@@ -48,7 +50,9 @@ Return ONLY JSON: {{"best_index": 0, "reasoning": "why", "improved_version": "th
 
 
 def _compress_system(ctx: FlowContext) -> str:
-    return """Final polish. Every character must earn its place. 280 max."""
+    return f"""Final polish. Every character must earn its place. 280 max.
+
+{ctx.voice_context}"""
 
 
 def _compress_user(ctx: FlowContext) -> str:

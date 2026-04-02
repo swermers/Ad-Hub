@@ -52,6 +52,8 @@ Return ONLY a JSON object:
 def _outline_system(ctx: FlowContext) -> str:
     return f"""You are structuring an X thread. Each tweet must stand alone in someone's feed AND build on the previous.
 
+{ctx.voice_context}
+
 {ctx.prompt_set.get("x_thread_rules", "")}
 
 Thread arc: Hook → Context → Insight → Evidence/Example → Deeper implication → Close"""
@@ -137,7 +139,9 @@ Return ONLY a JSON object:
 # ─── Step 4: Engagement Gate ─────────────────────────────────────────────
 
 def _gate_system(ctx: FlowContext) -> str:
-    return """You are an X/Twitter engagement expert. Evaluate this thread ruthlessly."""
+    return f"""You are an X/Twitter engagement expert. Evaluate this thread ruthlessly.
+
+{ctx.voice_context}"""
 
 
 def _gate_user(ctx: FlowContext) -> str:
@@ -196,7 +200,9 @@ def _gate_check(result: dict, ctx: FlowContext) -> bool:
 # ─── Step 5: Polish ─────────────────────────────────────────────────────
 
 def _polish_system(ctx: FlowContext) -> str:
-    return """You are doing final polish on an X thread. Trim, tighten, format."""
+    return f"""You are doing final polish on an X thread. Trim, tighten, format.
+
+{ctx.voice_context}"""
 
 
 def _polish_user(ctx: FlowContext) -> str:

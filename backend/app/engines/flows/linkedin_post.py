@@ -131,7 +131,9 @@ Return ONLY a JSON object:
 # ─── Step 4: Engagement Gate ─────────────────────────────────────────────
 
 def _gate_system(ctx: FlowContext) -> str:
-    return """You are a LinkedIn algorithm expert and engagement coach. Evaluate this post ruthlessly."""
+    return f"""You are a LinkedIn algorithm expert and engagement coach. Evaluate this post ruthlessly.
+
+{ctx.voice_context}"""
 
 
 def _gate_user(ctx: FlowContext) -> str:

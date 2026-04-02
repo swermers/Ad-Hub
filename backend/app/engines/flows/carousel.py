@@ -57,6 +57,8 @@ Return ONLY a JSON object:
 def _write_system(ctx: FlowContext) -> str:
     return f"""You are writing carousel slide copy. Each slide headline must be under 25 characters. Punchy, visual, bold.
 
+{ctx.voice_context}
+
 {ctx.prompt_set.get("voice_rules", "")}
 
 SLIDE COPY RULES:
@@ -141,7 +143,9 @@ Return ONLY a JSON object:
 # ─── Step 4: Validate Arc ────────────────────────────────────────────────
 
 def _validate_system(ctx: FlowContext) -> str:
-    return """You are validating a carousel for quality. Check each slide and the overall arc."""
+    return f"""You are validating a carousel for quality. Check each slide and the overall arc.
+
+{ctx.voice_context}"""
 
 
 def _validate_user(ctx: FlowContext) -> str:
