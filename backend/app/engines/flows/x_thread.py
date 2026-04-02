@@ -16,6 +16,15 @@ from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, Fl
 # ─── Step 1: Hook Mining ──────────────────────────────────────────────────
 
 def _hook_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: find the most provocative opening tweet. The first tweet decides if anyone reads the rest."""
+
     return f"""You are an X/Twitter thread strategist. You find the most provocative angle to open a thread.
 
 {ctx.product_context}
@@ -50,6 +59,13 @@ Return ONLY a JSON object:
 # ─── Step 2: Thread Outline ──────────────────────────────────────────────
 
 def _outline_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: plan the tweet-by-tweet arc. Each tweet must stand alone AND build on the previous."""
+
     return f"""You are structuring an X thread. Each tweet must stand alone in someone's feed AND build on the previous.
 
 {ctx.voice_context}
@@ -97,6 +113,15 @@ Return ONLY a JSON object:
 # ─── Step 3: Draft Tweets ────────────────────────────────────────────────
 
 def _draft_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: write the full thread following the outline. Each tweet under 280 characters."""
+
     return f"""You are writing an X/Twitter thread. Each tweet under 280 characters. No hashtags. No emojis.
 
 {ctx.voice_context}
@@ -139,6 +164,14 @@ Return ONLY a JSON object:
 # ─── Step 4: Engagement Gate ─────────────────────────────────────────────
 
 def _gate_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Content type: X Thread
+Your current task: evaluate this thread against voice profile and quality gates."""
+
     return f"""You are an X/Twitter engagement expert. Evaluate this thread ruthlessly.
 
 {ctx.voice_context}"""
@@ -200,6 +233,14 @@ def _gate_check(result: dict, ctx: FlowContext) -> bool:
 # ─── Step 5: Polish ─────────────────────────────────────────────────────
 
 def _polish_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Content type: X Thread
+Your current task: final polish pass. Trim, tighten, format. Every tweet under 280 chars."""
+
     return f"""You are doing final polish on an X thread. Trim, tighten, format.
 
 {ctx.voice_context}"""

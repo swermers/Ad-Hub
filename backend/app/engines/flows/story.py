@@ -11,6 +11,15 @@ from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, Fl
 
 
 def _frames_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: plan a 3-5 frame Story sequence. Each frame = 3-5 seconds of attention."""
+
     return f"""You design Story sequences. 3-5 frames, each viewed for 3-5 seconds. Every frame must hook or lose them.
 {ctx.product_context}
 {ctx.voice_context}"""
@@ -29,6 +38,13 @@ Return ONLY JSON: {{"frame_count": 4, "frames": [
 
 
 def _copy_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: write ultra-short copy for each frame. MAX 15 words per frame."""
+
     return f"""You write Story copy. MAX 15 words per frame. If it takes more than 3 seconds to read, it's too long.
 
 {ctx.voice_context}
@@ -50,6 +66,13 @@ Return ONLY JSON: {{"frames": [
 
 
 def _visual_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: add visual direction for each frame (background, text placement, animation, color mood)."""
+
     return f"""You direct visual treatment for Stories. Think like a creative director.
 
 {ctx.voice_context}"""

@@ -13,6 +13,15 @@ from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, Fl
 
 
 def _subject_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: generate 5 subject line A/B variants. The subject line is an ad for the newsletter — it decides open rates."""
+
     return f"""You write newsletter subject lines. The subject line is an ad for the email — it decides open rates.
 {ctx.product_context}
 {ctx.voice_context}"""
@@ -32,6 +41,13 @@ Return ONLY JSON: {{"subjects": [{{"text": "...", "angle": "...", "predicted_ope
 
 
 def _preview_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: write preview text that COMPLEMENTS the subject line. Never repeat it."""
+
     return f"""You write email preview text — the line that shows next to the subject in inbox. Complements, doesn't repeat.
 
 {ctx.voice_context}"""
@@ -55,6 +71,19 @@ def _draft_system(ctx: FlowContext) -> str:
     ps = ctx.prompt_set
     template = ctx.seed.get("template_fit", "A")
     template_instructions = ps.get("template_instructions", {})
+
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+TEMPLATE: {template}
+{template_instructions.get(template, template_instructions.get("A", ""))}
+
+Your current task: write the full newsletter body following the template structure."""
+
     return f"""You are writing a newsletter. Authentic voice, clear structure.
 {ctx.product_context}
 {ctx.voice_context}
@@ -78,6 +107,13 @@ Return ONLY JSON: {{"title": "...", "body": "full newsletter in markdown", "sect
 
 
 def _voice_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Your current task: review this newsletter draft for voice consistency and quality gates."""
+
     return f"""You are a voice consistency editor. Check that the newsletter sounds like the creator, not AI.
 {ctx.voice_context}
 {ctx.prompt_set.get("voice_rules", "")}"""
@@ -114,6 +150,13 @@ def _voice_check(result: dict, ctx: FlowContext) -> bool:
 
 
 def _cta_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: optimize CTA placement. Natural, not salesy. Placed after value delivery."""
+
     return f"""You optimize newsletter CTAs. Natural, not salesy. Placed at the right moments.
 
 {ctx.voice_context}"""

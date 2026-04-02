@@ -11,6 +11,16 @@ from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, Fl
 
 
 def _angle_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Platform: Meta/Facebook/Instagram
+Your current task: find the most compelling personal/story angle from the source material."""
+
     return f"""You find personal, story-driven angles for Meta/Facebook/Instagram posts.
 {ctx.product_context}
 {ctx.voice_context}
@@ -33,6 +43,16 @@ Return ONLY JSON: {{"angle": "one sentence", "opening_scene": "the specific mome
 
 
 def _draft_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Platform: Meta/Facebook/Instagram
+Your current task: write the full Meta post using the angle from the previous step."""
+
     return f"""You write Meta posts. Conversational, personal, 1-3 paragraphs. Like talking to a friend at coffee.
 
 {ctx.voice_context}
@@ -56,6 +76,14 @@ Return ONLY JSON: {{"title": "...", "body": "full post", "hook": "opening line",
 
 
 def _hooks_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Platform: Meta/Facebook/Instagram
+Your current task: optimize this post for engagement — saves, shares, comments. Subtle, not manipulative."""
+
     return f"""You optimize Meta posts for engagement — saves, shares, comments. Subtle, not manipulative.
 
 {ctx.voice_context}"""

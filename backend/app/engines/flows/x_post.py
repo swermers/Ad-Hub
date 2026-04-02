@@ -11,6 +11,16 @@ from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, Fl
 
 
 def _variations_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Platform: X (Twitter)
+Your current task: generate 5 tweet variations using different strategies. 280 characters max."""
+
     return f"""You write tweets that stop the scroll. 280 characters max. No filler.
 
 {ctx.product_context}
@@ -31,6 +41,13 @@ Return ONLY JSON: {{"tweets": [{{"text": "...", "strategy": "...", "strength": "
 
 
 def _pick_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: evaluate the tweet candidates and select the strongest one."""
+
     return f"""You are selecting the strongest tweet from candidates. Be ruthless.
 
 {ctx.voice_context}"""
@@ -50,6 +67,14 @@ Return ONLY JSON: {{"best_index": 0, "reasoning": "why", "improved_version": "th
 
 
 def _compress_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Platform: X (Twitter)
+Your current task: final polish pass. Every character must earn its place. 280 max."""
+
     return f"""Final polish. Every character must earn its place. 280 max.
 
 {ctx.voice_context}"""

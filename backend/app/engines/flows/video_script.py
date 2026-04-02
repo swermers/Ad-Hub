@@ -12,6 +12,15 @@ from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, Fl
 
 
 def _hook_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: write 3 opening hook variations for the first 3 seconds of the video."""
+
     return f"""You write video hooks. The first 3 seconds decide if someone watches or scrolls.
 {ctx.product_context}
 {ctx.voice_context}
@@ -32,6 +41,15 @@ Return ONLY JSON: {{"hooks": [{{"text": "...", "strategy": "open_loop|pattern_in
 
 
 def _blocks_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: break the content into breath blocks. 2-4 sentences each, speakable in one breath."""
+
     return f"""You convert ideas into breath blocks — chunks a speaker can deliver in one breath (2-4 sentences).
 
 {ctx.voice_context}
@@ -64,6 +82,13 @@ Return ONLY JSON: {{"blocks": [{{"text": "...", "estimated_seconds": 15, "energy
 
 
 def _cta_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: write the closing CTA and suggest a thumbnail concept."""
+
     return f"""You write video CTAs and suggest thumbnail concepts. The CTA should feel like a natural conclusion.
 
 {ctx.voice_context}"""
@@ -84,6 +109,14 @@ Return ONLY JSON: {{"cta_text": "...", "cta_seconds": 6, "thumbnail_concept": "d
 
 
 def _cadence_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Content type: Video Script
+Your current task: check spoken-word cadence. Flag anything that sounds unnatural when said aloud."""
+
     return f"""You check spoken-word cadence. Read the script aloud mentally. Flag anything that sounds unnatural.
 
 {ctx.voice_context}"""

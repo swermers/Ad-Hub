@@ -15,6 +15,15 @@ from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, Fl
 # ─── Step 1: Slide Outline ────────────────────────────────────────────────
 
 def _outline_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: plan the slide arc. Each slide must earn the next swipe."""
+
     return f"""You are a carousel content architect. You structure ideas into compelling slide sequences.
 
 {ctx.product_context}
@@ -55,6 +64,15 @@ Return ONLY a JSON object:
 # ─── Step 2: Write Slides ────────────────────────────────────────────────
 
 def _write_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: write the copy for each slide. Headlines 3-12 words, readable at glance speed."""
+
     return f"""You are writing carousel slide copy. Each slide headline must be under 25 characters. Punchy, visual, bold.
 
 {ctx.voice_context}
@@ -97,6 +115,13 @@ Return ONLY a JSON object:
 # ─── Step 3: Cover + CTA Refine ──────────────────────────────────────────
 
 def _refine_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: refine the cover slide (stop-scroll hook) and CTA slide (conversion point)."""
+
     return f"""You are refining the two most important slides in a carousel: the cover and the CTA.
 
 {ctx.voice_context}
@@ -143,6 +168,14 @@ Return ONLY a JSON object:
 # ─── Step 4: Validate Arc ────────────────────────────────────────────────
 
 def _validate_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Content type: Carousel
+Your current task: validate slide quality, arc, and voice consistency."""
+
     return f"""You are validating a carousel for quality. Check each slide and the overall arc.
 
 {ctx.voice_context}"""

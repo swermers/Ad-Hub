@@ -12,6 +12,15 @@ from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, Fl
 
 
 def _subject_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: write a subject line (6-10 words) + preview text (under 90 chars). 60% of opens are decided by the subject alone."""
+
     return f"""You write marketing emails that get opened. Subject + preview are the only things people see in inbox.
 {ctx.product_context}
 {ctx.voice_context}"""
@@ -28,6 +37,15 @@ Return ONLY JSON: {{"subject": "...", "preview": "...", "open_driver": "curiosit
 
 
 def _body_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: write the email body. 150-300 words. Feels like a person, not a template."""
+
     return f"""You write marketing emails. Conversational, scannable, 3-5 short paragraphs.
 
 {ctx.voice_context}
@@ -48,6 +66,13 @@ Return ONLY JSON: {{"body": "full email body in markdown", "tone": "conversation
 
 
 def _cta_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: optimize the CTA. One clear ask — multiple CTAs dilute all of them. Add P.S. if it adds value."""
+
     return f"""You optimize email CTAs. One clear CTA — don't dilute with multiple asks. Optional P.S. for secondary hook.
 
 {ctx.voice_context}"""
@@ -67,6 +92,14 @@ Return ONLY JSON: {{"cta_button": "...", "ps_line": "...", "final_body": "email 
 
 
 def _readability_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Content type: Email
+Your current task: check email quality — scannability, single CTA, human voice, value-first structure."""
+
     return f"""You check email quality. Scannable? Single CTA? Sounds human?
 
 {ctx.voice_context}"""
