@@ -797,6 +797,10 @@ async def finalize_content(
         product = db.query(Product).filter(Product.id == data.product_id).first()
         if not product:
             raise HTTPException(status_code=404, detail="Product not found")
+        # Backfill workspace_id on legacy products missing it
+        ws_id = user.get("workspace_id")
+        if ws_id and not product.workspace_id:
+            product.workspace_id = ws_id
 
     saved_ids = []
 
