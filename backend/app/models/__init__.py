@@ -21,6 +21,7 @@ from app.models.seed_bank import Seed
 from app.models.user import AgentAPIKey, User
 from app.models.content_prompts import ContentPromptSet
 from app.models.content_workflow import ContentTypeWorkflow
+from app.models.style_guide import StyleGuide
 from app.models.voice_profile import VoiceProfile
 
 __all__ = [
@@ -57,6 +58,7 @@ __all__ = [
     "ResearchCache",
     "IntelligenceConfig",
     "VoiceProfile",
+    "StyleGuide",
     "ContentPromptSet",
     "ContentTypeWorkflow",
 ]

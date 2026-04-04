@@ -76,6 +76,7 @@ def create_tables():
         SafetyGuardrail,
         ScheduledPost,
         Seed,
+        StyleGuide,
         TrendSignal,
         UploadedDocument,
         Subscription,
@@ -100,6 +101,7 @@ def create_tables():
     _add_column_if_missing("seeds", "voice_profile_id", "VARCHAR(36)")
     _add_column_if_missing("voice_profiles", "product_id", "VARCHAR(36)")
     _add_column_if_missing("voice_profiles", "quality_score", "INTEGER DEFAULT 0")
+    _add_column_if_missing("voice_profiles", "style_guide_id", "VARCHAR(36)")
 
     # Make product_id nullable for profile-only content generation
     _make_column_nullable("content_pieces", "product_id")

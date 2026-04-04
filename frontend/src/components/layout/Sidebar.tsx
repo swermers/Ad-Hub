@@ -23,6 +23,7 @@ const navSections = [
       { href: "/", label: "Dashboard", icon: "dashboard" },
       { href: "/products", label: "Products", icon: "inventory_2" },
       { href: "/brand-profile", label: "Brand & Voice", icon: "palette" },
+      { href: "/style-guides", label: "Style Guides", icon: "menu_book" },
       { href: "/schedule", label: "Schedule", icon: "calendar_month" },
       { href: "/analytics", label: "Analytics", icon: "bar_chart" },
       { href: "/intelligence", label: "Intelligence", icon: "psychology" },

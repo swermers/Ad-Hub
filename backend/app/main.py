@@ -32,6 +32,7 @@ from app.routers import (
     products,
     schedule,
     seeds,
+    style_guides,
     templates,
     video_render,
     voice_profiles,
@@ -115,6 +116,7 @@ app.include_router(autonomous_loop.router, prefix="/api/products", tags=["autono
 app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 app.include_router(intelligence.router, prefix="/api/products", tags=["intelligence"])
 app.include_router(voice_profiles.router, prefix="/api/voice-profiles", tags=["voice-profiles"])
+app.include_router(style_guides.router, prefix="/api/style-guides", tags=["style-guides"])
 app.include_router(content_pipeline.router, prefix="/api/pipeline", tags=["content-pipeline"])
 app.include_router(content_prompts.router, prefix="/api/products", tags=["content-prompts"])
 app.include_router(dispatch.router, prefix="/api/dispatch", tags=["dispatch"])

@@ -2,13 +2,104 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { api, API_BASE, type ContentPiece, type Product } from "@/lib/api";
 import { TemplateRenderer } from "@/components/ad-templates/TemplateRenderer";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
 
 type ViewMode = "grid" | "list";
+
+const REJECTION_REASONS = [
+  { value: "off_brand_voice", label: "Off-brand voice" },
+  { value: "wrong_tone", label: "Wrong tone (too casual / too formal)" },
+  { value: "irrelevant_topic", label: "Irrelevant topic" },
+  { value: "poor_quality", label: "Poor quality / not useful" },
+  { value: "other", label: "Other" },
+];
+
+// ── Feedback modal ────────────────────────────────────────────────────────────
+
+function BulkFeedbackModal({
+  count,
+  onConfirm,
+  onSkip,
+  onCancel,
+}: {
+  count: number;
+  onConfirm: (reason: string, details: string) => void;
+  onSkip: () => void;
+  onCancel: () => void;
+}) {
+  const [reason, setReason] = useState("off_brand_voice");
+  const [details, setDetails] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onCancel}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 glass-prism rounded-2xl border border-[#554334]/40 bg-[#1b1b1d]/90 backdrop-blur-xl p-7 w-full max-w-md space-y-5"
+      >
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FF9500] mb-2">Before you delete</p>
+          <h2 className="text-lg font-bold text-[#E5E1E4]">Why are you removing {count} item{count !== 1 ? "s" : ""}?</h2>
+          <p className="text-xs text-[#E5E1E4]/40 mt-1">Your feedback helps improve future generation.</p>
+        </div>
+
+        <div className="space-y-2">
+          {REJECTION_REASONS.map((r) => (
+            <label key={r.value} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-white/5 transition-colors">
+              <div
+                onClick={() => setReason(r.value)}
+                className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
+                  reason === r.value ? "border-[#FF9500] bg-[#FF9500]" : "border-[#554334]/60"
+                }`}
+              />
+              <span className="text-sm text-[#E5E1E4]/80">{r.label}</span>
+            </label>
+          ))}
+        </div>
+
+        <div>
+          <textarea
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            placeholder="Tell us more (optional)…"
+            className="w-full px-4 py-3 rounded-xl border border-[#554334]/30 bg-[#1b1b1d]/60 text-sm text-[#E5E1E4] placeholder-[#E5E1E4]/30 focus:outline-none focus:border-[#FF9500]/50 transition-colors resize-none"
+            rows={2}
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={onSkip}
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[#E5E1E4]/50 hover:text-[#E5E1E4] border border-[#554334]/30 hover:bg-white/5 transition-colors"
+          >
+            Delete without feedback
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => onConfirm(reason, details)}
+            className="flex-1 px-4 py-2.5 bg-[#FF9500] text-[#2d1600] rounded-xl text-sm font-semibold"
+          >
+            Submit & Delete
+          </motion.button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 const fadeUp = (delay: number = 0) => ({
   initial: { opacity: 0, y: 24 },
@@ -31,6 +122,13 @@ export default function ContentPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -74,6 +172,42 @@ export default function ContentPage() {
       else next.add(productId);
       return next;
     });
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelectedIds(new Set(content.map((c) => c.id)));
+  const clearSelection = () => { setSelectedIds(new Set()); setIsSelecting(false); };
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const executeBulkDelete = async (withFeedback: boolean, reason?: string, details?: string) => {
+    setBulkDeleting(true);
+    setShowFeedbackModal(false);
+    const ids = Array.from(selectedIds);
+    try {
+      if (withFeedback && reason) {
+        await api.bulkRejectionFeedback({ content_ids: ids, reason, details });
+      }
+      const { deleted } = await api.bulkDeleteContent(ids);
+      setContent((prev) => prev.filter((c) => !selectedIds.has(c.id)));
+      clearSelection();
+      showToast(withFeedback ? `Feedback saved. ${deleted} items deleted.` : `${deleted} items deleted.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bulk delete failed");
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   // Group content by product
@@ -179,6 +313,19 @@ export default function ContentPage() {
                 List
               </motion.button>
             </div>
+            {/* Select mode toggle */}
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { setIsSelecting(!isSelecting); if (isSelecting) clearSelection(); }}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                isSelecting
+                  ? "bg-[#ffb4ab]/10 text-[#ffb4ab] border-[#ffb4ab]/20"
+                  : "bg-[#1b1b1d]/60 text-[#E5E1E4]/50 border-[#554334]/30 hover:text-[#E5E1E4]"
+              }`}
+            >
+              {isSelecting ? "Cancel" : "Select"}
+            </motion.button>
             <Link href="/generate">
               <motion.span
                 whileHover={{ scale: 1.04 }}
@@ -270,6 +417,71 @@ export default function ContentPage() {
         </motion.div>
       )}
 
+      {/* Bulk action bar */}
+      <AnimatePresence>
+        {isSelecting && selectedIds.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 glass-prism rounded-2xl border border-[#554334]/40 bg-[#1b1b1d]/90 backdrop-blur-xl px-6 py-4 flex items-center gap-4 shadow-2xl"
+          >
+            <span className="text-sm font-semibold text-[#E5E1E4]">
+              {selectedIds.size} selected
+            </span>
+            <div className="w-px h-4 bg-[#554334]/40" />
+            <button
+              onClick={selectAll}
+              className="text-xs text-[#E5E1E4]/50 hover:text-[#E5E1E4] transition-colors font-medium"
+            >
+              Select all ({content.length})
+            </button>
+            <button
+              onClick={clearSelection}
+              className="text-xs text-[#E5E1E4]/50 hover:text-[#E5E1E4] transition-colors font-medium"
+            >
+              Clear
+            </button>
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setShowFeedbackModal(true)}
+              disabled={bulkDeleting}
+              className="px-5 py-2 bg-[#ffb4ab]/15 text-[#ffb4ab] border border-[#ffb4ab]/20 rounded-xl text-xs font-semibold hover:bg-[#ffb4ab]/25 transition-colors disabled:opacity-50"
+            >
+              {bulkDeleting ? "Deleting…" : `Delete ${selectedIds.size}`}
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Feedback modal */}
+      <AnimatePresence>
+        {showFeedbackModal && (
+          <BulkFeedbackModal
+            count={selectedIds.size}
+            onConfirm={(reason, details) => executeBulkDelete(true, reason, details)}
+            onSkip={() => executeBulkDelete(false)}
+            onCancel={() => setShowFeedbackModal(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Toast notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            className="fixed top-6 right-6 z-50 glass-prism rounded-2xl border border-[#4ade80]/20 bg-[#4ade80]/10 backdrop-blur-xl px-5 py-3"
+          >
+            <p className="text-sm font-medium text-[#4ade80]">{toast}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Content - grouped by product as folders */}
       {content.length === 0 ? (
         <motion.div
@@ -358,6 +570,9 @@ export default function ContentPage() {
                             product={product}
                             onStatusChange={handleStatusChange}
                             delay={pIdx * 0.04}
+                            isSelecting={isSelecting}
+                            isSelected={selectedIds.has(piece.id)}
+                            onToggleSelect={toggleSelect}
                           />
                         ))}
                       </div>
@@ -370,6 +585,9 @@ export default function ContentPage() {
                             product={product}
                             onStatusChange={handleStatusChange}
                             delay={pIdx * 0.04}
+                            isSelecting={isSelecting}
+                            isSelected={selectedIds.has(piece.id)}
+                            onToggleSelect={toggleSelect}
                           />
                         ))}
                       </div>
@@ -424,11 +642,17 @@ function GridCard({
   piece,
   product,
   delay = 0,
+  isSelecting = false,
+  isSelected = false,
+  onToggleSelect,
 }: {
   piece: ContentPiece;
   product?: Product;
   onStatusChange: (id: string, status: string) => void;
   delay?: number;
+  isSelecting?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }) {
   const isVisual =
     piece.content_type === "ad_copy" ||
@@ -455,17 +679,36 @@ function GridCard({
   // Detect broken/empty content
   const hasContent = headline.trim().length > 0 || bodyText.trim().length > 0;
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (isSelecting && onToggleSelect) {
+      e.preventDefault();
+      onToggleSelect(piece.id);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
     >
-      <Link href={`/content/${piece.id}`} className="group block">
+      <Link href={`/content/${piece.id}`} className="group block" onClick={handleCardClick}>
         <motion.div
-          whileHover={{ borderColor: "rgba(255,149,0,0.35)" }}
-          className="glass-prism rounded-2xl overflow-hidden border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl transition-all"
+          whileHover={{ borderColor: isSelected ? "rgba(255,149,0,0.6)" : "rgba(255,149,0,0.35)" }}
+          className={`glass-prism rounded-2xl overflow-hidden border backdrop-blur-xl transition-all relative ${
+            isSelected ? "border-[#FF9500]/50 bg-[#FF9500]/5" : "border-[#554334]/30 bg-[#1b1b1d]/60"
+          }`}
         >
+          {/* Selection checkbox overlay */}
+          {isSelecting && (
+            <div className="absolute top-2 left-2 z-10">
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                isSelected ? "border-[#FF9500] bg-[#FF9500]" : "border-white/40 bg-black/40"
+              }`}>
+                {isSelected && <span className="text-[#2d1600] text-[10px] font-bold">✓</span>}
+              </div>
+            </div>
+          )}
           {/* Visual thumbnail */}
           {isVisual && hasContent ? (
             <div
@@ -549,11 +792,17 @@ function ListCard({
   product,
   onStatusChange,
   delay = 0,
+  isSelecting = false,
+  isSelected = false,
+  onToggleSelect,
 }: {
   piece: ContentPiece;
   product?: Product;
   onStatusChange: (id: string, status: string) => void;
   delay?: number;
+  isSelecting?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }) {
   const isVisual =
     piece.content_type === "ad_copy" ||
@@ -591,8 +840,17 @@ function ListCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ backgroundColor: "rgba(255,255,255,0.02)" }}
-      className="flex gap-4 items-center p-4 rounded-xl transition-colors"
+      onClick={() => isSelecting && onToggleSelect && onToggleSelect(piece.id)}
+      className={`flex gap-4 items-center p-4 rounded-xl transition-colors cursor-${isSelecting ? "pointer" : "default"} ${isSelected ? "bg-[#FF9500]/5 border border-[#FF9500]/20" : ""}`}
     >
+      {/* Selection checkbox */}
+      {isSelecting && (
+        <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+          isSelected ? "border-[#FF9500] bg-[#FF9500]" : "border-[#554334]/60"
+        }`}>
+          {isSelected && <span className="text-[#2d1600] text-[10px] font-bold">✓</span>}
+        </div>
+      )}
       {/* Thumbnail */}
       {isVisual && (
         <Link href={`/content/${piece.id}`} className="flex-shrink-0">

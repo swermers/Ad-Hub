@@ -276,9 +276,12 @@ export default function BrandProfilePage() {
                     <p className="text-sm font-medium text-gray-700 mb-1">
                       Drop your brand guide here
                     </p>
-                    <p className="text-xs text-gray-400 mb-4">
+                    <p className="text-xs text-gray-400 mb-1">
                       PDF, PNG, JPG, or WEBP — we&apos;ll extract everything
                       automatically
+                    </p>
+                    <p className="text-xs text-gray-400/60 mb-4">
+                      Tip: Use <span className="font-medium text-gray-400">Google Stitch</span> to export a brand image, then upload the PNG
                     </p>
                     <label className="inline-flex px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer transition-colors">
                       Choose File

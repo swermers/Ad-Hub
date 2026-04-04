@@ -32,6 +32,7 @@ from app.engines.content_workflows import generate_content_by_type
 from app.models import ContentPiece, Product
 from app.models.brand_profile import BrandProfile
 from app.models.seed_bank import Seed
+from app.models.style_guide import StyleGuide
 from app.models.voice_profile import VoiceProfile
 from app.permissions import get_current_user
 from app.engines.skill_loader import get_skill
@@ -167,6 +168,65 @@ def _resolve_voice_profile(voice_profile_id: str | None, user_id: str, db: Sessi
     return profile
 
 
+def _get_style_guide_context(profile: VoiceProfile, db: Session) -> str:
+    """Build style guide context string from a paired StyleGuide."""
+    if not profile.style_guide_id:
+        return ""
+    guide = db.query(StyleGuide).filter(StyleGuide.id == profile.style_guide_id).first()
+    if not guide:
+        return ""
+
+    parts = [f"\n<style_guide>\n# {guide.name}"]
+    if guide.description:
+        parts.append(f"{guide.description}")
+
+    if guide.messaging_pillars:
+        try:
+            pillars = json.loads(guide.messaging_pillars)
+            if pillars:
+                parts.append(f"\nMessaging Pillars: {', '.join(pillars)}")
+        except json.JSONDecodeError:
+            pass
+
+    if guide.mission_statement:
+        parts.append(f"\nMission: {guide.mission_statement}")
+
+    if guide.value_proposition:
+        parts.append(f"\nValue Proposition: {guide.value_proposition}")
+
+    if guide.tone_rules:
+        parts.append(f"\nTone Rules: {guide.tone_rules}")
+
+    if guide.formatting_rules:
+        parts.append(f"\nFormatting Rules: {guide.formatting_rules}")
+
+    if guide.cta_guidelines:
+        parts.append(f"\nCTA Guidelines: {guide.cta_guidelines}")
+
+    if guide.vocabulary_rules:
+        try:
+            vocab = json.loads(guide.vocabulary_rules)
+            prefer = vocab.get("prefer", [])
+            avoid = vocab.get("avoid", [])
+            if prefer:
+                parts.append(f"\nPreferred vocabulary: {', '.join(prefer)}")
+            if avoid:
+                parts.append(f"\nVocabulary to avoid: {', '.join(avoid)}")
+        except json.JSONDecodeError:
+            pass
+
+    if guide.taglines:
+        try:
+            tags = json.loads(guide.taglines)
+            if tags:
+                parts.append(f"\nApproved taglines/slogans: {', '.join(tags)}")
+        except json.JSONDecodeError:
+            pass
+
+    parts.append("</style_guide>")
+    return "\n".join(parts)
+
+
 def _get_voice_context(voice_profile_id: str | None, user_id: str, db: Session, product_id: str | None = None) -> str:
     """Build voice context string from a voice profile.
 
@@ -195,31 +255,35 @@ def _get_voice_context(voice_profile_id: str | None, user_id: str, db: Session, 
         _append_structured_fields(parts, profile)
 
         parts.append("</voice_profile>")
-        return "\n".join(parts)
+        voice_block = "\n".join(parts)
+    else:
+        # Fallback: no rich style_rules, build from structured fields
+        parts = [f"<voice_profile>\nCREATOR VOICE PROFILE: {profile.name}"]
 
-    # Fallback: no rich style_rules, build from structured fields
-    parts = [f"<voice_profile>\nCREATOR VOICE PROFILE: {profile.name}"]
+        if profile.description:
+            parts.append(f"Description: {profile.description}")
 
-    if profile.description:
-        parts.append(f"Description: {profile.description}")
+        if profile.tone_keywords:
+            try:
+                keywords = json.loads(profile.tone_keywords)
+                parts.append(f"Tone: {', '.join(keywords)}")
+            except json.JSONDecodeError:
+                pass
 
-    if profile.tone_keywords:
-        try:
-            keywords = json.loads(profile.tone_keywords)
-            parts.append(f"Tone: {', '.join(keywords)}")
-        except json.JSONDecodeError:
-            pass
+        if profile.style_rules:
+            parts.append(f"Style Rules: {profile.style_rules}")
 
-    if profile.style_rules:
-        parts.append(f"Style Rules: {profile.style_rules}")
+        if profile.sentence_style:
+            parts.append(f"Sentence Style: {profile.sentence_style}")
 
-    if profile.sentence_style:
-        parts.append(f"Sentence Style: {profile.sentence_style}")
+        _append_structured_fields(parts, profile)
 
-    _append_structured_fields(parts, profile)
+        parts.append("</voice_profile>")
+        voice_block = "\n".join(parts)
 
-    parts.append("</voice_profile>")
-    return "\n".join(parts)
+    # Append style guide context if this voice has a paired StyleGuide
+    style_guide_block = _get_style_guide_context(profile, db)
+    return voice_block + style_guide_block if style_guide_block else voice_block
 
 
 def _append_structured_fields(parts: list[str], profile: VoiceProfile) -> None:
