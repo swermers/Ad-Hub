@@ -1,6 +1,7 @@
 import React from "react";
 import type { AdTemplateProps } from "./types";
 import { getDimensions } from "./types";
+import { GrainOverlay } from "./textures";
 
 export function SplitImageTemplate({
   headline,
@@ -10,7 +11,8 @@ export function SplitImageTemplate({
   textColor = "#ffffff",
   accentColor = "#10b981",
   screenshotUrl,
-  aspectRatio = "1:1",
+  imageUrl,
+  aspectRatio = "4:5",
   scale = 1,
 }: AdTemplateProps) {
   const { width, height } = getDimensions(aspectRatio, scale);
@@ -38,12 +40,17 @@ export function SplitImageTemplate({
           overflow: "hidden",
         }}
       >
-        {screenshotUrl ? (
+        {/* Premium texture overlay */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 2 }}>
+          <GrainOverlay opacity={0.2} />
+        </div>
+
+        {(imageUrl || screenshotUrl) ? (
           <div
             style={{
               position: "absolute",
               inset: 0,
-              backgroundImage: `url(${screenshotUrl})`,
+              backgroundImage: `url(${imageUrl || screenshotUrl})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}

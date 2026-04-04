@@ -6,6 +6,7 @@ import { useRef } from "react";
 import type { ReactNode, ErrorInfo } from "react";
 import { api, API_BASE, type ContentPiece, type Product, type GenerateImageStatus, type VideoRenderStatus } from "@/lib/api";
 import { TemplateRenderer, TEMPLATE_OPTIONS } from "@/components/ad-templates/TemplateRenderer";
+import { StorytellingCarouselPreview } from "@/components/ad-templates/StorytellingCarouselPreview";
 import dynamic from "next/dynamic";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { ASPECT_DIMENSIONS } from "@/components/ad-templates/types";
@@ -751,6 +752,7 @@ function ContentDetailInner() {
                       textColor={textColor}
                       accentColor={accentColor}
                       screenshotUrl={screenshotUrl}
+                      imageUrl={piece.image_url ? `${API_BASE}${piece.image_url}` : undefined}
                     />
                   </div>
                 </div>
@@ -770,6 +772,21 @@ function ContentDetailInner() {
                   slideHeadlines={slideHeadlines}
                 />
               </VideoErrorBoundary>
+            ) : previewTemplate === "storytelling_carousel" ? (
+              /* Interactive storytelling carousel preview */
+              <div style={{ width: previewWidth }}>
+                <StorytellingCarouselPreview
+                  headline={piece.hook || piece.title || headline}
+                  body={piece.body}
+                  cta={ctaText}
+                  backgroundColor={bgColor}
+                  textColor={textColor}
+                  accentColor={accentColor}
+                  imageUrl={piece.image_url ? `${API_BASE}${piece.image_url}` : undefined}
+                  aspectRatio={previewAspect}
+                  previewScale={previewScale}
+                />
+              </div>
             ) : (
               <div
                 className="rounded-xl overflow-hidden shadow-lg border border-white/10"
@@ -786,6 +803,7 @@ function ContentDetailInner() {
                     textColor={textColor}
                     accentColor={accentColor}
                     screenshotUrl={screenshotUrl}
+                    imageUrl={piece.image_url ? `${API_BASE}${piece.image_url}` : undefined}
                   />
                 </div>
               </div>
@@ -1374,6 +1392,7 @@ function ContentDetailInner() {
               textColor={textColor}
               accentColor={accentColor}
               screenshotUrl={screenshotUrl}
+              imageUrl={piece.image_url ? `${API_BASE}${piece.image_url}` : undefined}
             />
         </div>
       )}

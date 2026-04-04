@@ -15,10 +15,14 @@ export interface AdTemplateProps {
   accentColor?: string;
   logoUrl?: string;
   screenshotUrl?: string;
+  /** AI-generated image URL to composite into the template as background/hero */
+  imageUrl?: string;
   /** URL to encode as a QR code in templates that support it */
   qrUrl?: string;
   aspectRatio?: AspectRatio;
   scale?: number;
+  /** Target platform for platform-native rendering adjustments */
+  platform?: "instagram" | "linkedin" | "tiktok" | "meta" | "general";
 }
 
 export function getDimensions(aspectRatio: AspectRatio = "1:1", scale: number = 1) {

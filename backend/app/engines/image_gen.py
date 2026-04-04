@@ -2,13 +2,13 @@
 Image generation engine.
 
 Uses Claude to analyze brand context + reference images → builds a detailed
-image prompt → calls an image generation API (OpenAI DALL-E 3) → saves result.
+image prompt → calls Google Gemini (Nano Banana 2) → saves result.
 
 Flow:
 1. Gather brand context: brief, colors, fonts, reference images
 2. Send to Claude with vision to analyze visual style from references
 3. Build a detailed image generation prompt
-4. Call image gen API
+4. Call Nano Banana 2 (Gemini Flash Image) API
 5. Save to disk and return path
 """
 
@@ -31,10 +31,10 @@ GENERATED_DIR = os.path.join(
     "generated",
 )
 
-# Aspect ratio → DALL-E size mapping
+# Aspect ratio → size mapping (Nano Banana 2 supports these natively)
 ASPECT_TO_SIZE = {
     "1:1": "1024x1024",
-    "4:5": "1024x1024",  # DALL-E 3 doesn't have 4:5, use square
+    "4:5": "1024x1280",
     "9:16": "1024x1792",
     "16:9": "1792x1024",
 }
@@ -115,15 +115,16 @@ def build_image_prompt_with_claude(
 
     system = """You are an expert art director who creates detailed image generation prompts.
 Given brand context and ad copy, you produce a single detailed prompt for an AI image generator
-(like DALL-E 3) that will create a compelling ad visual.
+(Nano Banana 2 / Google Gemini) that will create a compelling ad visual.
 
 Your prompts should describe:
 - Overall composition and layout
 - Color palette (using brand colors when provided)
-- Typography style and placement
-- Visual elements, textures, and effects
+- Typography style and placement (Nano Banana 2 renders text well — include text overlays when appropriate)
+- Visual elements, textures, and effects (grain, noise, gritty gradients for premium feel)
 - Mood and atmosphere
 - Specific design details that make the ad look premium and scroll-stopping
+- High-quality textures: film grain, paper texture, subtle noise for depth
 
 IMPORTANT: Output ONLY the image generation prompt text. No explanations, no JSON, no formatting."""
 
@@ -161,6 +162,8 @@ Create a detailed image generation prompt that:
 2. Incorporates the brand's colors and identity
 3. Works as a compelling ad visual for the headline above
 4. Is designed for social media (bold, eye-catching, scroll-stopping)
+5. Includes premium textures (film grain, subtle noise, gritty gradients)
+6. Leverages text rendering capabilities for any headline/CTA overlays
 
 Output ONLY the prompt text.""",
         })
@@ -192,6 +195,8 @@ Create a detailed image generation prompt for a compelling ad visual that:
 2. Works as a social media ad visual
 3. Is bold, eye-catching, and scroll-stopping
 4. Uses modern design principles (clean typography, geometric shapes, strong color blocks)
+5. Includes premium textures (film grain, subtle noise, gritty gradients for depth)
+6. Leverages text rendering for headline/CTA overlays when it enhances the design
 
 Output ONLY the prompt text."""
 
@@ -199,39 +204,41 @@ Output ONLY the prompt text."""
         return result["content"].strip()
 
 
-def generate_image_openai(
+def generate_image_nano_banana(
     prompt: str,
     size: str = "1024x1024",
     quality: str = "standard",
 ) -> bytes:
-    """Call OpenAI DALL-E 3 API to generate an image. Returns image bytes."""
-    if not settings.openai_api_key:
-        raise ValueError("OpenAI API key not configured. Add OPENAI_API_KEY to your .env file.")
-
-    with httpx.Client(timeout=120.0) as client:
-        response = client.post(
-            "https://api.openai.com/v1/images/generations",
-            headers={
-                "Authorization": f"Bearer {settings.openai_api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": settings.image_gen_model,
-                "prompt": prompt,
-                "n": 1,
-                "size": size,
-                "quality": quality,
-                "response_format": "b64_json",
-            },
+    """Call Nano Banana 2 (Google Gemini Flash Image) to generate an image.
+    Returns image bytes (PNG)."""
+    if not settings.google_api_key:
+        raise ValueError(
+            "Google API key not configured. Add GOOGLE_API_KEY to your .env file. "
+            "Get a free key at https://ai.google.dev/gemini-api"
         )
 
-    if response.status_code != 200:
-        error_detail = response.json().get("error", {}).get("message", response.text)
-        raise ValueError(f"Image generation failed: {error_detail}")
+    from google import genai
 
-    data = response.json()
-    image_b64 = data["data"][0]["b64_json"]
-    return base64.b64decode(image_b64)
+    client = genai.Client(api_key=settings.google_api_key)
+
+    # Include size guidance in the prompt
+    width, height = size.split("x")
+    full_prompt = f"{prompt}\n\nImage dimensions: {width}x{height} pixels."
+
+    response = client.models.generate_content(
+        model=settings.image_gen_model,
+        contents=[full_prompt],
+    )
+
+    # Extract image bytes from the response
+    for part in response.parts:
+        if part.inline_data is not None:
+            return part.inline_data.data
+
+    raise ValueError(
+        "No image was generated. The model may have refused the prompt or returned text only. "
+        f"Response text: {response.text[:200] if response.text else 'empty'}"
+    )
 
 
 def generate_ad_image(
@@ -277,9 +284,9 @@ def generate_ad_image(
     )
     logger.info("Image prompt: %s", image_prompt[:200])
 
-    # Step 2: Generate image
+    # Step 2: Generate image via Nano Banana 2
     size = ASPECT_TO_SIZE.get(aspect_ratio, settings.image_gen_size)
-    image_bytes = generate_image_openai(image_prompt, size=size, quality=quality)
+    image_bytes = generate_image_nano_banana(image_prompt, size=size, quality=quality)
 
     # Step 3: Save to disk
     os.makedirs(GENERATED_DIR, exist_ok=True)

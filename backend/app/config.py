@@ -15,11 +15,14 @@ class Settings(BaseSettings):
     twitter_client_secret: str = ""
     twitter_bearer_token: str = ""
 
-    # OpenAI (Image Generation + Whisper Transcription)
+    # OpenAI (Whisper Transcription)
     openai_api_key: str = ""
-    image_gen_model: str = "dall-e-3"
-    image_gen_size: str = "1024x1024"
     whisper_model: str = "whisper-1"
+
+    # Google GenAI (Image Generation — Nano Banana 2 / Gemini Flash Image)
+    google_api_key: str = ""
+    image_gen_model: str = "gemini-3.1-flash-image-preview"
+    image_gen_size: str = "1024x1024"
 
     # Pexels (B-roll stock footage/images)
     pexels_api_key: str = ""

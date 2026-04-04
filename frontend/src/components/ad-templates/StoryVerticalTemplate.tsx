@@ -1,6 +1,7 @@
 import React from "react";
 import type { AdTemplateProps } from "./types";
 import { getDimensions } from "./types";
+import { GrainOverlay, VignetteOverlay } from "./textures";
 
 export function StoryVerticalTemplate({
   headline,
@@ -10,6 +11,7 @@ export function StoryVerticalTemplate({
   textColor = "#ffffff",
   accentColor = "#f59e0b",
   screenshotUrl,
+  imageUrl,
   aspectRatio = "9:16",
   scale = 1,
 }: AdTemplateProps) {
@@ -29,13 +31,13 @@ export function StoryVerticalTemplate({
         position: "relative",
       }}
     >
-      {/* Full background image if available */}
-      {screenshotUrl && (
+      {/* Full background image — AI-generated or screenshot */}
+      {(imageUrl || screenshotUrl) && (
         <div
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage: `url(${screenshotUrl})`,
+            backgroundImage: `url(${imageUrl || screenshotUrl})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             zIndex: 0,
@@ -48,12 +50,18 @@ export function StoryVerticalTemplate({
         style={{
           position: "absolute",
           inset: 0,
-          background: screenshotUrl
+          background: (imageUrl || screenshotUrl)
             ? `linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.9) 75%, ${backgroundColor} 100%)`
             : `linear-gradient(180deg, ${backgroundColor} 0%, ${adjustBrightness(backgroundColor, -10)} 100%)`,
           zIndex: 1,
         }}
       />
+
+      {/* Premium texture overlays */}
+      <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+        <GrainOverlay opacity={0.3} />
+        {(imageUrl || screenshotUrl) && <VignetteOverlay opacity={0.4} />}
+      </div>
 
       {/* Top area - branding / hook */}
       <div

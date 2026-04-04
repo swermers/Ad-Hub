@@ -23,6 +23,11 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
         />
+        {/* Editorial fonts for storytelling carousel and premium templates */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body className="antialiased bg-[#131315] text-[#E5E1E4] font-sans">
         <AppShell>{children}</AppShell>
