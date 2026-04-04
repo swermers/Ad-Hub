@@ -830,7 +830,7 @@ function ContentDetailInner() {
               <div style={{ width: previewWidth }}>
                 <StorytellingCarouselPreview
                   headline={piece?.hook || piece?.title || headline}
-                  body={piece?.body}
+                  body={piece?.body ?? ""}
                   cta={ctaText}
                   backgroundColor={bgColor}
                   textColor={textColor}
