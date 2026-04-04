@@ -805,7 +805,7 @@ function ContentDetailInner() {
                       textColor={textColor}
                       accentColor={accentColor}
                       screenshotUrl={screenshotUrl}
-                      imageUrl={piece.image_url ? `${API_BASE}${piece.image_url}` : undefined}
+                      imageUrl={piece?.image_url ? `${API_BASE}${piece?.image_url}` : undefined}
                     />
                   </div>
                 </div>
@@ -829,13 +829,13 @@ function ContentDetailInner() {
               /* Interactive storytelling carousel preview */
               <div style={{ width: previewWidth }}>
                 <StorytellingCarouselPreview
-                  headline={piece.hook || piece.title || headline}
-                  body={piece.body}
+                  headline={piece?.hook || piece?.title || headline}
+                  body={piece?.body ?? ""}
                   cta={ctaText}
                   backgroundColor={bgColor}
                   textColor={textColor}
                   accentColor={accentColor}
-                  imageUrl={piece.image_url ? `${API_BASE}${piece.image_url}` : undefined}
+                  imageUrl={piece?.image_url ? `${API_BASE}${piece?.image_url}` : undefined}
                   aspectRatio={previewAspect}
                   previewScale={previewScale}
                 />
@@ -856,7 +856,7 @@ function ContentDetailInner() {
                     textColor={textColor}
                     accentColor={accentColor}
                     screenshotUrl={screenshotUrl}
-                    imageUrl={piece?.image_url ? `${API_BASE}${piece.image_url}` : undefined}
+                    imageUrl={piece?.image_url ? `${API_BASE}${piece?.image_url}` : undefined}
                   />
                 </div>
               </div>
