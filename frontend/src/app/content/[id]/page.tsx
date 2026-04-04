@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, Component } from "react";
+import { useEffect, useState, Component } from "react";
 import { useRef } from "react";
 import type { ReactNode, ErrorInfo } from "react";
 import { api, API_BASE, type ContentPiece, type Product, type GenerateImageStatus, type VideoRenderStatus } from "@/lib/api";
@@ -214,13 +214,6 @@ function sanitizePiece(c: ContentPiece): ContentPiece {
   };
 }
 
-/** Safely render any value as a React-safe string */
-function safeText(v: unknown): string {
-  if (typeof v === "string") return v;
-  if (v == null) return "";
-  return JSON.stringify(v);
-}
-
 export default function ContentDetailPage() {
   return <ContentErrorBoundary><ContentDetailInner /></ContentErrorBoundary>;
 }
@@ -271,10 +264,6 @@ function ContentDetailInner() {
     api
       .getContent(id)
       .then(async (raw) => {
-        // Debug: log field types to diagnose React #310
-        console.log("[ContentDetail] raw piece field types:", Object.fromEntries(
-          Object.entries(raw).map(([k, v]) => [k, `${typeof v}${v && typeof v === "object" ? ` (keys: ${Object.keys(v as object).join(",")})` : ""}`])
-        ));
         const c = sanitizePiece(raw);
         setPiece(c);
         setEditBody(c.body);
@@ -315,6 +304,13 @@ function ContentDetailInner() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Cleanup render poll on unmount (must be before early returns to satisfy Rules of Hooks)
+  useEffect(() => {
+    return () => {
+      if (renderPollRef.current) clearInterval(renderPollRef.current);
+    };
+  }, []);
 
   const handleSave = async () => {
     if (!piece) return;
@@ -441,8 +437,8 @@ function ContentDetailInner() {
   const accentColor = toned.accent;
   const textColor = toned.text;
 
-  // Save brand colors back to product
-  const handleSaveColors = useCallback(async (colors: string[]) => {
+  // Save brand colors back to product (defined as plain function — useCallback moved before early returns)
+  const handleSaveColors = async (colors: string[]) => {
     if (!product) return;
     setSavingColors(true);
     try {
@@ -453,7 +449,7 @@ function ContentDetailInner() {
     } finally {
       setSavingColors(false);
     }
-  }, [product]);
+  };
 
   const handleAddCustomColor = () => {
     const c = customColorInput.trim();
@@ -587,13 +583,6 @@ function ContentDetailInner() {
     }
   };
 
-  // Cleanup render poll on unmount
-  useEffect(() => {
-    return () => {
-      if (renderPollRef.current) clearInterval(renderPollRef.current);
-    };
-  }, []);
-
   const handleRefine = async () => {
     if (!piece) return;
     setRefining(true);
@@ -713,8 +702,8 @@ function ContentDetailInner() {
 
       {/* Main layout: visual preview + copy side by side */}
       <div className={`grid gap-6 mb-6 ${isVisualContent && showVisual ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 max-w-3xl"}`}>
-        {/* Visual Preview — temporarily disabled to isolate React #310 crash */}
-        {false && isVisualContent && showVisual && (
+        {/* Visual Preview */}
+        {isVisualContent && showVisual && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-[#dbc2ad]">Visual Preview</h3>
