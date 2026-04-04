@@ -420,7 +420,7 @@ function ContentDetailInner() {
   const ctaText = piece.cta || "Learn More";
 
   const handleGenerateImage = async () => {
-    if (!piece) return;
+    if (!piece || !piece.product_id) return;
     setGeneratingImage(true);
     setImageGenStatus(null);
     try {
@@ -1207,7 +1207,7 @@ function ContentDetailInner() {
         </button>
         {/* Re-generate variation */}
         <button
-          onClick={() => router.push(`/generate?product_id=${piece.product_id}`)}
+          onClick={() => router.push(piece.product_id ? `/generate?product_id=${piece.product_id}` : "/generate")}
           className="px-4 py-2 bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
         >
           Re-generate
