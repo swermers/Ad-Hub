@@ -390,8 +390,28 @@ export default function StyleGuidesPage() {
               {!isNew && (
                 <Section title="Import from Document">
                   <p className="text-xs text-[#E5E1E4]/40">
-                    Upload a PDF or image of your brand/style guide and Claude Vision will extract the rules automatically.
+                    Claude Vision will read your guide and extract messaging pillars, tone rules, vocabulary, and audience details automatically.
                   </p>
+                  <div className="flex items-start gap-3 p-4 rounded-xl border border-[#554334]/20 bg-[#1b1b1d]/40">
+                    <span className="material-symbols-outlined text-[#FF9500]/60 text-xl mt-0.5 flex-shrink-0">description</span>
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-xs font-semibold text-[#E5E1E4]/70">Accepted formats</p>
+                      <div className="flex flex-wrap gap-2">
+                        {["PDF", "PNG", "JPG", "WEBP"].map((fmt) => (
+                          <span key={fmt} className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                            fmt === "PDF" || fmt === "PNG"
+                              ? "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20"
+                              : "bg-[#E5E1E4]/5 text-[#E5E1E4]/40 border-[#554334]/20"
+                          }`}>
+                            {fmt}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-[#E5E1E4]/30 mt-1">
+                        Tip: Use <span className="text-[#E5E1E4]/50 font-medium">Google Stitch</span> to generate a brand image export, then upload the PNG here.
+                      </p>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-3">
                     <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={handleExtract} className="hidden" />
                     <motion.button
