@@ -130,12 +130,12 @@ function desaturateHex(hex: string, amount: number): string {
   return rgbToHex(nr, ng, nb);
 }
 
-class ContentErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+class ContentErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; errorMessage: string }> {
   constructor(props: { children: ReactNode }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, errorMessage: "" };
   }
-  static getDerivedStateFromError() { return { hasError: true }; }
+  static getDerivedStateFromError(error: Error) { return { hasError: true, errorMessage: error?.message || "Unknown error" }; }
   componentDidCatch(error: Error, info: ErrorInfo) { console.error("ContentDetail error:", error, info); }
   render() {
     if (this.state.hasError) {
@@ -143,7 +143,8 @@ class ContentErrorBoundary extends Component<{ children: ReactNode }, { hasError
         <div className="max-w-5xl p-8">
           <div className="bg-[#ffb4ab]/10 border border-[#ffb4ab]/20 rounded-xl p-6 text-center">
             <p className="text-[#ffb4ab] font-medium mb-2">Something went wrong rendering this content.</p>
-            <button onClick={() => this.setState({ hasError: false })} className="text-sm text-[#dbc2ad] underline">Try again</button>
+            <p className="text-[#ffb4ab]/60 text-xs font-mono mb-3">{this.state.errorMessage}</p>
+            <button onClick={() => this.setState({ hasError: false, errorMessage: "" })} className="text-sm text-[#dbc2ad] underline">Try again</button>
             {" | "}
             <button onClick={() => window.history.back()} className="text-sm text-[#dbc2ad] underline">Go back</button>
           </div>
