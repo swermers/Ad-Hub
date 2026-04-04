@@ -543,6 +543,15 @@ TEMPLATE_CONSTRAINTS = {
 }
 
 
+def _strip_em_dashes(piece_data: dict) -> dict:
+    """Remove em dashes from all text fields as a hard safety net."""
+    for field in ("title", "body", "hook", "cta"):
+        val = piece_data.get(field)
+        if val and isinstance(val, str) and "\u2014" in val:
+            piece_data[field] = val.replace(" \u2014 ", ", ").replace("\u2014", ", ")
+    return piece_data
+
+
 def _enforce_template_limits(piece_data: dict, template_type: str | None) -> dict:
     """Truncate fields to template limits as safety net."""
     if not template_type or template_type not in TEMPLATE_CONSTRAINTS:
@@ -912,7 +921,8 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                 for color_key in ("backgroundColor", "textColor", "accentColor"):
                     if piece.get(color_key):
                         piece_dict[color_key] = piece[color_key]
-                # Enforce template character limits as safety net
+                # Safety nets
+                _strip_em_dashes(piece_dict)
                 _enforce_template_limits(piece_dict, assigned_template)
                 all_pieces.append(piece_dict)
 
@@ -1138,7 +1148,8 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                 for color_key in ("backgroundColor", "textColor", "accentColor"):
                     if piece.get(color_key):
                         piece_dict[color_key] = piece[color_key]
-                # Enforce template character limits as safety net
+                # Safety nets
+                _strip_em_dashes(piece_dict)
                 _enforce_template_limits(piece_dict, assigned_template)
                 all_pieces.append(piece_dict)
 

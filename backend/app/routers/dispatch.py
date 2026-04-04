@@ -400,6 +400,12 @@ Creator feedback: {feedback}
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
         refined = json.loads(raw)
 
+        # Strip em dashes as hard safety net
+        for _f in ("body", "hook", "cta"):
+            _v = refined.get(_f)
+            if _v and isinstance(_v, str) and "\u2014" in _v:
+                refined[_f] = _v.replace(" \u2014 ", ", ").replace("\u2014", ", ")
+
         # Update the piece
         piece.body = refined.get("body", piece.body)
         if refined.get("hook"):

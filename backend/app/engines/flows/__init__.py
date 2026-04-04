@@ -75,6 +75,13 @@ class FlowContext:
 
 # ─── Flow Result ───────────────────────────────────────────────────────────
 
+def _clean_em_dashes(text: str | None) -> str | None:
+    """Strip em dashes from generated text. Hard rule, no exceptions."""
+    if not text or "\u2014" not in text:
+        return text
+    return text.replace(" \u2014 ", ", ").replace("\u2014", ", ")
+
+
 @dataclass
 class FlowResult:
     """Final output of a content flow."""
@@ -95,6 +102,13 @@ class FlowResult:
     quality_gates_passed: list[str] = field(default_factory=list)
     quality_gates_failed: list[str] = field(default_factory=list)
     total_llm_calls: int = 0
+
+    def __post_init__(self):
+        """Strip em dashes from all text fields on creation."""
+        self.title = _clean_em_dashes(self.title) or ""
+        self.body = _clean_em_dashes(self.body) or ""
+        self.hook = _clean_em_dashes(self.hook)
+        self.cta = _clean_em_dashes(self.cta)
 
     def to_dict(self) -> dict:
         d = {
@@ -371,6 +385,7 @@ Source context:
 Score each dimension 1-5. Pass threshold: 22/25.
 
 Auto-fail conditions:
+- Any em dash (—) anywhere in the content. Rewrite using commas, periods, or colons instead.
 - Any word from the voice profile's banned list
 - More than 2 AI fingerprints (universal + profile-specific)
 - Format conventions from another content type leaking in

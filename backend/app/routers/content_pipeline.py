@@ -908,7 +908,9 @@ async def refine_content(
 
 Content Type: {piece.content_type}
 Platform: {piece.platform}
-Funnel Stage: {piece.funnel_stage}"""
+Funnel Stage: {piece.funnel_stage}
+
+HARD RULE: Never use em dashes (\u2014). Use commas, periods, or colons instead."""
 
     instruction_text = data.instructions or "Improve the overall quality, clarity, and impact of this content."
 
@@ -946,6 +948,12 @@ Return ONLY the JSON object."""
             "hook": piece.hook,
             "cta": piece.cta,
         }
+
+    # Strip em dashes as hard safety net
+    for field in ("title", "body", "hook", "cta"):
+        val = parsed.get(field)
+        if val and isinstance(val, str) and "\u2014" in val:
+            parsed[field] = val.replace(" \u2014 ", ", ").replace("\u2014", ", ")
 
     return RefineResponse(**parsed)
 
