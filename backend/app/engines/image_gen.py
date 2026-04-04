@@ -211,15 +211,15 @@ def generate_image_nano_banana(
 ) -> bytes:
     """Call Nano Banana 2 (Google Gemini Flash Image) to generate an image.
     Returns image bytes (PNG)."""
-    if not settings.google_api_key:
+    if not settings.gemini_api_key:
         raise ValueError(
-            "Google API key not configured. Add GOOGLE_API_KEY to your .env file. "
+            "Gemini API key not configured. Add GEMINI_API_KEY to your environment. "
             "Get a free key at https://ai.google.dev/gemini-api"
         )
 
     from google import genai
 
-    client = genai.Client(api_key=settings.google_api_key)
+    client = genai.Client(api_key=settings.gemini_api_key)
 
     # Include size guidance in the prompt
     width, height = size.split("x")
