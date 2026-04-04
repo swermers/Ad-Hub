@@ -687,8 +687,8 @@ function ContentDetailInner() {
 
       {/* Main layout: visual preview + copy side by side */}
       <div className={`grid gap-6 mb-6 ${isVisualContent && showVisual ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 max-w-3xl"}`}>
-        {/* Visual Preview */}
-        {isVisualContent && showVisual && (
+        {/* Visual Preview — temporarily disabled to isolate React #310 crash */}
+        {false && isVisualContent && showVisual && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-[#dbc2ad]">Visual Preview</h3>
