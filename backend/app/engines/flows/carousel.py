@@ -9,12 +9,24 @@ Steps:
 
 import json
 
-from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry
+from app.engines.flows import (
+    ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry,
+    editor_gate_parser, editor_gate_check,
+)
 
 
 # ─── Step 1: Slide Outline ────────────────────────────────────────────────
 
 def _outline_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: plan the slide arc. Each slide must earn the next swipe."""
+
     return f"""You are a carousel content architect. You structure ideas into compelling slide sequences.
 
 {ctx.product_context}
@@ -55,6 +67,15 @@ Return ONLY a JSON object:
 # ─── Step 2: Write Slides ────────────────────────────────────────────────
 
 def _write_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: write the copy for each slide. Headlines 3-12 words, readable at glance speed."""
+
     return f"""You are writing carousel slide copy. Each slide headline must be under 25 characters. Punchy, visual, bold.
 
 {ctx.voice_context}
@@ -97,6 +118,13 @@ Return ONLY a JSON object:
 # ─── Step 3: Cover + CTA Refine ──────────────────────────────────────────
 
 def _refine_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: refine the cover slide (stop-scroll hook) and CTA slide (conversion point)."""
+
     return f"""You are refining the two most important slides in a carousel: the cover and the CTA.
 
 {ctx.voice_context}
@@ -143,6 +171,14 @@ Return ONLY a JSON object:
 # ─── Step 4: Validate Arc ────────────────────────────────────────────────
 
 def _validate_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Content type: Carousel
+Your current task: validate slide quality, arc, and voice consistency."""
+
     return f"""You are validating a carousel for quality. Check each slide and the overall arc.
 
 {ctx.voice_context}"""
@@ -164,43 +200,60 @@ def _validate_user(ctx: FlowContext) -> str:
         for i, s in enumerate(slides)
     ])
 
-    return f"""Validate this carousel:
+    return f"""Review this carousel:
 
 {slides_text}
 
-Check:
-1. COVER HOOK: Does slide 1 make you want to swipe? (1-10)
-2. STANDALONE: Can each slide be screenshotted and still make sense? (1-10)
-3. FLOW: Does each slide pull you to the next? (1-10)
-4. ARC: Is there a clear beginning → middle → end? (1-10)
-5. CTA: Is the last slide a clear, compelling next step? (1-10)
-6. CHARACTER LIMITS: Any headline over 25 chars? Flag it.
+Seed: {ctx.seed.get('seed', '')}
+
+Score each dimension 1-5. Pass threshold: 22/25.
+
+| Dimension | What You're Measuring |
+|---|---|
+| Voice match | Does this sound like the creator's voice across all slides? |
+| Format compliance | 4-8 slides? Headlines 3-12 words? One clear arc type? CTA slide present? |
+| Coherence | Does each slide advance the story? No repeats or filler? |
+| Quality | Slide 1 creates stop-scroll curiosity? Second-to-last has saveable line? |
+| AI-free | No AI fingerprints in headlines or subtext? |
+
+Auto-fail conditions:
+- Fewer than 4 or more than 8 slides
+- Any headline that's a complete sentence (fragments work better)
+- No clear arc (slides feel disconnected)
+- CTA slide says "Like and share!" instead of connecting to content
 
 Return ONLY a JSON object:
 {{
-    "scores": {{"cover_hook": 8, "standalone": 7, "flow": 8, "arc": 9, "cta": 8}},
-    "average": 8.0,
+    "overall_score": 22,
     "passed": true,
+    "scores": {{
+        "voice_match": 5,
+        "format_compliance": 4,
+        "coherence": 5,
+        "quality": 4,
+        "ai_free": 4
+    }},
     "over_limit_slides": [],
-    "feedback": "what works and what could improve",
-    "final_slides": [
-        {{"position": 1, "headline": "...", "subtext": "..."}}
-    ]
-}}"""
+    "violations": [],
+    "ai_fingerprints": [],
+    "priority_fixes": [],
+    "strongest_moments": [],
+    "final_slides": null
+}}
+
+Set final_slides to the corrected array ONLY if fixes are needed, otherwise null."""
 
 
 def _validate_parser(result: dict, ctx: FlowContext) -> dict:
-    from app.engines.flows import _default_parse
-    parsed = _default_parse(result)
+    parsed = editor_gate_parser(result, ctx)
 
     if parsed.get("final_slides"):
-        ctx.step_results["write_slides"]["slides"] = parsed["final_slides"]
+        write_result = ctx.get_step_result("write_slides")
+        if write_result:
+            write_result["slides"] = parsed["final_slides"]
+            ctx.step_results["write_slides"] = write_result
 
     return parsed
-
-
-def _validate_check(result: dict, ctx: FlowContext) -> bool:
-    return result.get("passed", False) or result.get("average", 0) >= 7
 
 
 # ─── Assemble Flow ─────────────────────────────────────────────────────────
@@ -212,7 +265,7 @@ class CarouselFlow(ContentFlow):
         FlowStep(name="slide_outline", system_prompt_builder=_outline_system, user_prompt_builder=_outline_user, max_tokens=1536),
         FlowStep(name="write_slides", system_prompt_builder=_write_system, user_prompt_builder=_write_user, max_tokens=2048, premium=True),
         FlowStep(name="cover_cta_refine", system_prompt_builder=_refine_system, user_prompt_builder=_refine_user, max_tokens=1536),
-        FlowStep(name="validate_arc", system_prompt_builder=_validate_system, user_prompt_builder=_validate_user, parser=_validate_parser, quality_gate=_validate_check, max_tokens=2048),
+        FlowStep(name="validate_arc", system_prompt_builder=_validate_system, user_prompt_builder=_validate_user, parser=_validate_parser, quality_gate=editor_gate_check, max_tokens=2048, premium=True),
     ]
 
     def build_result(self, ctx, steps_done, gates_passed, gates_failed, total_calls):
@@ -240,8 +293,9 @@ class CarouselFlow(ContentFlow):
                 "slides": slides,
                 "slide_headlines": headlines,
                 "slide_count": len(slides),
-                "quality_scores": validate.get("scores", {}),
-                "quality_average": validate.get("average"),
+                "editor_score": validate.get("overall_score"),
+                "editor_scores": validate.get("scores", {}),
+                "editor_passed": validate.get("passed", False),
                 "theme": outline.get("theme"),
             },
             video_style="swiss-carousel",

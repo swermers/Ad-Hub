@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.engines.voice_scoring import compute_voice_profile_score, compute_section_scores, get_quality_grade
 from app.models.voice_profile import VoiceProfile
 from app.permissions import get_current_user
 from app.services.claude_client import call_claude
@@ -77,6 +78,7 @@ def _profile_to_dict(p: VoiceProfile) -> dict:
         except json.JSONDecodeError:
             return []
 
+    quality = p.quality_score or 0
     return {
         "id": p.id,
         "user_id": p.user_id,
@@ -93,6 +95,8 @@ def _profile_to_dict(p: VoiceProfile) -> dict:
         "default_template": p.default_template,
         "content_themes": _parse_json(p.content_themes),
         "is_default": p.is_default,
+        "quality_score": quality,
+        "quality_grade": get_quality_grade(quality),
         "created_at": p.created_at.isoformat() if p.created_at else None,
         "updated_at": p.updated_at.isoformat() if p.updated_at else None,
     }
@@ -119,6 +123,8 @@ def create_voice_profile(
 
     profile = VoiceProfile(user_id=user["id"], **data)
     db.add(profile)
+    db.flush()
+    profile.quality_score = compute_voice_profile_score(profile)
     db.commit()
     db.refresh(profile)
     return _profile_to_dict(profile)
@@ -185,6 +191,7 @@ def update_voice_profile(
     for key, value in update_data.items():
         setattr(profile, key, value)
 
+    profile.quality_score = compute_voice_profile_score(profile)
     profile.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(profile)
@@ -208,6 +215,70 @@ def delete_voice_profile(
     db.delete(profile)
     db.commit()
     return {"deleted": True}
+
+
+# ─── Score Preview & AI Analysis ────────────────────────────────────────────
+
+
+class ScorePreviewRequest(BaseModel):
+    """Preview quality score without saving to DB."""
+    name: str = ""
+    description: str | None = None
+    tone_keywords: list[str] = []
+    style_rules: str | None = None
+    sentence_style: str | None = None
+    favorite_phrases: list[str] = []
+    words_to_avoid: list[str] = []
+    words_to_use: list[str] = []
+    writing_samples: list[str] = []
+
+
+class AnalyzeSamplesRequest(BaseModel):
+    """Writing samples to analyze via AI."""
+    writing_samples: list[str]
+
+
+@router.post("/score-preview")
+def score_preview(
+    body: ScorePreviewRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Preview quality score for voice profile data without saving.
+
+    Used by the builder frontend to show live scoring as the user fills in sections.
+    """
+    # Create a transient profile object (not saved to DB) for scoring
+    profile = VoiceProfile(
+        user_id=user["id"],
+        name=body.name,
+        description=body.description,
+        tone_keywords=json.dumps(body.tone_keywords) if body.tone_keywords else None,
+        style_rules=body.style_rules,
+        sentence_style=body.sentence_style,
+        favorite_phrases=json.dumps(body.favorite_phrases) if body.favorite_phrases else None,
+        words_to_avoid=json.dumps(body.words_to_avoid) if body.words_to_avoid else None,
+        words_to_use=json.dumps(body.words_to_use) if body.words_to_use else None,
+        writing_samples=json.dumps(body.writing_samples) if body.writing_samples else None,
+    )
+    return compute_section_scores(profile)
+
+
+@router.post("/analyze-samples")
+async def analyze_samples(
+    body: AnalyzeSamplesRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Analyze writing samples via Claude and extract voice profile fields.
+
+    Powers the "Analyze my writing" button in the Voice Profile Builder.
+    Returns suggested tone, vocabulary, and anti-patterns derived from the samples.
+    """
+    if not body.writing_samples or not any(s.strip() for s in body.writing_samples):
+        raise HTTPException(status_code=400, detail="At least one non-empty writing sample is required")
+
+    from app.engines.voice_analyzer import analyze_writing_samples
+    result = await analyze_writing_samples(body.writing_samples)
+    return result
 
 
 # ─── Markdown Import ─────────────────────────────────────────────────────────
@@ -322,6 +393,8 @@ async def import_markdown_and_create(
     data = _serialize(parsed)
     profile = VoiceProfile(user_id=user["id"], **data)
     db.add(profile)
+    db.flush()
+    profile.quality_score = compute_voice_profile_score(profile)
     db.commit()
     db.refresh(profile)
     return _profile_to_dict(profile)
