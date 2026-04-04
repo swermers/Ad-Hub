@@ -74,9 +74,17 @@ def build_image_prompt_with_claude(
     cta: str,
     reference_image_paths: list[str] | None = None,
     style_notes: str = "",
+    design_style: str | None = None,
 ) -> str:
     """Use Claude (with vision if references provided) to build a detailed
     image generation prompt based on brand context and reference images."""
+
+    # Prepend design style visual direction to style_notes
+    if design_style:
+        from app.engines.generation import DESIGN_STYLES
+        ds = DESIGN_STYLES.get(design_style)
+        if ds:
+            style_notes = f"DESIGN STYLE: {ds['label']} — {ds['visual_prompt']}\n{style_notes}"
 
     # Build brand context
     brand_context = f"Product: {product.name}\nDescription: {product.description}"
@@ -249,6 +257,7 @@ def generate_ad_image(
     aspect_ratio: str = "1:1",
     style_notes: str = "",
     quality: str = "standard",
+    design_style: str | None = None,
 ) -> str:
     """Full pipeline: analyze brand + references → build prompt → generate image → save.
 
@@ -281,6 +290,7 @@ def generate_ad_image(
         cta,
         reference_image_paths=all_references if all_references else None,
         style_notes=style_notes,
+        design_style=design_style,
     )
     logger.info("Image prompt: %s", image_prompt[:200])
 

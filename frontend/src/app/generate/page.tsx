@@ -29,6 +29,36 @@ const CREATIVE_PRESETS = [
   { value: "local_business", label: "Local Business", description: "Neighborhood trust — personal, warm, community", bestFor: [] },
 ];
 
+const DESIGN_STYLES = [
+  { value: "", label: "None", description: "No design style — use default generation" },
+  { value: "flat", label: "Flat", description: "Simple, two-dimensional design without shadows or textures" },
+  { value: "psychedelic", label: "Psychedelic", description: "Vibrant, swirling colors and distorted 60s visuals" },
+  { value: "minimalism", label: "Minimalism", description: "Less is more — clean lines, ample white space" },
+  { value: "japanese", label: "Japanese", description: "Bold typography and clean modern layouts" },
+  { value: "poster_collage", label: "Poster Collage", description: "Layered, cut-and-paste mixed media" },
+  { value: "indie_collage", label: "Indie Collage", description: "DIY, gritty zine culture aesthetic" },
+  { value: "indie_groovy", label: "Indie Groovy", description: "70s-inspired wavy shapes and warm tones" },
+  { value: "vintage_80s", label: "Vintage 80s", description: "Neon-tinged, high-contrast retro" },
+  { value: "90s_editorial", label: "90s Editorial", description: "High-fashion magazine with serif fonts" },
+  { value: "neo_3d", label: "Neo 3D", description: "Smooth, clay-like 3D rendered objects" },
+  { value: "popping_colors", label: "Popping Colors", description: "High-saturation, high-energy palettes" },
+  { value: "y2k", label: "Y2K", description: "Futuristic, metallic, blobby late-90s aesthetic" },
+  { value: "liquid_retro", label: "Liquid Retro", description: "Psychedelic shapes meet retro-futurism" },
+  { value: "metallic_typography", label: "Metallic Typography", description: "Chrome-like, liquid metal text effects" },
+  { value: "font_mixing", label: "Font Mixing", description: "Multiple contrasting typefaces" },
+  { value: "hand_drawn_doodles", label: "Hand-drawn Doodles", description: "Sketches and scribbles, organic feel" },
+  { value: "noi_brutalism", label: "Noi Brutalism", description: "Raw, unpolished, high-contrast layouts" },
+  { value: "rubber_hose", label: "Rubber Hose", description: "Classic 1920s/30s animation style" },
+  { value: "romantasy", label: "Romantasy", description: "Romance meets fantasy — ethereal, dreamy" },
+  { value: "pixel_art", label: "Pixel Art", description: "Low-resolution retro game graphics" },
+  { value: "neoclassical", label: "Neoclassical", description: "Classical art and architecture influence" },
+  { value: "memphis", label: "Memphis", description: "Geometric shapes, squiggles, and pastels" },
+  { value: "cottagecore", label: "Cottagecore", description: "Nostalgic rural charm with flowers" },
+  { value: "cybercore", label: "Cybercore", description: "Dark, techy glitches and neon" },
+  { value: "brutalism", label: "Brutalism", description: "Bold, raw structure over beauty" },
+  { value: "bauhaus", label: "Bauhaus", description: "Geometric forms and functionalism" },
+];
+
 const TEMPLATE_CHOICES = [
   { value: "", label: "Auto (Best for platform)" },
   { value: "bold_hook", label: "Bold Hook" },
@@ -206,6 +236,7 @@ function GenerateForm() {
   const [creativePreset, setCreativePreset] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [usePremiumModel, setUsePremiumModel] = useState(false);
+  const [designStyle, setDesignStyle] = useState("");
 
   useEffect(() => {
     api
@@ -235,6 +266,23 @@ function GenerateForm() {
     if (suggested) setCreativePreset(suggested);
   }, [industryVertical, creativePreset]);
 
+  // Auto-suggest a design style when industry changes
+  useEffect(() => {
+    if (!industryVertical || designStyle) return;
+    const styleMap: Record<string, string> = {
+      "saas-tech": "flat",
+      "fintech": "minimalism",
+      "ecommerce": "popping_colors",
+      "healthcare": "minimalism",
+      "edtech": "hand_drawn_doodles",
+      "real-estate": "neoclassical",
+      "fitness": "cybercore",
+      "creative": "psychedelic",
+    };
+    const suggested = styleMap[industryVertical];
+    if (suggested) setDesignStyle(suggested);
+  }, [industryVertical, designStyle]);
+
   const handleGenerate = async () => {
     if (!productId) return;
     setGenerating(true);
@@ -258,6 +306,7 @@ function GenerateForm() {
         image_url: imageUrl || undefined,
         industry_colors: industryColors,
         use_premium_model: usePremiumModel,
+        design_style: designStyle || undefined,
       });
       setStatus(result);
 
@@ -604,6 +653,50 @@ function GenerateForm() {
             return preset ? (
               <p className="mt-2 text-xs text-[#E5E1E4]/40 font-mono">
                 {preset.description}
+              </p>
+            ) : null;
+          })()}
+        </motion.div>
+
+        {/* Design Style */}
+        <motion.div {...fadeUp(0.25)}>
+          <p className="text-[#FF9500] text-[11px] font-black uppercase tracking-[0.2em] mb-1.5">
+            Design Style
+          </p>
+          <p className="text-xs text-[#E5E1E4]/30 mb-3 font-mono">
+            Visual aesthetic direction for generated imagery and ads
+          </p>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {DESIGN_STYLES
+              .filter((s) => s.value === "" || [
+                "flat", "minimalism", "psychedelic", "y2k", "brutalism", "bauhaus", "neo_3d", "popping_colors",
+              ].includes(s.value))
+              .map((style) => (
+                <ChipButton
+                  key={style.value}
+                  active={designStyle === style.value}
+                  onClick={() => setDesignStyle(style.value)}
+                >
+                  {style.label}
+                </ChipButton>
+              ))}
+          </div>
+          <select
+            value={designStyle}
+            onChange={(e) => setDesignStyle(e.target.value)}
+            className="w-full px-4 py-2.5 glass-prism rounded-xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl text-sm text-[#E5E1E4] focus:outline-none focus:border-[#FF9500]/50 transition-colors appearance-none cursor-pointer"
+          >
+            {DESIGN_STYLES.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          {designStyle && (() => {
+            const style = DESIGN_STYLES.find((s) => s.value === designStyle);
+            return style ? (
+              <p className="mt-2 text-xs text-[#E5E1E4]/40 font-mono">
+                {style.description}
               </p>
             ) : null;
           })()}

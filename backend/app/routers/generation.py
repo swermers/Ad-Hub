@@ -25,6 +25,7 @@ class GenerateRequest(BaseModel):
     image_url: str | None = None
     industry_colors: dict | None = None
     use_premium_model: bool = False
+    design_style: str | None = None
 
 
 class GenerateStatusResponse(BaseModel):
@@ -49,6 +50,7 @@ def _run_generation(
     image_url: str | None = None,
     industry_colors: dict | None = None,
     use_premium_model: bool = False,
+    design_style: str | None = None,
 ):
     """Run content generation in background thread (sync — no asyncio.run)."""
     from app.database import SessionLocal
@@ -102,6 +104,7 @@ def _run_generation(
             image_url=image_url,
             industry_colors=industry_colors,
             use_premium_model=use_premium_model,
+            design_style=design_style,
         )
 
         for piece_data in pieces:
@@ -172,6 +175,7 @@ def generate_content(
         data.image_url,
         data.industry_colors,
         data.use_premium_model,
+        data.design_style,
     )
 
     return GenerateStatusResponse(task_id=task_id, status="pending", pieces_generated=0)
@@ -192,4 +196,14 @@ def list_creative_presets():
     return [
         {"value": key, "label": preset["label"]}
         for key, preset in CREATIVE_PRESETS.items()
+    ]
+
+
+@router.get("/design-styles")
+def list_design_styles():
+    """Return available design style options for the generate UI."""
+    from app.engines.generation import DESIGN_STYLES
+    return [
+        {"value": key, "label": ds["label"], "description": ds["description"]}
+        for key, ds in DESIGN_STYLES.items()
     ]
