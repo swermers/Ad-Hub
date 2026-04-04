@@ -47,6 +47,7 @@ Words to avoid:
 - Supercharge, future-proof, 10x
 
 Patterns to avoid:
+- Em dashes (—): NEVER use em dashes. Use commas, periods, colons, or rewrite the sentence instead. This is a hard rule with zero exceptions.
 - Staccato lists: "No X. No Y. No Z." (rapid-fire fragments repeating structure 3+ times)
 - Negation runway: "Not X. Not Y. [The real thing]." — just state the positive claim
 - Generic transitions: "Somewhere along the way..." (fits any article about any topic)
