@@ -215,14 +215,24 @@ def scope_product_query(query, model, user: dict, db: Session):
 
     For models like ContentPiece, Seed, etc. that have product_id but not workspace_id,
     this filters to only products in the user's workspace.
+    Also includes items with NULL product_id and items linked to legacy products
+    (workspace_id IS NULL) so they remain accessible.
     """
     ws_id = user.get("workspace_id")
     if ws_id and hasattr(model, "product_id"):
+        from sqlalchemy import or_
         from app.models import Product
         workspace_product_ids = [
-            p.id for p in db.query(Product.id).filter(Product.workspace_id == ws_id).all()
+            p.id for p in db.query(Product.id).filter(
+                or_(Product.workspace_id == ws_id, Product.workspace_id.is_(None))
+            ).all()
         ]
-        query = query.filter(model.product_id.in_(workspace_product_ids))
+        query = query.filter(
+            or_(
+                model.product_id.in_(workspace_product_ids),
+                model.product_id.is_(None),
+            )
+        )
     return query
 
 

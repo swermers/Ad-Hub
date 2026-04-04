@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Product
+from app.permissions import get_current_user, scope_query
 
 router = APIRouter()
 
@@ -74,8 +75,9 @@ def bulk_upload(
     data: BulkUploadRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
-    product = db.query(Product).filter(Product.id == product_id).first()
+    product = scope_query(db.query(Product), Product, user).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
