@@ -466,7 +466,7 @@ export default function QueuePage() {
                           <span className="text-[10px] text-[#E5E1E4]/30">
                             {relativeTime(piece.created_at)}
                           </span>
-                          {productMap[piece.product_id] && (
+                          {piece.product_id && productMap[piece.product_id] && (
                             <span className="text-[10px] text-[#E5E1E4]/20 truncate max-w-[80px]">
                               {productMap[piece.product_id].name}
                             </span>
