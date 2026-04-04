@@ -168,6 +168,25 @@ class VideoErrorBoundary extends Component<{ children: ReactNode; fallback: Reac
   }
 }
 
+/** Ensure string fields are actually strings (AI can return objects/arrays) */
+function sanitizePiece(c: ContentPiece): ContentPiece {
+  const str = (v: unknown): string =>
+    typeof v === "string" ? v : v == null ? "" : JSON.stringify(v);
+  const strOrNull = (v: unknown): string | null =>
+    v == null ? null : str(v);
+  return {
+    ...c,
+    body: str(c.body),
+    title: strOrNull(c.title),
+    hook: strOrNull(c.hook),
+    cta: strOrNull(c.cta),
+    content_type: str(c.content_type),
+    platform: str(c.platform),
+    funnel_stage: str(c.funnel_stage),
+    status: str(c.status),
+  };
+}
+
 export default function ContentDetailPage() {
   return <ContentErrorBoundary><ContentDetailInner /></ContentErrorBoundary>;
 }
@@ -217,7 +236,8 @@ function ContentDetailInner() {
   useEffect(() => {
     api
       .getContent(id)
-      .then(async (c) => {
+      .then(async (raw) => {
+        const c = sanitizePiece(raw);
         setPiece(c);
         setEditBody(c.body);
         setEditTitle(c.title || "");
@@ -266,7 +286,7 @@ function ContentDetailInner() {
         title: editTitle,
         body: editBody,
       });
-      setPiece(updated);
+      setPiece(sanitizePiece(updated));
       setEditing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
@@ -279,7 +299,7 @@ function ContentDetailInner() {
     if (!piece) return;
     try {
       const updated = await api.updateContentStatus(piece.id, status);
-      setPiece(updated);
+      setPiece(sanitizePiece(updated));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update status");
     }
@@ -445,7 +465,7 @@ function ContentDetailInner() {
             setGeneratingImage(false);
             if (updated.status === "completed") {
               const refreshed = await api.getContent(piece.id);
-              setPiece(refreshed);
+              setPiece(sanitizePiece(refreshed));
             }
           }
         } catch {
@@ -552,7 +572,7 @@ function ContentDetailInner() {
         hook: result.hook ?? undefined,
         cta: result.cta ?? undefined,
       });
-      setPiece(updated);
+      setPiece(sanitizePiece(updated));
       setEditBody(result.body);
       setEditTitle(result.title);
       setRefineOpen(false);
@@ -993,7 +1013,7 @@ function ContentDetailInner() {
                       cta: newCta,
                       generation_metadata: JSON.stringify(newMeta),
                     });
-                    setPiece(updated);
+                    setPiece(sanitizePiece(updated));
                     setEditBody(newBody);
                     setEditTitle(newTitle || "");
                   } catch (err) {
