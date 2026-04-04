@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import AdTemplate, AdVariation, PainPoint, Product
+from app.permissions import get_current_user, scope_query, scope_product_query
 
 router = APIRouter()
 
@@ -202,8 +203,9 @@ def bulk_generate(
     data: BulkGenerateRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
-    product = db.query(Product).filter(Product.id == product_id).first()
+    product = scope_query(db.query(Product), Product, user).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -239,8 +241,9 @@ def list_variations(
     limit: int = 100,
     offset: int = 0,
     db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
-    query = db.query(AdVariation).filter(AdVariation.product_id == product_id)
+    query = scope_product_query(db.query(AdVariation), AdVariation, user, db).filter(AdVariation.product_id == product_id)
     if batch_id:
         query = query.filter(AdVariation.batch_id == batch_id)
     if status:
@@ -250,8 +253,8 @@ def list_variations(
 
 
 @router.put("/ad-variations/{variation_id}", response_model=VariationResponse)
-def update_variation(variation_id: str, data: VariationUpdate, db: Session = Depends(get_db)):
-    v = db.query(AdVariation).filter(AdVariation.id == variation_id).first()
+def update_variation(variation_id: str, data: VariationUpdate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    v = scope_product_query(db.query(AdVariation), AdVariation, user, db).filter(AdVariation.id == variation_id).first()
     if not v:
         raise HTTPException(status_code=404, detail="Variation not found")
     if data.headline is not None:
@@ -266,10 +269,10 @@ def update_variation(variation_id: str, data: VariationUpdate, db: Session = Dep
 
 
 @router.put("/ad-variations/bulk-status")
-def bulk_update_status(data: BulkStatusUpdate, db: Session = Depends(get_db)):
+def bulk_update_status(data: BulkStatusUpdate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     updated = 0
     for vid in data.variation_ids:
-        v = db.query(AdVariation).filter(AdVariation.id == vid).first()
+        v = scope_product_query(db.query(AdVariation), AdVariation, user, db).filter(AdVariation.id == vid).first()
         if v:
             v.status = data.status
             updated += 1
@@ -278,8 +281,8 @@ def bulk_update_status(data: BulkStatusUpdate, db: Session = Depends(get_db)):
 
 
 @router.delete("/ad-variations/{variation_id}", status_code=204)
-def delete_variation(variation_id: str, db: Session = Depends(get_db)):
-    v = db.query(AdVariation).filter(AdVariation.id == variation_id).first()
+def delete_variation(variation_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    v = scope_product_query(db.query(AdVariation), AdVariation, user, db).filter(AdVariation.id == variation_id).first()
     if not v:
         raise HTTPException(status_code=404, detail="Variation not found")
     db.delete(v)
@@ -287,8 +290,8 @@ def delete_variation(variation_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/ad-variations/{variation_id}/upload-image")
-async def upload_variation_image(variation_id: str, file: UploadFile, db: Session = Depends(get_db)):
-    v = db.query(AdVariation).filter(AdVariation.id == variation_id).first()
+async def upload_variation_image(variation_id: str, file: UploadFile, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    v = scope_product_query(db.query(AdVariation), AdVariation, user, db).filter(AdVariation.id == variation_id).first()
     if not v:
         raise HTTPException(status_code=404, detail="Variation not found")
 

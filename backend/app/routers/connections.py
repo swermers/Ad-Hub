@@ -55,7 +55,7 @@ def list_connections(
 
 
 @router.post("", response_model=ConnectionResponse, status_code=201)
-def create_connection(data: ConnectionCreate, db: Session = Depends(get_db)):
+def create_connection(data: ConnectionCreate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     conn = PlatformConnection(**data.model_dump())
     db.add(conn)
     db.commit()
@@ -64,16 +64,16 @@ def create_connection(data: ConnectionCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{connection_id}", response_model=ConnectionResponse)
-def get_connection(connection_id: str, db: Session = Depends(get_db)):
-    conn = db.query(PlatformConnection).filter(PlatformConnection.id == connection_id).first()
+def get_connection(connection_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    conn = scope_product_query(db.query(PlatformConnection), PlatformConnection, user, db).filter(PlatformConnection.id == connection_id).first()
     if not conn:
         raise HTTPException(status_code=404, detail="Connection not found")
     return conn
 
 
 @router.delete("/{connection_id}", status_code=204)
-def delete_connection(connection_id: str, db: Session = Depends(get_db)):
-    conn = db.query(PlatformConnection).filter(PlatformConnection.id == connection_id).first()
+def delete_connection(connection_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    conn = scope_product_query(db.query(PlatformConnection), PlatformConnection, user, db).filter(PlatformConnection.id == connection_id).first()
     if not conn:
         raise HTTPException(status_code=404, detail="Connection not found")
     db.delete(conn)
@@ -81,8 +81,8 @@ def delete_connection(connection_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{connection_id}/test", response_model=ConnectionTestResult)
-async def test_connection(connection_id: str, db: Session = Depends(get_db)):
-    conn = db.query(PlatformConnection).filter(PlatformConnection.id == connection_id).first()
+async def test_connection(connection_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    conn = scope_product_query(db.query(PlatformConnection), PlatformConnection, user, db).filter(PlatformConnection.id == connection_id).first()
     if not conn:
         raise HTTPException(status_code=404, detail="Connection not found")
 

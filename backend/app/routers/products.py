@@ -106,8 +106,8 @@ def get_product(product_id: str, db: Session = Depends(get_db), user: dict = Dep
 
 
 @router.put("/{product_id}", response_model=ProductResponse, dependencies=[Depends(deny_agent)])
-def update_product(product_id: str, data: ProductUpdate, db: Session = Depends(get_db)):
-    product = db.query(Product).filter(Product.id == product_id).first()
+def update_product(product_id: str, data: ProductUpdate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    product = scope_query(db.query(Product), Product, user).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -122,8 +122,8 @@ def update_product(product_id: str, data: ProductUpdate, db: Session = Depends(g
 
 
 @router.delete("/{product_id}", status_code=204, dependencies=[Depends(deny_agent)])
-def delete_product(product_id: str, db: Session = Depends(get_db)):
-    product = db.query(Product).filter(Product.id == product_id).first()
+def delete_product(product_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    product = scope_query(db.query(Product), Product, user).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     db.delete(product)
@@ -131,9 +131,9 @@ def delete_product(product_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{product_id}/screenshots")
-async def upload_screenshot(product_id: str, file: UploadFile, db: Session = Depends(get_db)):
+async def upload_screenshot(product_id: str, file: UploadFile, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     """Upload a screenshot of the product/website for visual context."""
-    product = db.query(Product).filter(Product.id == product_id).first()
+    product = scope_query(db.query(Product), Product, user).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -172,9 +172,9 @@ async def upload_screenshot(product_id: str, file: UploadFile, db: Session = Dep
 
 
 @router.delete("/{product_id}/screenshots")
-def delete_screenshot(product_id: str, path: str, db: Session = Depends(get_db)):
+def delete_screenshot(product_id: str, path: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     """Remove a screenshot from the product."""
-    product = db.query(Product).filter(Product.id == product_id).first()
+    product = scope_query(db.query(Product), Product, user).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -184,8 +184,9 @@ def delete_screenshot(product_id: str, path: str, db: Session = Depends(get_db))
     product.updated_at = datetime.now(timezone.utc)
     db.commit()
 
-    # Delete file from disk
-    full_path = os.path.join(os.path.dirname(SCREENSHOT_DIR), os.path.basename(os.path.dirname(path)), os.path.basename(path))
+    # Delete file from disk — use only the basename to prevent path traversal
+    filename = os.path.basename(path)
+    full_path = os.path.join(SCREENSHOT_DIR, filename)
     if os.path.exists(full_path):
         os.remove(full_path)
 
@@ -193,9 +194,9 @@ def delete_screenshot(product_id: str, path: str, db: Session = Depends(get_db))
 
 
 @router.post("/{product_id}/reference-images")
-async def upload_reference_image(product_id: str, file: UploadFile, db: Session = Depends(get_db)):
+async def upload_reference_image(product_id: str, file: UploadFile, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     """Upload a reference/inspiration image for guiding visual style."""
-    product = db.query(Product).filter(Product.id == product_id).first()
+    product = scope_query(db.query(Product), Product, user).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -221,9 +222,9 @@ async def upload_reference_image(product_id: str, file: UploadFile, db: Session 
 
 
 @router.delete("/{product_id}/reference-images")
-def delete_reference_image(product_id: str, path: str, db: Session = Depends(get_db)):
+def delete_reference_image(product_id: str, path: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     """Remove a reference image from the product."""
-    product = db.query(Product).filter(Product.id == product_id).first()
+    product = scope_query(db.query(Product), Product, user).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 

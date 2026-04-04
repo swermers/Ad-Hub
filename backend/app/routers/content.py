@@ -78,16 +78,16 @@ def list_content(
 
 
 @router.get("/{content_id}", response_model=ContentPieceResponse)
-def get_content(content_id: str, db: Session = Depends(get_db)):
-    piece = db.query(ContentPiece).filter(ContentPiece.id == content_id).first()
+def get_content(content_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    piece = scope_product_query(db.query(ContentPiece), ContentPiece, user, db).filter(ContentPiece.id == content_id).first()
     if not piece:
         raise HTTPException(status_code=404, detail="Content not found")
     return piece
 
 
 @router.put("/{content_id}", response_model=ContentPieceResponse)
-def update_content(content_id: str, data: ContentUpdate, db: Session = Depends(get_db)):
-    piece = db.query(ContentPiece).filter(ContentPiece.id == content_id).first()
+def update_content(content_id: str, data: ContentUpdate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    piece = scope_product_query(db.query(ContentPiece), ContentPiece, user, db).filter(ContentPiece.id == content_id).first()
     if not piece:
         raise HTTPException(status_code=404, detail="Content not found")
 
@@ -102,9 +102,9 @@ def update_content(content_id: str, data: ContentUpdate, db: Session = Depends(g
 
 @router.put("/{content_id}/status", response_model=ContentPieceResponse)
 def update_content_status(
-    content_id: str, data: ContentStatusUpdate, db: Session = Depends(get_db)
+    content_id: str, data: ContentStatusUpdate, db: Session = Depends(get_db), user: dict = Depends(get_current_user),
 ):
-    piece = db.query(ContentPiece).filter(ContentPiece.id == content_id).first()
+    piece = scope_product_query(db.query(ContentPiece), ContentPiece, user, db).filter(ContentPiece.id == content_id).first()
     if not piece:
         raise HTTPException(status_code=404, detail="Content not found")
 
@@ -118,8 +118,8 @@ def update_content_status(
 
 
 @router.delete("/{content_id}", status_code=204)
-def delete_content(content_id: str, db: Session = Depends(get_db)):
-    piece = db.query(ContentPiece).filter(ContentPiece.id == content_id).first()
+def delete_content(content_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    piece = scope_product_query(db.query(ContentPiece), ContentPiece, user, db).filter(ContentPiece.id == content_id).first()
     if not piece:
         raise HTTPException(status_code=404, detail="Content not found")
     db.delete(piece)
