@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     whisper_model: str = "whisper-1"
 
-    # Google GenAI (Image Generation — Nano Banana 2 / Gemini Flash Image)
-    google_api_key: str = ""
+    # Google GenAI (Image Generation — Gemini Flash Image)
+    gemini_api_key: str = ""
     image_gen_model: str = "gemini-3.1-flash-image-preview"
     image_gen_size: str = "1024x1024"
 

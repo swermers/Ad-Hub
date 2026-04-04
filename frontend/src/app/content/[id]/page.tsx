@@ -246,10 +246,12 @@ function ContentDetailInner() {
           setDefaultsSet(true);
         }
         // Load product for brand colors + screenshots
-        try {
-          const p = await api.getProduct(c.product_id);
-          setProduct(p);
-        } catch { /* ok */ }
+        if (c.product_id) {
+          try {
+            const p = await api.getProduct(c.product_id);
+            setProduct(p);
+          } catch { /* ok */ }
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -369,7 +371,7 @@ function ContentDetailInner() {
   }
 
   // Pick colors for the visual preview using smart color scheme + overrides + tone
-  const colorScheme = buildColorSchemeFromSeed(brandColors, piece.product_id);
+  const colorScheme = buildColorSchemeFromSeed(brandColors, piece.product_id ?? "default");
   const toned = applyTone(
     colorOverride.bg || colorScheme.backgroundColor,
     colorOverride.text || colorScheme.textColor,

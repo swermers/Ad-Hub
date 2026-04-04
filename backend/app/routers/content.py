@@ -13,7 +13,7 @@ router = APIRouter()
 
 class ContentPieceResponse(BaseModel):
     id: str
-    product_id: str
+    product_id: str | None
     content_type: str
     platform: str
     title: str | None

@@ -31,27 +31,30 @@ export default function ContentOutput({ result, productId }: ContentOutputProps)
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchPieces = useCallback(async () => {
     if (result.content_ids.length === 0) {
       setLoading(false);
       return;
     }
-
-    // Fetch the saved content pieces
-    const fetchPieces = async () => {
-      try {
-        const all = await api.listContent({ product_id: productId });
-        const saved = all.filter((p) => result.content_ids.includes(p.id));
-        setPieces(saved);
-      } catch {
-        // Fallback: just show IDs
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPieces();
+    setLoading(true);
+    setError(null);
+    try {
+      const all = await api.listContent({ product_id: productId || undefined });
+      const saved = all.filter((p) => result.content_ids.includes(p.id));
+      setPieces(saved);
+    } catch (err) {
+      console.error("Failed to load content pieces:", err);
+      setError(err instanceof Error ? err.message : "Failed to load content pieces");
+    } finally {
+      setLoading(false);
+    }
   }, [result, productId]);
+
+  useEffect(() => {
+    fetchPieces();
+  }, [fetchPieces]);
 
   const copyToClipboard = useCallback(async (text: string, id: string) => {
     try {
@@ -83,6 +86,35 @@ export default function ContentOutput({ result, productId }: ContentOutputProps)
             progress_activity
           </span>
           <span className="text-sm text-[#E5E1E4]/50">Loading your content...</span>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (error) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-prism rounded-2xl border border-[#ffb4ab]/20 bg-[#ffb4ab]/5 backdrop-blur-xl p-8 text-center"
+      >
+        <span className="material-symbols-outlined text-[#ffb4ab] text-4xl mb-3 block">
+          error_outline
+        </span>
+        <p className="text-sm text-[#ffb4ab]/80 mb-1">
+          {result.pieces_saved} piece{result.pieces_saved !== 1 ? "s" : ""} saved, but failed to load preview.
+        </p>
+        <p className="text-xs text-[#E5E1E4]/30 mb-4">{error}</p>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => fetchPieces()}
+            className="px-4 py-2 rounded-lg border border-[#FF9500]/40 text-[#FF9500] text-xs font-semibold hover:bg-[#FF9500]/10 transition-colors"
+          >
+            Retry
+          </button>
+          <Link href="/content" className="text-[#FF9500] hover:underline text-xs">
+            View in Content Library
+          </Link>
         </div>
       </motion.div>
     );

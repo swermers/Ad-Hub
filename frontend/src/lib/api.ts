@@ -909,7 +909,7 @@ export interface GenerateStatus {
 
 export interface ContentPiece {
   id: string;
-  product_id: string;
+  product_id: string | null;
   content_type: string;
   platform: string;
   title: string | null;

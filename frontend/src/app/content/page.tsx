@@ -48,10 +48,13 @@ export default function ContentPage() {
         for (const prod of p) map[prod.id] = prod;
         setProductMap(map);
         // Auto-expand all product folders on load
-        const ids = new Set(c.map((piece) => piece.product_id));
+        const ids = new Set(c.map((piece) => piece.product_id ?? "__ungrouped__"));
         setExpandedFolders(ids);
       })
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err);
+        setError(err instanceof Error ? err.message : "Failed to load content");
+      })
       .finally(() => setLoading(false));
   }, [filterProduct, filterStatus, filterType]);
 
@@ -76,8 +79,9 @@ export default function ContentPage() {
   // Group content by product
   const grouped: Record<string, ContentPiece[]> = {};
   for (const piece of content) {
-    if (!grouped[piece.product_id]) grouped[piece.product_id] = [];
-    grouped[piece.product_id].push(piece);
+    const key = piece.product_id ?? "__ungrouped__";
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(piece);
   }
 
   // Stats
@@ -316,7 +320,7 @@ export default function ContentPage() {
                     </motion.span>
                     <div className="text-left">
                       <p className="text-sm font-semibold text-[#E5E1E4]">
-                        {product?.name || "Unknown Product"}
+                        {product?.name || (productId === "__ungrouped__" ? "General Content" : "Unknown Product")}
                       </p>
                       <p className="text-xs text-[#E5E1E4]/30 mt-0.5 font-mono">
                         {pieces.length} item{pieces.length !== 1 ? "s" : ""}
@@ -652,7 +656,7 @@ function ListCard({
 }
 
 /** Extract product visuals (colors + screenshot) - shared logic */
-function useProductVisuals(product: Product | undefined, productId: string) {
+function useProductVisuals(product: Product | undefined, productId: string | null) {
   let brandColors: string[] = [];
   if (product?.brand_colors) {
     try {
@@ -670,7 +674,7 @@ function useProductVisuals(product: Product | undefined, productId: string) {
     }
   }
 
-  const colorScheme = buildColorSchemeFromSeed(brandColors, productId);
+  const colorScheme = buildColorSchemeFromSeed(brandColors, productId ?? "default");
 
   let screenshotUrl: string | undefined;
   if (product?.screenshots) {
