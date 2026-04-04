@@ -420,11 +420,12 @@ function ContentDetailInner() {
   const ctaText = piece.cta || "Learn More";
 
   const handleGenerateImage = async () => {
-    if (!piece) return;
+    if (!piece || !piece.product_id) return;
+    const productId = piece.product_id;
     setGeneratingImage(true);
     setImageGenStatus(null);
     try {
-      const status = await api.generateImage(piece.product_id, {
+      const status = await api.generateImage(productId, {
         content_id: piece.id,
         headline,
         body: bodyText,
@@ -436,7 +437,7 @@ function ContentDetailInner() {
       if (imageGenPollRef.current) clearInterval(imageGenPollRef.current);
       imageGenPollRef.current = setInterval(async () => {
         try {
-          const updated = await api.getImageGenStatus(piece.product_id, status.task_id);
+          const updated = await api.getImageGenStatus(productId, status.task_id);
           setImageGenStatus(updated);
           if (updated.status === "completed" || updated.status === "failed") {
             if (imageGenPollRef.current) clearInterval(imageGenPollRef.current);
@@ -1207,7 +1208,7 @@ function ContentDetailInner() {
         </button>
         {/* Re-generate variation */}
         <button
-          onClick={() => router.push(`/generate?product_id=${piece.product_id}`)}
+          onClick={() => router.push(piece.product_id ? `/generate?product_id=${piece.product_id}` : "/generate")}
           className="px-4 py-2 bg-[#201f21] text-[#dbc2ad] border border-white/10 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
         >
           Re-generate
