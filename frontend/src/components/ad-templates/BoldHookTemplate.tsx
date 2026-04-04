@@ -1,6 +1,7 @@
 import React from "react";
 import type { AdTemplateProps } from "./types";
 import { getDimensions } from "./types";
+import { GrainOverlay, VignetteOverlay } from "./textures";
 
 export function BoldHookTemplate({
   headline,
@@ -10,11 +11,15 @@ export function BoldHookTemplate({
   textColor = "#ffffff",
   accentColor = "#FF3366",
   screenshotUrl,
-  aspectRatio = "1:1",
+  imageUrl,
+  aspectRatio = "4:5",
   scale = 1,
 }: AdTemplateProps) {
   const { width, height } = getDimensions(aspectRatio, scale);
   const s = scale;
+
+  // Use AI-generated image or screenshot as background
+  const bgImage = imageUrl || screenshotUrl;
 
   return (
     <div
@@ -29,31 +34,37 @@ export function BoldHookTemplate({
         position: "relative",
       }}
     >
-      {/* Gradient overlay from bottom */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: screenshotUrl
-            ? `linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 60%, ${backgroundColor} 100%)`
-            : `linear-gradient(135deg, ${backgroundColor} 0%, ${adjustBrightness(backgroundColor, -20)} 100%)`,
-          zIndex: 1,
-        }}
-      />
-
-      {/* Product screenshot background */}
-      {screenshotUrl && (
+      {/* AI-generated or product image — full-bleed background */}
+      {bgImage && (
         <div
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage: `url(${screenshotUrl})`,
+            backgroundImage: `url(${bgImage})`,
             backgroundSize: "cover",
             backgroundPosition: "center top",
             zIndex: 0,
           }}
         />
       )}
+
+      {/* Gradient overlay from bottom */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: bgImage
+            ? `linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 60%, ${backgroundColor} 100%)`
+            : `linear-gradient(135deg, ${backgroundColor} 0%, ${adjustBrightness(backgroundColor, -20)} 100%)`,
+          zIndex: 1,
+        }}
+      />
+
+      {/* Premium texture overlays */}
+      <div style={{ position: "absolute", inset: 0, zIndex: 2 }}>
+        <GrainOverlay opacity={0.3} />
+        {bgImage && <VignetteOverlay opacity={0.4} />}
+      </div>
 
       {/* Decorative accent shapes */}
       <div
@@ -65,7 +76,7 @@ export function BoldHookTemplate({
           height: 400 * s,
           borderRadius: "50%",
           background: `radial-gradient(circle, ${accentColor}22 0%, transparent 70%)`,
-          zIndex: 1,
+          zIndex: 2,
         }}
       />
 
@@ -78,7 +89,7 @@ export function BoldHookTemplate({
           justifyContent: "flex-end",
           padding: `${80 * s}px ${70 * s}px`,
           position: "relative",
-          zIndex: 2,
+          zIndex: 3,
         }}
       >
         {/* Accent tag */}

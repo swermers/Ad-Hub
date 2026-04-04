@@ -24,6 +24,7 @@ import { SaasDemoComposition } from "./SaasDemoComposition";
 import { DataHypeComposition } from "./DataHypeComposition";
 import { SocialProofComposition } from "./SocialProofComposition";
 import { ImageFrameOverlayComposition } from "./ImageFrameOverlayComposition";
+import { StorytellingCarouselComposition } from "./StorytellingCarouselComposition";
 
 const FPS = 30;
 
@@ -63,6 +64,7 @@ const COMPOSITIONS: {
   { id: "data-hype", component: DataHypeComposition, durationSeconds: 6, width: 1080, height: 1080 },
   { id: "social-proof", component: SocialProofComposition, durationSeconds: 7, width: 1080, height: 1920 },
   { id: "image-overlay", component: ImageFrameOverlayComposition, durationSeconds: 7, width: 1080, height: 1080 },
+  { id: "storytelling-carousel", component: StorytellingCarouselComposition, durationSeconds: 18, width: 1080, height: 1350 },
 ];
 
 export const RemotionRoot: React.FC = () => {

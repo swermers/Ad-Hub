@@ -18,6 +18,7 @@ import { BrandHeroTemplate } from "./BrandHeroTemplate";
 import { StatusCardTemplate } from "./StatusCardTemplate";
 import { HandwrittenQuoteTemplate } from "./HandwrittenQuoteTemplate";
 import { BillboardTemplate } from "./BillboardTemplate";
+import { StorytellingCarouselTemplate } from "./StorytellingCarouselTemplate";
 
 interface TemplateRendererProps extends AdTemplateProps {
   templateType: string;
@@ -41,6 +42,7 @@ const TEMPLATES: Record<string, React.ComponentType<AdTemplateProps>> = {
   status_card: StatusCardTemplate,
   handwritten_quote: HandwrittenQuoteTemplate,
   billboard: BillboardTemplate,
+  storytelling_carousel: StorytellingCarouselTemplate,
 };
 
 export function TemplateRenderer({ templateType, ...props }: TemplateRendererProps) {
@@ -127,7 +129,7 @@ export const TEMPLATE_OPTIONS: {
     label: "Carousel Card",
     description: "Numbered card with pagination dots, designed for multi-slide carousels",
     bestFor: ["carousel"],
-    defaultAspect: "1:1",
+    defaultAspect: "4:5",
   },
   {
     value: "ugc_style",
@@ -177,6 +179,13 @@ export const TEMPLATE_OPTIONS: {
     label: "Billboard",
     description: "Bold headline + centered illustration + brand footer with QR code — outdoor ad style",
     bestFor: ["billboard", "feed"],
+    defaultAspect: "4:5",
+  },
+  {
+    value: "storytelling_carousel",
+    label: "Storytelling Carousel",
+    description: "Editorial multi-slide narrative with luxury typography, textures, design elements, and optional AI imagery — hook → build → rehook → insight → CTA",
+    bestFor: ["carousel", "feed"],
     defaultAspect: "4:5",
   },
 ];

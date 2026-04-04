@@ -1,6 +1,7 @@
 import React from "react";
 import type { AdTemplateProps } from "./types";
 import { getDimensions } from "./types";
+import { GrainOverlay, NoiseGradient } from "./textures";
 
 export function GradientCardTemplate({
   headline,
@@ -10,7 +11,8 @@ export function GradientCardTemplate({
   textColor = "#ffffff",
   accentColor = "#7c3aed",
   screenshotUrl,
-  aspectRatio = "1:1",
+  imageUrl,
+  aspectRatio = "4:5",
   scale = 1,
 }: AdTemplateProps) {
   const { width, height } = getDimensions(aspectRatio, scale);
@@ -42,6 +44,10 @@ export function GradientCardTemplate({
         }}
       />
 
+      {/* Premium texture overlays */}
+      <GrainOverlay opacity={0.25} />
+      <NoiseGradient opacity={0.15} color={accentColor} />
+
       {/* Floating card with product shot */}
       <div
         style={{
@@ -68,12 +74,12 @@ export function GradientCardTemplate({
             justifyContent: "center",
           }}
         >
-          {screenshotUrl ? (
+          {(imageUrl || screenshotUrl) ? (
             <div
               style={{
                 width: "100%",
                 height: "100%",
-                backgroundImage: `url(${screenshotUrl})`,
+                backgroundImage: `url(${imageUrl || screenshotUrl})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center top",
               }}

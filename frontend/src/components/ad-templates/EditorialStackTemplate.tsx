@@ -1,11 +1,12 @@
 import React from "react";
 import type { AdTemplateProps } from "./types";
 import { getDimensions } from "./types";
+import { PaperTexture, GrainOverlay } from "./textures";
 
 /**
  * Editorial Stack — Bold stacked typography layout.
  * Inspired by CPG billboard ads (RELOAD / REORDER / REFILL style).
- * Text-dominant with optional product image and brand logo.
+ * Text-dominant with optional product image, AI-generated image, and brand logo.
  */
 export function EditorialStackTemplate({
   headline,
@@ -16,7 +17,8 @@ export function EditorialStackTemplate({
   accentColor = "#000000",
   logoUrl,
   screenshotUrl,
-  aspectRatio = "1:1",
+  imageUrl,
+  aspectRatio = "4:5",
   scale = 1,
 }: AdTemplateProps) {
   const { width, height } = getDimensions(aspectRatio, scale);
@@ -45,6 +47,36 @@ export function EditorialStackTemplate({
         position: "relative",
       }}
     >
+      {/* Premium texture overlays */}
+      <PaperTexture opacity={0.12} />
+      <GrainOverlay opacity={0.2} blend="soft-light" />
+
+      {/* AI-generated image as accent element */}
+      {imageUrl && (
+        <div
+          style={{
+            position: "absolute",
+            top: "5%",
+            right: "3%",
+            width: "42%",
+            height: "48%",
+            zIndex: 1,
+            borderRadius: 12 * s,
+            overflow: "hidden",
+            boxShadow: `0 ${8 * s}px ${32 * s}px rgba(0,0,0,0.15)`,
+          }}
+        >
+          <img
+            src={imageUrl}
+            alt=""
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+        </div>
+      )}
       {/* Product image floating on the right side */}
       {screenshotUrl && (
         <div
