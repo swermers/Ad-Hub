@@ -10,12 +10,24 @@ Steps:
 
 import json
 
-from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry
+from app.engines.flows import (
+    ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry,
+    editor_gate_parser, editor_gate_check,
+)
 
 
 # ─── Step 1: Hook Mining ──────────────────────────────────────────────────
 
 def _hook_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: find the most provocative opening tweet. The first tweet decides if anyone reads the rest."""
+
     return f"""You are an X/Twitter thread strategist. You find the most provocative angle to open a thread.
 
 {ctx.product_context}
@@ -50,6 +62,13 @@ Return ONLY a JSON object:
 # ─── Step 2: Thread Outline ──────────────────────────────────────────────
 
 def _outline_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: plan the tweet-by-tweet arc. Each tweet must stand alone AND build on the previous."""
+
     return f"""You are structuring an X thread. Each tweet must stand alone in someone's feed AND build on the previous.
 
 {ctx.voice_context}
@@ -97,6 +116,15 @@ Return ONLY a JSON object:
 # ─── Step 3: Draft Tweets ────────────────────────────────────────────────
 
 def _draft_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: write the full thread following the outline. Each tweet under 280 characters."""
+
     return f"""You are writing an X/Twitter thread. Each tweet under 280 characters. No hashtags. No emojis.
 
 {ctx.voice_context}
@@ -139,6 +167,14 @@ Return ONLY a JSON object:
 # ─── Step 4: Engagement Gate ─────────────────────────────────────────────
 
 def _gate_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Content type: X Thread
+Your current task: evaluate this thread against voice profile and quality gates."""
+
     return f"""You are an X/Twitter engagement expert. Evaluate this thread ruthlessly.
 
 {ctx.voice_context}"""
@@ -147,59 +183,64 @@ def _gate_system(ctx: FlowContext) -> str:
 def _gate_user(ctx: FlowContext) -> str:
     draft = ctx.get_step_result("draft_tweets") or {}
     tweets = draft.get("tweets", [])
-    thread_text = "\n\n---\n\n".join([f"Tweet {i+1}: {t}" for i, t in enumerate(tweets)])
+    thread_text = "\n\n---\n\n".join([f"Tweet {i+1} ({len(t)} chars): {t}" for i, t in enumerate(tweets)])
 
-    return f"""Evaluate this X thread:
+    return f"""Review this X thread:
 
 {thread_text}
 
-Score each criterion (1-10):
-1. TWEET 1 POWER: Would you click "Show this thread" from your timeline?
-2. STANDALONE VALUE: Can each tweet stand alone if someone only sees that one?
-3. FLOW: Does each tweet pull you to the next? Are transitions smooth?
-4. ORIGINALITY: Does this feel fresh or like recycled thread advice?
-5. CLOSE: Does the final tweet inspire engagement (reply, retweet, bookmark)?
+Seed: {ctx.seed.get('seed', '')}
+Audience hook: {ctx.seed.get('audience_hook', '')}
 
-Also check:
-- Any tweet over 280 characters? Flag it.
-- Any tweet that's just filler? Flag it.
-- Any repetitive structure (3+ tweets starting the same way)? Flag it.
+Score each dimension 1-5. Pass threshold: 22/25.
 
-If average score < 7, rewrite the weak tweets.
+| Dimension | What You're Measuring |
+|---|---|
+| Voice match | Does this sound like the creator? |
+| Format compliance | Every tweet under 280? No numbering/hashtags? Varied length? |
+| Coherence | Clear arc from hook to close? Each tweet earns the next? |
+| Quality | Tweet 1 standalone? Each tweet quotable? Close drives engagement? |
+| AI-free | No AI fingerprints? No "Here's the thing" / "Let that sink in"? |
+
+Auto-fail conditions:
+- Any tweet over 280 characters
+- "Thread:" or "1/" prefixes
+- Tweet 1 opens with "I've been thinking..." (newsletter energy)
+- 3+ AI fingerprints across the thread
+- No clear arc (just disconnected takes)
 
 Return ONLY a JSON object:
 {{
-    "scores": {{"tweet1_power": 8, "standalone": 7, "flow": 8, "originality": 7, "close": 8}},
-    "average": 7.6,
+    "overall_score": 22,
     "passed": true,
+    "scores": {{
+        "voice_match": 5,
+        "format_compliance": 4,
+        "coherence": 5,
+        "quality": 4,
+        "ai_free": 4
+    }},
     "over_limit_tweets": [],
     "filler_tweets": [],
-    "feedback": "what worked and what to fix",
-    "rewritten_tweets": null
-}}
-
-Set rewritten_tweets to the full array if average < 7, otherwise null."""
-
-
-def _gate_parser(result: dict, ctx: FlowContext) -> dict:
-    from app.engines.flows import _default_parse
-    parsed = _default_parse(result)
-
-    if parsed.get("rewritten_tweets"):
-        draft = ctx.get_step_result("draft_tweets") or {}
-        draft["tweets"] = parsed["rewritten_tweets"]
-        ctx.step_results["draft_tweets"] = draft
-
-    return parsed
-
-
-def _gate_check(result: dict, ctx: FlowContext) -> bool:
-    return result.get("passed", False) or result.get("average", 0) >= 7
+    "violations": [],
+    "ai_fingerprints": [],
+    "priority_fixes": [],
+    "strongest_moments": [],
+    "notes": ""
+}}"""
 
 
 # ─── Step 5: Polish ─────────────────────────────────────────────────────
 
 def _polish_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Content type: X Thread
+Your current task: final polish pass. Trim, tighten, format. Every tweet under 280 chars."""
+
     return f"""You are doing final polish on an X thread. Trim, tighten, format.
 
 {ctx.voice_context}"""
@@ -236,7 +277,7 @@ class XThreadFlow(ContentFlow):
         FlowStep(name="hook_mining", system_prompt_builder=_hook_system, user_prompt_builder=_hook_user, max_tokens=1024),
         FlowStep(name="thread_outline", system_prompt_builder=_outline_system, user_prompt_builder=_outline_user, max_tokens=1536),
         FlowStep(name="draft_tweets", system_prompt_builder=_draft_system, user_prompt_builder=_draft_user, max_tokens=2048, premium=True),
-        FlowStep(name="engagement_gate", system_prompt_builder=_gate_system, user_prompt_builder=_gate_user, parser=_gate_parser, quality_gate=_gate_check, max_tokens=2048, premium=True),
+        FlowStep(name="engagement_gate", system_prompt_builder=_gate_system, user_prompt_builder=_gate_user, parser=editor_gate_parser, quality_gate=editor_gate_check, max_tokens=2048, premium=True),
         FlowStep(name="polish", system_prompt_builder=_polish_system, user_prompt_builder=_polish_user, max_tokens=1536),
     ]
 
@@ -264,8 +305,9 @@ class XThreadFlow(ContentFlow):
                 "steps_completed": steps_done,
                 "tweets": tweets,
                 "tweet_count": len(tweets),
-                "quality_scores": gate.get("scores", {}),
-                "quality_average": gate.get("average"),
+                "editor_score": gate.get("overall_score"),
+                "editor_scores": gate.get("scores", {}),
+                "editor_passed": gate.get("passed", False),
                 "hook_strategy": (ctx.get_step_result("hook_mining") or {}).get("reasoning"),
             },
             steps_completed=steps_done,

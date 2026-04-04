@@ -44,6 +44,14 @@ class FlowContext:
     workflow_type: str = ""
     workflow_version: int = 1
 
+    # Loaded skill content (from skill_loader) — rich, enforceable agent instructions
+    drafter_skill: str = ""
+    editor_skill: str = ""
+
+    # Voice profile quality score (0-100) — affects editor pass thresholds
+    # 90+: full enforcement (22/25), 70-89: softer gates (20/25), <70: guidance only
+    voice_quality_score: int = 100
+
     # Step overrides from ContentTypeWorkflow (loaded from DB or defaults)
     step_prompt_overrides: dict[str, str] = field(default_factory=dict)
     quality_gate_overrides: dict[str, str] = field(default_factory=dict)
@@ -241,6 +249,151 @@ class ContentFlow:
             quality_gates_failed=gates_failed,
             total_llm_calls=total_calls,
         )
+
+
+# ─── Editor Step Infrastructure ──────────────────────────────────────────
+# Reusable components for the 22/25 scoring rubric, auto-fail conditions,
+# and revision loop that all content flows share.
+
+
+EDITOR_PASS_THRESHOLD = 22
+EDITOR_REVISION_FLOOR = 18
+EDITOR_HARD_FLOOR = 15
+
+
+def editor_gate_check(result: dict, ctx: FlowContext) -> bool:
+    """Score-aware 22/25 pass/fail check used by all editor steps.
+
+    The pass threshold adjusts based on voice profile quality:
+    - 90%+ profile: full enforcement (22/25)
+    - 70-89% profile: softer gates (20/25)
+    - Below 70%: even softer (18/25) since voice matching is inherently weaker
+
+    Returns True if the draft passes, False to trigger a revision retry.
+    """
+    if result.get("passed") is True:
+        return True
+
+    score = result.get("overall_score", 0)
+
+    # Adjust threshold based on voice profile quality
+    if ctx.voice_quality_score >= 90:
+        threshold = EDITOR_PASS_THRESHOLD  # 22
+    elif ctx.voice_quality_score >= 70:
+        threshold = 20
+    else:
+        threshold = EDITOR_REVISION_FLOOR  # 18
+
+    return score >= threshold
+
+
+def editor_gate_parser(result: dict, ctx: FlowContext) -> dict:
+    """Standard editor parser — extracts scoring and handles revision feedback.
+
+    If the editor returns priority_fixes, stores them in context so the
+    retry prompt can reference them specifically.
+    """
+    parsed = _default_parse(result)
+
+    # Store editor feedback for revision loop
+    priority_fixes = parsed.get("priority_fixes", [])
+    if priority_fixes:
+        ctx.step_results["_editor_feedback"] = {
+            "overall_score": parsed.get("overall_score", 0),
+            "priority_fixes": priority_fixes,
+            "violations": parsed.get("violations", []),
+            "ai_fingerprints": parsed.get("ai_fingerprints", []),
+        }
+
+    return parsed
+
+
+def build_editor_system_prompt(ctx: FlowContext, content_type: str, platform: str = "") -> str:
+    """Build system prompt for an editor step using the loaded editor skill.
+
+    Falls back to a structured default if no skill is loaded.
+    """
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Content type: {content_type}
+{f"Platform: {platform}" if platform else ""}
+Your current task: review this draft against the voice profile and quality gates. Score on the 22/25 rubric."""
+
+    # Fallback: structured editor prompt without skill file
+    return f"""You are a content quality gate. Review this draft against the voice profile and quality standards.
+
+{ctx.voice_context}
+
+{ctx.prompt_set.get("voice_rules", "")}
+
+Content type: {content_type}
+{f"Platform: {platform}" if platform else ""}
+
+Score each dimension 1-5:
+- Voice match: Does this sound like the creator?
+- Format compliance: Does it follow platform/type conventions?
+- Coherence: Does it deliver on the seed's promise?
+- Quality: Is this good enough to publish without edits?
+- AI-free: Does it pass the fingerprint scan cleanly?
+
+Pass threshold: 22/25. Auto-fail: banned words, 3+ AI fingerprints, wrong format conventions."""
+
+
+def build_editor_user_prompt(
+    ctx: FlowContext,
+    draft_text: str,
+    content_type: str,
+    platform: str = "",
+    extra_checks: str = "",
+) -> str:
+    """Build user prompt for an editor step.
+
+    Includes the draft, seed context, and asks for the standardized scoring output.
+    """
+    seed_context = f"""Seed: {ctx.seed.get('seed', '')}
+Heat: {json.dumps(ctx.seed.get('heat', []))}
+Audience hook: {ctx.seed.get('audience_hook', '')}"""
+
+    return f"""Review this {content_type} draft:
+
+---
+{draft_text[:3000]}
+---
+
+Source context:
+{seed_context}
+
+{extra_checks}
+
+Score each dimension 1-5. Pass threshold: 22/25.
+
+Auto-fail conditions:
+- Any word from the voice profile's banned list
+- More than 2 AI fingerprints (universal + profile-specific)
+- Format conventions from another content type leaking in
+{f"- Over 280 characters (X post)" if platform == "twitter" else ""}
+{f"- Newsletter sign-off on a social post" if content_type == "social_post" else ""}
+
+Return ONLY a JSON object:
+{{
+    "overall_score": 22,
+    "passed": true,
+    "scores": {{
+        "voice_match": 5,
+        "format_compliance": 4,
+        "coherence": 5,
+        "quality": 4,
+        "ai_free": 4
+    }},
+    "violations": [],
+    "ai_fingerprints": [],
+    "priority_fixes": [],
+    "strongest_moments": [],
+    "notes": ""
+}}"""
 
 
 # ─── Flow Registry ─────────────────────────────────────────────────────────

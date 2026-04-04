@@ -8,10 +8,22 @@ Steps:
 """
 
 import json
-from app.engines.flows import ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry
+from app.engines.flows import (
+    ContentFlow, FlowContext, FlowResult, FlowStep, FlowRegistry,
+    editor_gate_parser, editor_gate_check,
+)
 
 
 def _hook_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: write 3 opening hook variations for the first 3 seconds of the video."""
+
     return f"""You write video hooks. The first 3 seconds decide if someone watches or scrolls.
 {ctx.product_context}
 {ctx.voice_context}
@@ -32,6 +44,15 @@ Return ONLY JSON: {{"hooks": [{{"text": "...", "strategy": "open_loop|pattern_in
 
 
 def _blocks_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+{ctx.product_context}
+
+Your current task: break the content into breath blocks. 2-4 sentences each, speakable in one breath."""
+
     return f"""You convert ideas into breath blocks — chunks a speaker can deliver in one breath (2-4 sentences).
 
 {ctx.voice_context}
@@ -64,6 +85,13 @@ Return ONLY JSON: {{"blocks": [{{"text": "...", "estimated_seconds": 15, "energy
 
 
 def _cta_system(ctx: FlowContext) -> str:
+    if ctx.drafter_skill:
+        return f"""{ctx.drafter_skill}
+
+{ctx.voice_context}
+
+Your current task: write the closing CTA and suggest a thumbnail concept."""
+
     return f"""You write video CTAs and suggest thumbnail concepts. The CTA should feel like a natural conclusion.
 
 {ctx.voice_context}"""
@@ -84,6 +112,14 @@ Return ONLY JSON: {{"cta_text": "...", "cta_seconds": 6, "thumbnail_concept": "d
 
 
 def _cadence_system(ctx: FlowContext) -> str:
+    if ctx.editor_skill:
+        return f"""{ctx.editor_skill}
+
+{ctx.voice_context}
+
+Content type: Video Script
+Your current task: check spoken-word cadence. Flag anything that sounds unnatural when said aloud."""
+
     return f"""You check spoken-word cadence. Read the script aloud mentally. Flag anything that sounds unnatural.
 
 {ctx.voice_context}"""
@@ -100,24 +136,51 @@ def _cadence_user(ctx: FlowContext) -> str:
 
     full_script = f"{best_hook}\n\n" + "\n\n".join(block_texts) + f"\n\n{cta.get('cta_text', '')}"
 
-    return f"""Review this video script for spoken cadence:
+    return f"""Review this video script:
 
 ---
 {full_script}
 ---
 
-Check:
-1. NATURALNESS: Does every sentence sound natural spoken aloud? (1-10)
-2. PACING: Is there variety in sentence length and energy? (1-10)
-3. TRANSITIONS: Do blocks flow into each other? (1-10)
-4. TONGUE TWISTERS: Any phrases that are hard to say? Flag them.
+Seed: {ctx.seed.get('seed', '')}
 
-Return ONLY JSON: {{"scores": {{"naturalness": 8, "pacing": 8, "transitions": 7}}, "average": 7.7,
-"passed": true, "tongue_twisters": [], "final_script": "the full script with any fixes"}}"""
+Score each dimension 1-5. Pass threshold: 22/25.
 
+| Dimension | What You're Measuring |
+|---|---|
+| Voice match | Does this sound like the creator speaking naturally? |
+| Format compliance | Every block 2-4 sentences? Speakable? No em dashes? [THUMBNAIL MOMENT] marked? |
+| Coherence | Does the script deliver on the seed's promise? Strong lines preserved? |
+| Quality | Would this sound natural on camera without edits? Closing question intact? |
+| AI-free | No AI fingerprints? No stilted written-language phrases? |
 
-def _cadence_check(result: dict, ctx: FlowContext) -> bool:
-    return result.get("passed", False) or result.get("average", 0) >= 7
+Auto-fail conditions:
+- Blocks longer than 4 sentences
+- Em dashes (spoken delivery doesn't have them)
+- Sentences over 25 words that weren't simplified
+- Strong lines from source paraphrased instead of preserved
+- 3+ AI fingerprints
+
+Return ONLY a JSON object:
+{{
+    "overall_score": 22,
+    "passed": true,
+    "scores": {{
+        "voice_match": 5,
+        "format_compliance": 4,
+        "coherence": 5,
+        "quality": 4,
+        "ai_free": 4
+    }},
+    "tongue_twisters": [],
+    "violations": [],
+    "ai_fingerprints": [],
+    "priority_fixes": [],
+    "strongest_moments": [],
+    "final_script": null
+}}
+
+Set final_script to the full corrected script ONLY if fixes are needed, otherwise null."""
 
 
 class VideoScriptFlow(ContentFlow):
@@ -127,7 +190,7 @@ class VideoScriptFlow(ContentFlow):
         FlowStep(name="video_hook", system_prompt_builder=_hook_system, user_prompt_builder=_hook_user, max_tokens=1024),
         FlowStep(name="breath_blocks", system_prompt_builder=_blocks_system, user_prompt_builder=_blocks_user, max_tokens=2048, premium=True),
         FlowStep(name="cta_timing", system_prompt_builder=_cta_system, user_prompt_builder=_cta_user, max_tokens=1024),
-        FlowStep(name="cadence_check", system_prompt_builder=_cadence_system, user_prompt_builder=_cadence_user, quality_gate=_cadence_check, max_tokens=2048),
+        FlowStep(name="cadence_check", system_prompt_builder=_cadence_system, user_prompt_builder=_cadence_user, parser=editor_gate_parser, quality_gate=editor_gate_check, max_tokens=2048, premium=True),
     ]
 
     def build_result(self, ctx, steps_done, gates_passed, gates_failed, total_calls):
@@ -153,7 +216,9 @@ class VideoScriptFlow(ContentFlow):
                 "blocks": [b.get("text", "") for b in block_data],
                 "thumbnail_concept": cta.get("thumbnail_concept"),
                 "estimated_length": f"{blocks.get('total_estimated_seconds', 120)}s",
-                "cadence_scores": cadence.get("scores", {}),
+                "editor_score": cadence.get("overall_score"),
+                "editor_scores": cadence.get("scores", {}),
+                "editor_passed": cadence.get("passed", False),
             },
             steps_completed=steps_done, quality_gates_passed=gates_passed,
             quality_gates_failed=gates_failed, total_llm_calls=total_calls,
