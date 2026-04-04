@@ -48,7 +48,7 @@ export default function ContentPage() {
         for (const prod of p) map[prod.id] = prod;
         setProductMap(map);
         // Auto-expand all product folders on load
-        const ids = new Set(c.map((piece) => piece.product_id));
+        const ids = new Set(c.map((piece) => piece.product_id ?? "__ungrouped__"));
         setExpandedFolders(ids);
       })
       .catch((err) => {
@@ -656,7 +656,7 @@ function ListCard({
 }
 
 /** Extract product visuals (colors + screenshot) - shared logic */
-function useProductVisuals(product: Product | undefined, productId: string) {
+function useProductVisuals(product: Product | undefined, productId: string | null) {
   let brandColors: string[] = [];
   if (product?.brand_colors) {
     try {
@@ -674,7 +674,7 @@ function useProductVisuals(product: Product | undefined, productId: string) {
     }
   }
 
-  const colorScheme = buildColorSchemeFromSeed(brandColors, productId);
+  const colorScheme = buildColorSchemeFromSeed(brandColors, productId ?? "default");
 
   let screenshotUrl: string | undefined;
   if (product?.screenshots) {
