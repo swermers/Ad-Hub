@@ -81,6 +81,7 @@ def create_tables():
         Subscription,
         UsageRecord,
         User,
+        VoiceProfile,
         Workspace,
     )
 
@@ -98,6 +99,7 @@ def create_tables():
     _add_column_if_missing("content_pieces", "voice_profile_id", "VARCHAR(36)")
     _add_column_if_missing("seeds", "voice_profile_id", "VARCHAR(36)")
     _add_column_if_missing("voice_profiles", "product_id", "VARCHAR(36)")
+    _add_column_if_missing("voice_profiles", "quality_score", "INTEGER DEFAULT 0")
 
     # Make product_id nullable for profile-only content generation
     _make_column_nullable("content_pieces", "product_id")

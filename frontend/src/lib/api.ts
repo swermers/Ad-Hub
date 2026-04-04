@@ -1754,6 +1754,9 @@ export interface VoiceProfileItem {
   default_template: string | null;
   content_themes: string[];
   is_default: boolean;
+  quality_score: number;
+  quality_grade: string;
+  product_id: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
