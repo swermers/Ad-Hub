@@ -805,7 +805,7 @@ function ContentDetailInner() {
                       textColor={textColor}
                       accentColor={accentColor}
                       screenshotUrl={screenshotUrl}
-                      imageUrl={piece?.image_url ? `${API_BASE}${piece.image_url}` : undefined}
+                      imageUrl={piece?.image_url ? `${API_BASE}${piece?.image_url}` : undefined}
                     />
                   </div>
                 </div>
