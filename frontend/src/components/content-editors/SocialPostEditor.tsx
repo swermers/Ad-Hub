@@ -196,7 +196,7 @@ export default function SocialPostEditor({
                 Specificity
               </p>
               <p className="text-[10px] text-[#E5E1E4]/50 leading-relaxed">
-                {metadata.specificity_check}
+                {String(metadata.specificity_check)}
               </p>
             </div>
           )}
@@ -206,7 +206,7 @@ export default function SocialPostEditor({
                 Tension
               </p>
               <p className="text-[10px] text-[#E5E1E4]/50 leading-relaxed">
-                {metadata.tension_check}
+                {String(metadata.tension_check)}
               </p>
             </div>
           )}
@@ -216,7 +216,7 @@ export default function SocialPostEditor({
                 Stealable Line
               </p>
               <p className="text-[10px] text-[#E5E1E4]/50 leading-relaxed italic">
-                &ldquo;{metadata.stealable_line}&rdquo;
+                &ldquo;{String(metadata.stealable_line)}&rdquo;
               </p>
             </div>
           )}

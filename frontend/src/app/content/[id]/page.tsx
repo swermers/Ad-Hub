@@ -168,7 +168,7 @@ class VideoErrorBoundary extends Component<{ children: ReactNode; fallback: Reac
   }
 }
 
-/** Ensure string fields are actually strings (AI can return objects/arrays) */
+/** Ensure ALL fields are plain serializable types (AI can return objects/arrays) */
 function sanitizePiece(c: ContentPiece): ContentPiece {
   const str = (v: unknown): string =>
     typeof v === "string" ? v : v == null ? "" : JSON.stringify(v);
@@ -184,7 +184,21 @@ function sanitizePiece(c: ContentPiece): ContentPiece {
     platform: str(c.platform),
     funnel_stage: str(c.funnel_stage),
     status: str(c.status),
+    template_type: strOrNull(c.template_type),
+    aspect_ratio: strOrNull(c.aspect_ratio),
+    generation_metadata: strOrNull(c.generation_metadata),
+    image_url: strOrNull(c.image_url),
+    media_type: strOrNull(c.media_type),
+    video_style: strOrNull(c.video_style),
+    video_config: strOrNull(c.video_config),
   };
+}
+
+/** Safely render any value as a React-safe string */
+function safeText(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (v == null) return "";
+  return JSON.stringify(v);
 }
 
 export default function ContentDetailPage() {
@@ -237,6 +251,10 @@ function ContentDetailInner() {
     api
       .getContent(id)
       .then(async (raw) => {
+        // Debug: log field types to diagnose React #310
+        console.log("[ContentDetail] raw piece field types:", Object.fromEntries(
+          Object.entries(raw).map(([k, v]) => [k, `${typeof v}${v && typeof v === "object" ? ` (keys: ${Object.keys(v as object).join(",")})` : ""}`])
+        ));
         const c = sanitizePiece(raw);
         setPiece(c);
         setEditBody(c.body);
@@ -619,11 +637,22 @@ function ContentDetailInner() {
 
   let metadata: Record<string, unknown> | null = null;
   if (piece.generation_metadata) {
-    try { metadata = JSON.parse(piece.generation_metadata); } catch { metadata = null; }
+    try {
+      const parsed = JSON.parse(piece.generation_metadata);
+      // Flatten any nested objects to strings so they're safe to render
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        for (const [key, val] of Object.entries(parsed)) {
+          if (val != null && typeof val === "object") {
+            (parsed as Record<string, unknown>)[key] = JSON.stringify(val);
+          }
+        }
+        metadata = parsed;
+      }
+    } catch { metadata = null; }
   }
 
   // Extract slide headlines from metadata for carousel format
-  const slideHeadlines = metadata?.slide_headlines as string | undefined;
+  const slideHeadlines = typeof metadata?.slide_headlines === "string" ? metadata.slide_headlines : undefined;
 
   return (
     <div className="max-w-5xl">
