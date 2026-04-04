@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import ContentPiece
+from app.models.brand_profile import RejectionFeedback
 from app.permissions import get_current_user, scope_product_query
 
 router = APIRouter()
@@ -124,3 +125,68 @@ def delete_content(content_id: str, db: Session = Depends(get_db), user: dict = 
         raise HTTPException(status_code=404, detail="Content not found")
     db.delete(piece)
     db.commit()
+
+
+# ── Bulk Operations ───────────────────────────────────────────────────────────
+
+
+class BulkDeleteRequest(BaseModel):
+    content_ids: list[str]
+
+
+class BulkDeleteResponse(BaseModel):
+    deleted: int
+
+
+class BulkFeedbackRequest(BaseModel):
+    content_ids: list[str]
+    reason: str  # off_brand_voice, wrong_tone, irrelevant_topic, poor_quality, other
+    details: str | None = None
+
+
+class BulkFeedbackResponse(BaseModel):
+    recorded: int
+
+
+@router.delete("", response_model=BulkDeleteResponse)
+def bulk_delete_content(data: BulkDeleteRequest, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    """Delete multiple content pieces at once."""
+    if not data.content_ids:
+        return BulkDeleteResponse(deleted=0)
+
+    base_query = scope_product_query(db.query(ContentPiece), ContentPiece, user, db)
+    pieces = base_query.filter(ContentPiece.id.in_(data.content_ids)).all()
+
+    for piece in pieces:
+        db.delete(piece)
+    db.commit()
+
+    return BulkDeleteResponse(deleted=len(pieces))
+
+
+@router.post("/bulk-feedback", response_model=BulkFeedbackResponse, status_code=201)
+def bulk_rejection_feedback(data: BulkFeedbackRequest, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    """Record rejection feedback for multiple content pieces at once."""
+    if not data.content_ids:
+        return BulkFeedbackResponse(recorded=0)
+
+    base_query = scope_product_query(db.query(ContentPiece), ContentPiece, user, db)
+    pieces = base_query.filter(ContentPiece.id.in_(data.content_ids)).all()
+
+    piece_map = {p.id: p for p in pieces}
+    recorded = 0
+
+    for content_id in data.content_ids:
+        piece = piece_map.get(content_id)
+        if piece:
+            feedback = RejectionFeedback(
+                product_id=piece.product_id or "",
+                content_id=content_id,
+                reason=data.reason,
+                details=data.details,
+            )
+            db.add(feedback)
+            recorded += 1
+
+    db.commit()
+    return BulkFeedbackResponse(recorded=recorded)

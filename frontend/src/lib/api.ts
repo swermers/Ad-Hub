@@ -554,6 +554,60 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // ─── Bulk Content Operations ─────────────────────────────────────────────────
+
+  bulkDeleteContent: (contentIds: string[]) =>
+    request<{ deleted: number }>("/api/content", {
+      method: "DELETE",
+      body: JSON.stringify({ content_ids: contentIds }),
+    }),
+  bulkRejectionFeedback: (data: BulkRejectionFeedbackCreate) =>
+    request<{ recorded: number }>("/api/content/bulk-feedback", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // ─── Style Guides ────────────────────────────────────────────────────────────
+
+  listStyleGuides: () =>
+    request<StyleGuideItem[]>("/api/style-guides"),
+  getStyleGuide: (id: string) =>
+    request<StyleGuideItem>(`/api/style-guides/${id}`),
+  createStyleGuide: (data: StyleGuideCreate) =>
+    request<StyleGuideItem>("/api/style-guides", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateStyleGuide: (id: string, data: Partial<StyleGuideCreate>) =>
+    request<StyleGuideItem>(`/api/style-guides/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  deleteStyleGuide: (id: string) =>
+    request<void>(`/api/style-guides/${id}`, { method: "DELETE" }),
+  extractStyleGuide: async (guideId: string, file: File): Promise<StyleGuideExtractResult> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/style-guides/${guideId}/extract`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+      throw new Error(err.detail || "Upload failed");
+    }
+    return res.json();
+  },
+
   // Intelligence — Tier 5
   getIntelligenceDashboard: (productId: string) =>
     request<IntelligenceDashboard>(`/api/products/${productId}/intelligence/dashboard`),
@@ -1566,6 +1620,57 @@ export interface RejectionFeedbackCreate {
   details?: string;
 }
 
+export interface BulkRejectionFeedbackCreate {
+  content_ids: string[];
+  reason: string;
+  details?: string;
+}
+
+// Style Guides
+
+export interface StyleGuideItem {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description: string | null;
+  messaging_pillars: string | null;   // JSON string of string[]
+  taglines: string | null;            // JSON string of string[]
+  mission_statement: string | null;
+  value_proposition: string | null;
+  tone_rules: string | null;
+  formatting_rules: string | null;
+  vocabulary_rules: string | null;    // JSON string of {prefer: string[], avoid: string[]}
+  cta_guidelines: string | null;
+  target_personas: string | null;     // JSON string of persona objects
+  pain_points: string | null;         // JSON string of string[]
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StyleGuideCreate {
+  name: string;
+  description?: string;
+  messaging_pillars?: string[];
+  taglines?: string[];
+  mission_statement?: string;
+  value_proposition?: string;
+  tone_rules?: string;
+  formatting_rules?: string;
+  vocabulary_rules?: string;
+  cta_guidelines?: string;
+  target_personas?: { name: string; description: string; pain_points: string[] }[];
+  pain_points?: string[];
+  is_default?: boolean;
+}
+
+export interface StyleGuideExtractResult {
+  status: string;
+  extracted_fields: number;
+  summary: string;
+  guide: StyleGuideItem;
+}
+
 // Intelligence — Tier 5
 
 export interface IntelligenceDashboard {
@@ -1757,6 +1862,7 @@ export interface VoiceProfileItem {
   quality_score: number;
   quality_grade: string;
   product_id: string | null;
+  style_guide_id: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -1774,6 +1880,7 @@ export interface VoiceProfileCreate {
   default_template?: string;
   content_themes?: string[];
   is_default?: boolean;
+  style_guide_id?: string | null;
 }
 
 export interface VoiceProfileParsed {
