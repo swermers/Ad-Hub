@@ -952,6 +952,7 @@ export interface GenerateRequest {
   image_url?: string;
   industry_colors?: Record<string, string>;
   use_premium_model?: boolean;
+  design_style?: string;
 }
 
 export interface GenerateStatus {
@@ -1279,6 +1280,7 @@ export interface GenerateImageRequest {
   aspect_ratio?: string;
   style_notes?: string;
   quality?: string;
+  design_style?: string;
 }
 
 export interface GenerateImageStatus {

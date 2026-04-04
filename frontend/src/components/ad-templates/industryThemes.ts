@@ -21,6 +21,8 @@ export interface IndustryTheme {
   recommendedStyles: string[];
   /** Best-fit static templates */
   recommendedTemplates: string[];
+  /** Best-fit design styles (visual aesthetics) */
+  recommendedDesignStyles: string[];
 }
 
 export const INDUSTRY_THEMES: IndustryTheme[] = [
@@ -38,6 +40,7 @@ export const INDUSTRY_THEMES: IndustryTheme[] = [
     pacing: 1.0,
     recommendedStyles: ["saas-demo", "swiss-minimal", "swiss-bold", "data-hype"],
     recommendedTemplates: ["bold_hook", "gradient_card", "minimal_clean", "stat_proof"],
+    recommendedDesignStyles: ["flat", "minimalism", "bauhaus"],
   },
   // 2. Fintech / Banking — Growth Green, data-driven, premium dark
   {
@@ -53,6 +56,7 @@ export const INDUSTRY_THEMES: IndustryTheme[] = [
     pacing: 0.9,
     recommendedStyles: ["data-hype", "swiss-grid", "swiss-type", "swiss-stack"],
     recommendedTemplates: ["stat_proof", "minimal_clean", "bold_hook"],
+    recommendedDesignStyles: ["flat", "minimalism", "neo_3d"],
   },
   // 3. E-Commerce / DTC — Energetic, warm, conversion-focused
   {
@@ -68,6 +72,7 @@ export const INDUSTRY_THEMES: IndustryTheme[] = [
     pacing: 1.2,
     recommendedStyles: ["social-proof", "swiss-bold", "kinetic", "swiss-carousel"],
     recommendedTemplates: ["bold_hook", "before_after", "testimonial", "ugc_style"],
+    recommendedDesignStyles: ["popping_colors", "y2k", "memphis"],
   },
   // 4. Healthcare / Wellness — Calm, trustworthy, clean
   {
@@ -83,6 +88,7 @@ export const INDUSTRY_THEMES: IndustryTheme[] = [
     pacing: 0.85,
     recommendedStyles: ["swiss-minimal", "hand-drawn", "swiss-type", "pas"],
     recommendedTemplates: ["before_after", "testimonial", "pain_solution", "minimal_clean"],
+    recommendedDesignStyles: ["minimalism", "cottagecore", "flat"],
   },
   // 5. Education / EdTech — Knowledge-focused, approachable
   {
@@ -98,6 +104,7 @@ export const INDUSTRY_THEMES: IndustryTheme[] = [
     pacing: 0.95,
     recommendedStyles: ["kinetic", "swiss-carousel", "saas-demo", "swiss-stack"],
     recommendedTemplates: ["stat_proof", "pain_solution", "carousel_card", "split_image"],
+    recommendedDesignStyles: ["hand_drawn_doodles", "flat", "rubber_hose"],
   },
   // 6. Real Estate — Premium, warm, aspirational
   {
@@ -113,6 +120,7 @@ export const INDUSTRY_THEMES: IndustryTheme[] = [
     pacing: 0.9,
     recommendedStyles: ["swiss-minimal", "swiss-bold", "swiss-grid", "default"],
     recommendedTemplates: ["bold_hook", "gradient_card", "split_image", "story_vertical"],
+    recommendedDesignStyles: ["minimalism", "neoclassical", "90s_editorial"],
   },
   // 7. Fitness / Lifestyle — Bold, high-energy, motivation
   {
@@ -128,6 +136,7 @@ export const INDUSTRY_THEMES: IndustryTheme[] = [
     pacing: 1.3,
     recommendedStyles: ["kinetic", "swiss-bold", "social-proof", "pas"],
     recommendedTemplates: ["bold_hook", "before_after", "ugc_style", "testimonial"],
+    recommendedDesignStyles: ["popping_colors", "cybercore", "vintage_80s"],
   },
   // 8. Creative / Agency — Distinctive, bold, artistic
   {
@@ -143,6 +152,7 @@ export const INDUSTRY_THEMES: IndustryTheme[] = [
     pacing: 1.1,
     recommendedStyles: ["hand-drawn", "kinetic", "swiss-grid", "swiss-type"],
     recommendedTemplates: ["gradient_card", "split_image", "ugc_style", "bold_hook"],
+    recommendedDesignStyles: ["psychedelic", "indie_collage", "memphis", "bauhaus"],
   },
 ];
 
@@ -159,4 +169,9 @@ export function getRecommendedStyles(industryId: string): string[] {
 /** Get recommended static templates for an industry */
 export function getRecommendedTemplates(industryId: string): string[] {
   return getTheme(industryId)?.recommendedTemplates || [];
+}
+
+/** Get recommended design styles for an industry */
+export function getRecommendedDesignStyles(industryId: string): string[] {
+  return getTheme(industryId)?.recommendedDesignStyles || [];
 }

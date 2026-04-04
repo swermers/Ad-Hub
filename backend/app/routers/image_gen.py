@@ -33,6 +33,7 @@ class GenerateImageRequest(BaseModel):
     aspect_ratio: str = "1:1"
     style_notes: str = ""
     quality: str = "standard"  # "standard" or "hd"
+    design_style: str | None = None
 
 
 class GenerateImageStatus(BaseModel):
@@ -82,7 +83,7 @@ def generate_image(
     # Run in background thread
     thread = threading.Thread(
         target=_run_image_gen,
-        args=(task_id, product_id, headline, body_text, cta, data.aspect_ratio, data.style_notes, data.quality, data.content_id),
+        args=(task_id, product_id, headline, body_text, cta, data.aspect_ratio, data.style_notes, data.quality, data.content_id, data.design_style),
         daemon=True,
     )
     thread.start()
@@ -116,6 +117,7 @@ def _run_image_gen(
     style_notes: str,
     quality: str,
     content_id: str | None,
+    design_style: str | None = None,
 ):
     """Background thread: generate image and update task status."""
     from app.engines.image_gen import generate_ad_image, build_image_prompt_with_claude
@@ -138,6 +140,7 @@ def _run_image_gen(
             aspect_ratio=aspect_ratio,
             style_notes=style_notes,
             quality=quality,
+            design_style=design_style,
         )
 
         # Update content piece with generated image URL
