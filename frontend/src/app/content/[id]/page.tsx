@@ -421,10 +421,11 @@ function ContentDetailInner() {
 
   const handleGenerateImage = async () => {
     if (!piece || !piece.product_id) return;
+    const productId = piece.product_id;
     setGeneratingImage(true);
     setImageGenStatus(null);
     try {
-      const status = await api.generateImage(piece.product_id, {
+      const status = await api.generateImage(productId, {
         content_id: piece.id,
         headline,
         body: bodyText,
@@ -436,7 +437,7 @@ function ContentDetailInner() {
       if (imageGenPollRef.current) clearInterval(imageGenPollRef.current);
       imageGenPollRef.current = setInterval(async () => {
         try {
-          const updated = await api.getImageGenStatus(piece.product_id, status.task_id);
+          const updated = await api.getImageGenStatus(productId, status.task_id);
           setImageGenStatus(updated);
           if (updated.status === "completed" || updated.status === "failed") {
             if (imageGenPollRef.current) clearInterval(imageGenPollRef.current);
