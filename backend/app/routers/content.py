@@ -178,9 +178,9 @@ def bulk_rejection_feedback(data: BulkFeedbackRequest, db: Session = Depends(get
 
     for content_id in data.content_ids:
         piece = piece_map.get(content_id)
-        if piece:
+        if piece and piece.product_id:
             feedback = RejectionFeedback(
-                product_id=piece.product_id or "",
+                product_id=piece.product_id,
                 content_id=content_id,
                 reason=data.reason,
                 details=data.details,

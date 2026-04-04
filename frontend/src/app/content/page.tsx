@@ -197,7 +197,11 @@ export default function ContentPage() {
     const ids = Array.from(selectedIds);
     try {
       if (withFeedback && reason) {
-        await api.bulkRejectionFeedback({ content_ids: ids, reason, details });
+        try {
+          await api.bulkRejectionFeedback({ content_ids: ids, reason, details });
+        } catch {
+          // Feedback is best-effort — don't block the delete
+        }
       }
       const { deleted } = await api.bulkDeleteContent(ids);
       setContent((prev) => prev.filter((c) => !selectedIds.has(c.id)));
