@@ -1044,6 +1044,32 @@ function ContentDetailInner() {
                 hook={piece.hook}
                 cta={piece.cta}
                 metadata={metadata as Record<string, unknown>}
+                onSharpen={async (feedback) => {
+                  if (!piece) return;
+                  setRefining(true);
+                  setError(null);
+                  try {
+                    const result = await api.pipelineRefine({
+                      content_id: piece.id,
+                      instructions: feedback || undefined,
+                    });
+                    const updated = await api.updateContent(piece.id, {
+                      title: result.title,
+                      body: result.body,
+                      hook: result.hook ?? undefined,
+                      cta: result.cta ?? undefined,
+                    });
+                    setPiece(sanitizePiece(updated));
+                    setEditBody(result.body);
+                    setEditTitle(result.title);
+                    setRefineSuccess(true);
+                    setTimeout(() => setRefineSuccess(false), 4000);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Sharpen failed");
+                  } finally {
+                    setRefining(false);
+                  }
+                }}
                 onChange={async (updates) => {
                   const newBody = (updates.body as string) ?? piece.body;
                   const newTitle = (updates.title as string) ?? piece.title;

@@ -9,13 +9,18 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "@remotion/bundler": "^4.0.438",
     "@remotion/cli": "^4.0.438",
+    "@remotion/motion-blur": "^4.0.445",
+    "@remotion/noise": "^4.0.445",
     "@remotion/player": "^4.0.438",
     "@remotion/renderer": "^4.0.438",
+    "@remotion/transitions": "^4.0.445",
     "@types/file-saver": "^2.0.7",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.38.0",
+    "gsap": "^3.14.2",
     "html-to-image": "^1.11.13",
     "jszip": "^3.10.1",
     "next": "16.1.6",

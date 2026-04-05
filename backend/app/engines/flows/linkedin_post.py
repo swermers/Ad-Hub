@@ -43,7 +43,7 @@ Heat lines: {ctx.seed.get('heat', [])}
 Audience hook: {ctx.seed.get('audience_hook', '')}
 {f"Newsletter excerpt: {ctx.source_text[:600]}" if ctx.draft else ""}
 
-Find the strongest ANGLE for a LinkedIn post. Look for:
+Find the ONE strongest ANGLE for a LinkedIn post. Identify the single core insight — strip everything that doesn't serve it. Look for:
 - A contrarian take that challenges conventional wisdom
 - A personal experience that reveals a non-obvious lesson
 - A pattern you've noticed that others haven't named yet
@@ -123,7 +123,7 @@ Your current task: write the FULL LinkedIn post using the angle and hook structu
 {ctx.prompt_set.get("social_post_rules", "")}
 
 LINKEDIN FORMAT RULES:
-- 200-400 words.
+- 150-250 words. Shorter is stronger. Every sentence must earn its place.
 - Short paragraphs (1-2 sentences). White space is your friend.
 - No emojis unless brand voice calls for them.
 - No hashtags in body. Add 3-5 at the very end.
@@ -195,7 +195,7 @@ Score each dimension 1-5. Pass threshold: 22/25.
 | Specificity | Is there at least one concrete moment/example the reader can picture? |
 | Tension | Does the post hold two ideas that pull against each other? |
 | Stealable line | Is there one phrase someone would screenshot or share? |
-| Platform compliance | Hook under 140 chars? 200-600 words? Line breaks? Conversation-starting close? |
+| Platform compliance | Hook under 140 chars? 125-300 words? Line breaks? Conversation-starting close? Posts over 250 words lose a point. |
 
 Auto-fail conditions:
 - Contains words from the voice profile's banned list

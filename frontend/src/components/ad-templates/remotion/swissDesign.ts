@@ -167,3 +167,49 @@ export const SPACE = {
   xl: 56,
   xxl: 80,
 } as const;
+
+/* ─── Shadow System ─── */
+
+export const SHADOWS = {
+  /** Subtle lift — cards, buttons */
+  sm: "0 2px 8px rgba(0,0,0,0.08)",
+  /** Medium depth — floating elements */
+  md: "0 8px 24px rgba(0,0,0,0.12)",
+  /** Strong depth — hero cards, modals */
+  lg: "0 16px 48px rgba(0,0,0,0.18)",
+  /** Cinematic glow — use with accent color for premium feel */
+  cinematicGlow: (color: string, opacity: number = 0.35) =>
+    `0 8px 32px ${color}${Math.round(opacity * 255).toString(16).padStart(2, "0")}`,
+  /** Text shadow for readability on busy backgrounds */
+  textReadable: "0 2px 12px rgba(0,0,0,0.5)",
+} as const;
+
+/* ─── Animation Timing Tokens (in frames at 30fps) ─── */
+
+export const TIMING = {
+  /** Quick micro-interaction (6 frames / 0.2s) */
+  fast: 6,
+  /** Standard transition (12 frames / 0.4s) */
+  normal: 12,
+  /** Slow cinematic reveal (24 frames / 0.8s) */
+  slow: 24,
+  /** Extended dramatic entrance (36 frames / 1.2s) */
+  dramatic: 36,
+  /** Stagger between items in a list */
+  stagger: 4,
+  /** Hold/pause duration between scenes */
+  scenePause: 15,
+} as const;
+
+/* ─── Depth Tokens for Parallax Layers ─── */
+
+export const DEPTH = {
+  /** Background layer — moves slowest */
+  background: 0.3,
+  /** Mid-ground accent shapes */
+  midground: 0.6,
+  /** Normal layer — default */
+  normal: 1.0,
+  /** Foreground text — moves fastest */
+  foreground: 1.5,
+} as const;

@@ -18,7 +18,10 @@ import {
   animatedMeshGradient,
   vignetteOverlay,
   breathe,
+  parallaxOffset,
+  generateParticles,
 } from "./animationUtils";
+import { DEPTH, SHADOWS } from "./swissDesign";
 
 export interface AdCompositionProps extends AdTemplateProps {
   aspectRatio?: AspectRatio;
@@ -89,6 +92,13 @@ export function AdComposition({
   // Animated mesh gradient background
   const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.12);
 
+  // Parallax layers
+  const bgParallax = parallaxOffset(frame, fps, 5, DEPTH.background, 12);
+  const fgParallax = parallaxOffset(frame, fps, 5, DEPTH.foreground, 6);
+
+  // Floating particles
+  const particles = generateParticles(10, frame, fps, width, height, 33);
+
   return (
     <AbsoluteFill
       style={{
@@ -99,6 +109,35 @@ export function AdComposition({
         overflow: "hidden",
       }}
     >
+      {/* Parallax background layer */}
+      <div
+        style={{
+          position: "absolute",
+          inset: -15,
+          background: meshBg,
+          transform: `translateY(${bgParallax}px)`,
+        }}
+      />
+
+      {/* Floating particles */}
+      {particles.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: p.x,
+            top: p.y,
+            width: p.size,
+            height: p.size,
+            borderRadius: "50%",
+            backgroundColor: accentColor,
+            opacity: p.opacity,
+            zIndex: 1,
+            pointerEvents: "none",
+          }}
+        />
+      ))}
+
       {/* Cinematic vignette */}
       <div
         style={{
@@ -188,7 +227,7 @@ export function AdComposition({
               marginBottom: 20,
               opacity: headlineAnim.opacity,
               filter: headlineAnim.filter,
-              transform: headlineAnim.transform,
+              transform: `${headlineAnim.transform} translateY(${fgParallax}px)`,
               textTransform: "uppercase",
               letterSpacing: -1,
             }}

@@ -171,24 +171,29 @@ export function EditorialStackTemplate({
           zIndex: 2,
         }}
       >
-        {stackLines.map((line, i) => (
-          <div
-            key={i}
-            style={{
-              fontSize: Math.min(96 * s, (width * 0.85) / Math.max(line.length * 0.55, 1)),
-              fontWeight: 900,
-              color: textColor,
-              lineHeight: 0.95,
-              textTransform: "uppercase",
-              letterSpacing: -2 * s,
-              margin: 0,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-            }}
-          >
-            {line}
-          </div>
-        ))}
+        {stackLines.map((line, i) => {
+          // Dynamic font size: shrink for longer text, min 36px
+          const maxFontSize = 96 * s;
+          const fitted = (width * 0.85) / Math.max(line.length * 0.55, 1);
+          const fontSize = Math.max(36 * s, Math.min(maxFontSize, fitted));
+          return (
+            <div
+              key={i}
+              style={{
+                fontSize,
+                fontWeight: 900,
+                color: textColor,
+                lineHeight: 0.95,
+                textTransform: "uppercase",
+                letterSpacing: -2 * s,
+                margin: 0,
+                wordBreak: "break-word",
+              }}
+            >
+              {line}
+            </div>
+          );
+        })}
 
         {/* CTA at bottom */}
         <div

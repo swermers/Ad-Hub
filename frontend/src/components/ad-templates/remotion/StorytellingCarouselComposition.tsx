@@ -75,10 +75,17 @@ export function StorytellingCarouselComposition({
   const textY = interpolate(textRevealProgress, [0, 1], [30, 0]);
   const textOpacity = textRevealProgress;
 
-  // Ken Burns effect (slow zoom) for static slides
+  // Ken Burns effect (slow zoom + diagonal pan) for static slides
   const kenBurnsScale = isHook || isRehook
     ? 1
-    : interpolate(frameInSlide, [0, framesPerSlide], [1, 1.05], { extrapolateRight: "clamp" });
+    : interpolate(frameInSlide, [0, framesPerSlide], [1, 1.08], { extrapolateRight: "clamp" });
+  // Diagonal pan direction alternates per slide
+  const panX = isHook || isRehook
+    ? 0
+    : interpolate(frameInSlide, [0, framesPerSlide], [0, currentIndex % 2 === 0 ? 8 : -8], { extrapolateRight: "clamp" });
+  const panY = isHook || isRehook
+    ? 0
+    : interpolate(frameInSlide, [0, framesPerSlide], [0, currentIndex % 3 === 0 ? -5 : 5], { extrapolateRight: "clamp" });
 
   // Accent line animation
   const lineWidth = interpolate(
@@ -102,10 +109,10 @@ export function StorytellingCarouselComposition({
 
   return (
     <AbsoluteFill style={{ backgroundColor: bg, overflow: "hidden" }}>
-      {/* Ken Burns background zoom */}
+      {/* Ken Burns background zoom + diagonal pan */}
       <AbsoluteFill
         style={{
-          transform: `scale(${kenBurnsScale})`,
+          transform: `scale(${kenBurnsScale}) translate(${panX}px, ${panY}px)`,
           transformOrigin: isHook ? "center top" : "center center",
         }}
       />
