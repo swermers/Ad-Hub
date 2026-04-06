@@ -608,6 +608,30 @@ export const api = {
     return res.json();
   },
 
+  createAndExtractStyleGuide: async (name: string, file: File): Promise<StyleGuideExtractResult> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("name", name);
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/style-guides/create-and-extract?name=${encodeURIComponent(name)}`, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+      throw new Error(err.detail || "Upload failed");
+    }
+    return res.json();
+  },
+
   // Intelligence — Tier 5
   getIntelligenceDashboard: (productId: string) =>
     request<IntelligenceDashboard>(`/api/products/${productId}/intelligence/dashboard`),
