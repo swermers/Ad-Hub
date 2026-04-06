@@ -65,21 +65,21 @@ class StyleGuideResponse(BaseModel):
     id: str
     workspace_id: str
     name: str
-    description: str | None
-    messaging_pillars: str | None
-    taglines: str | None
-    mission_statement: str | None
-    value_proposition: str | None
-    tone_rules: str | None
-    formatting_rules: str | None
-    vocabulary_rules: str | None
-    cta_guidelines: str | None
-    target_personas: str | None
-    pain_points: str | None
+    description: str | None = None
+    messaging_pillars: str | None = None
+    taglines: str | None = None
+    mission_statement: str | None = None
+    value_proposition: str | None = None
+    tone_rules: str | None = None
+    formatting_rules: str | None = None
+    vocabulary_rules: str | None = None
+    cta_guidelines: str | None = None
+    target_personas: str | None = None
+    pain_points: str | None = None
     markdown_content: str | None = None
-    is_default: bool
-    created_at: datetime
-    updated_at: datetime
+    is_default: bool = False
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
