@@ -293,7 +293,31 @@ export default function StyleGuidesPage() {
 
   const handleExtract = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !selectedId || isNew) return;
+    if (!file) return;
+
+    // For new guides: use create-and-extract (creates guide + extracts in one call)
+    if (isNew) {
+      const guideName = form.name.trim() || file.name.replace(/\.[^.]+$/, "");
+      setExtracting(true);
+      setExtractResult(null);
+      try {
+        const result = await api.createAndExtractStyleGuide(guideName, file);
+        const created = result.guide;
+        setGuides((prev) => [created, ...prev]);
+        setSelectedId(created.id);
+        loadGuide(created);
+        setExtractResult(`Extracted ${result.extracted_fields} fields. ${result.summary}`);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Extraction failed");
+      } finally {
+        setExtracting(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    // For existing guides: extract into the selected guide
+    if (!selectedId) return;
     setExtracting(true);
     setExtractResult(null);
     try {
@@ -386,11 +410,10 @@ export default function StyleGuidesPage() {
             </div>
           ) : (
             <>
-              {/* Extract from PDF/image (only for saved guides) */}
-              {!isNew && (
-                <Section title="Import from Document">
+              {/* Extract from PDF/image/markdown */}
+              <Section title="Import from Document">
                   <p className="text-xs text-[#E5E1E4]/40">
-                    Claude Vision will read your guide and extract messaging pillars, tone rules, vocabulary, and audience details automatically.
+                    Upload a document and Claude will extract messaging pillars, tone rules, vocabulary, and audience details automatically.
                   </p>
                   <div className="flex items-start gap-3 p-4 rounded-xl border border-[#554334]/20 bg-[#1b1b1d]/40">
                     <span className="material-symbols-outlined text-[#FF9500]/60 text-xl mt-0.5 flex-shrink-0">description</span>
@@ -428,7 +451,6 @@ export default function StyleGuidesPage() {
                     )}
                   </div>
                 </Section>
-              )}
 
               {/* Identity */}
               <Section title="Identity">
