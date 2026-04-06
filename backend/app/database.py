@@ -102,6 +102,7 @@ def create_tables():
     _add_column_if_missing("voice_profiles", "product_id", "VARCHAR(36)")
     _add_column_if_missing("voice_profiles", "quality_score", "INTEGER DEFAULT 0")
     _add_column_if_missing("voice_profiles", "style_guide_id", "VARCHAR(36)")
+    _add_column_if_missing("style_guides", "markdown_content", "TEXT")
 
     # Make product_id nullable for profile-only content generation
     _make_column_nullable("content_pieces", "product_id")

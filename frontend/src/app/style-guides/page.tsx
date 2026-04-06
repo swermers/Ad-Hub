@@ -397,9 +397,9 @@ export default function StyleGuidesPage() {
                     <div className="space-y-1 min-w-0">
                       <p className="text-xs font-semibold text-[#E5E1E4]/70">Accepted formats</p>
                       <div className="flex flex-wrap gap-2">
-                        {["PDF", "PNG", "JPG", "WEBP"].map((fmt) => (
+                        {["PDF", "PNG", "JPG", "WEBP", "MD"].map((fmt) => (
                           <span key={fmt} className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                            fmt === "PDF" || fmt === "PNG"
+                            fmt === "PDF" || fmt === "PNG" || fmt === "MD"
                               ? "bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/20"
                               : "bg-[#E5E1E4]/5 text-[#E5E1E4]/40 border-[#554334]/20"
                           }`}>
@@ -413,7 +413,7 @@ export default function StyleGuidesPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={handleExtract} className="hidden" />
+                    <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.md,.txt" onChange={handleExtract} className="hidden" />
                     <motion.button
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}

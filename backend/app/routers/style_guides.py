@@ -76,6 +76,7 @@ class StyleGuideResponse(BaseModel):
     cta_guidelines: str | None
     target_personas: str | None
     pain_points: str | None
+    markdown_content: str | None = None
     is_default: bool
     created_at: datetime
     updated_at: datetime
@@ -212,10 +213,10 @@ class StyleGuideExtractResponse(BaseModel):
 
 @router.post("/{guide_id}/extract", response_model=StyleGuideExtractResponse)
 async def extract_style_guide(guide_id: str, file: UploadFile, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
-    """Upload a PDF or image and use Claude Vision to extract style guide data into an existing guide."""
+    """Upload a PDF, image, or Markdown file and use Claude to extract style guide data into an existing guide."""
     import base64
 
-    from app.services.claude_client import call_claude_sync
+    from app.services.claude_client import call_claude, call_claude_sync
 
     workspace_id = _get_workspace_id(user, db)
     guide = db.query(StyleGuide).filter(StyleGuide.id == guide_id, StyleGuide.workspace_id == workspace_id).first()
@@ -224,11 +225,11 @@ async def extract_style_guide(guide_id: str, file: UploadFile, db: Session = Dep
 
     filename = file.filename or "guide.pdf"
     ext = os.path.splitext(filename)[1].lower()
-    allowed_extensions = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
+    allowed_extensions = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".md", ".txt"}
     if ext not in allowed_extensions:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type '{ext}'. Upload a PDF or image (PNG, JPG, WEBP).",
+            detail=f"Unsupported file type '{ext}'. Upload a PDF, image (PNG, JPG, WEBP), or Markdown (.md) file.",
         )
 
     content = await file.read()
@@ -239,24 +240,41 @@ async def extract_style_guide(guide_id: str, file: UploadFile, db: Session = Dep
     with open(filepath, "wb") as f:
         f.write(content)
 
-    media_type_map = {
-        ".png": "image/png",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".webp": "image/webp",
-        ".gif": "image/gif",
-        ".pdf": "application/pdf",
-    }
-    media_type = media_type_map.get(ext, "application/octet-stream")
-    b64_data = base64.b64encode(content).decode("utf-8")
-    images = [{"media_type": media_type, "data": b64_data}]
+    if ext in (".md", ".txt"):
+        # Markdown/text: read as text, use async text-only Claude call (not Vision)
+        markdown_text = content.decode("utf-8", errors="replace")
+        if not markdown_text.strip():
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-    result = call_claude_sync(
-        STYLE_GUIDE_EXTRACTION_PROMPT,
-        system="You are a brand strategy expert. Analyze style guides and extract structured messaging and writing rules with precision.",
-        images=images,
-        premium=True,
-    )
+        # Persist the raw markdown on the guide
+        guide.markdown_content = markdown_text
+
+        result = await call_claude(
+            STYLE_GUIDE_EXTRACTION_PROMPT + "\n\n---\n\n" + markdown_text,
+            system="You are a brand strategy expert. Analyze style guides and extract structured messaging and writing rules with precision.",
+            max_tokens=4096,
+            premium=True,
+        )
+    else:
+        # PDF/image: use Claude Vision with base64-encoded content
+        media_type_map = {
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".webp": "image/webp",
+            ".gif": "image/gif",
+            ".pdf": "application/pdf",
+        }
+        media_type = media_type_map.get(ext, "application/octet-stream")
+        b64_data = base64.b64encode(content).decode("utf-8")
+        images = [{"media_type": media_type, "data": b64_data}]
+
+        result = call_claude_sync(
+            STYLE_GUIDE_EXTRACTION_PROMPT,
+            system="You are a brand strategy expert. Analyze style guides and extract structured messaging and writing rules with precision.",
+            images=images,
+            premium=True,
+        )
 
     try:
         text = result["content"].strip()
