@@ -44,7 +44,7 @@ class StyleGuide(Base):
     pain_points: Mapped[str | None] = mapped_column(Text)  # JSON: ["Overwhelmed by too many tools", ...]
 
     # Source document (raw markdown, if uploaded)
-    markdown_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    markdown_content: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
 
     # Meta
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
