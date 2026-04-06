@@ -43,6 +43,9 @@ class StyleGuide(Base):
     target_personas: Mapped[str | None] = mapped_column(Text)  # JSON: [{"name": "...", "description": "...", "pain_points": [...]}]
     pain_points: Mapped[str | None] = mapped_column(Text)  # JSON: ["Overwhelmed by too many tools", ...]
 
+    # Source document (raw markdown, if uploaded)
+    markdown_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Meta
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))

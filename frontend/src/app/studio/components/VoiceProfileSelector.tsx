@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { api, type VoiceProfileItem, type VoiceProfileCreate } from "@/lib/api";
+import { api, type VoiceProfileItem, type VoiceProfileCreate, type StyleGuideItem } from "@/lib/api";
 
 interface VoiceProfileSelectorProps {
   selectedId: string | null;
@@ -369,8 +369,14 @@ function ProfileForm({
   const [wordsToUse, setWordsToUse] = useState(profile?.words_to_use.join(", ") ?? "");
   const [writingSample, setWritingSample] = useState(profile?.writing_samples[0] ?? "");
   const [isDefault, setIsDefault] = useState(profile?.is_default ?? false);
+  const [styleGuideId, setStyleGuideId] = useState<string | null>(profile?.style_guide_id ?? null);
+  const [styleGuides, setStyleGuides] = useState<StyleGuideItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.listStyleGuides().then(setStyleGuides).catch(() => {});
+  }, []);
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
@@ -400,6 +406,7 @@ function ProfileForm({
         .filter(Boolean),
       writing_samples: writingSample.trim() ? [writingSample.trim()] : [],
       is_default: isDefault,
+      style_guide_id: styleGuideId || undefined,
     };
 
     try {
@@ -450,6 +457,25 @@ function ProfileForm({
           className={inputClass}
         />
       </div>
+
+      {styleGuides.length > 0 && (
+        <div>
+          <label className={labelClass}>Style Guide</label>
+          <select
+            value={styleGuideId ?? ""}
+            onChange={(e) => setStyleGuideId(e.target.value || null)}
+            className={inputClass}
+          >
+            <option value="">None</option>
+            {styleGuides.map((sg) => (
+              <option key={sg.id} value={sg.id}>{sg.name}</option>
+            ))}
+          </select>
+          <p className="text-[10px] text-[#E5E1E4]/25 mt-1">
+            Link a style guide for brand messaging rules
+          </p>
+        </div>
+      )}
 
       <div>
         <label className={labelClass}>Tone Keywords (comma-separated)</label>

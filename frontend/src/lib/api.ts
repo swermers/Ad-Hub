@@ -1645,6 +1645,7 @@ export interface StyleGuideItem {
   cta_guidelines: string | null;
   target_personas: string | null;     // JSON string of persona objects
   pain_points: string | null;         // JSON string of string[]
+  markdown_content: string | null;    // Raw markdown source document
   is_default: boolean;
   created_at: string;
   updated_at: string;
