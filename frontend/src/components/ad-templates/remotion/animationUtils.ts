@@ -292,43 +292,9 @@ export function vignetteOverlay(strength: number = 0.5): string {
   ].join(", ");
 }
 
-// ─── Text Safety ───
+// ─── Text Safety (re-exported from shared textUtils) ───
 
-/** Truncate text to fit within a max character count, adding ellipsis */
-export function safeTruncate(text: string, maxChars: number): string {
-  if (text.length <= maxChars) return text;
-  return text.slice(0, maxChars - 1).trimEnd() + "\u2026";
-}
-
-/** Pick font size based on text length and available width */
-export function responsiveFontSize(
-  text: string,
-  basePx: number,
-  maxChars: number = 25,
-  minScale: number = 0.6,
-): number {
-  if (text.length <= maxChars) return basePx;
-  const ratio = maxChars / text.length;
-  return Math.max(basePx * minScale, basePx * ratio);
-}
-
-/** Split text into lines that fit within a character limit */
-export function wrapText(text: string, maxCharsPerLine: number): string[] {
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let current = "";
-
-  for (const word of words) {
-    if (current.length + word.length + 1 > maxCharsPerLine && current.length > 0) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = current ? `${current} ${word}` : word;
-    }
-  }
-  if (current) lines.push(current);
-  return lines;
-}
+export { safeTruncate, responsiveFontSize, wrapText } from "../textUtils";
 
 // ─── Color Utilities ───
 
@@ -376,6 +342,153 @@ export function shiftHue(hex: string, degrees: number): string {
 
   const toHex = (v: number) => Math.round(v * 255).toString(16).padStart(2, "0");
   return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`;
+}
+
+// ─── Cinematic Utilities ───
+
+/**
+ * Motion blur CSS filter — ramps up during fast movement, 0 when settled.
+ * Use on elements during fast slide/scale transitions.
+ */
+export function motionBlur(progress: number, maxBlurPx: number = 8): string {
+  // Blur is strongest when progress velocity is highest (around 0.3-0.7)
+  const velocity = Math.sin(progress * Math.PI);
+  const blur = maxBlurPx * velocity * (1 - progress);
+  return `blur(${Math.max(0, blur).toFixed(1)}px)`;
+}
+
+/**
+ * Parallax offset — elements at different depths move at different speeds.
+ * depth: 0.3 = slow background, 1.0 = normal, 2.0 = fast foreground
+ */
+export function parallaxOffset(
+  frame: number,
+  fps: number,
+  totalDuration: number,
+  depth: number = 1.0,
+  amplitude: number = 30,
+): number {
+  const progress = frame / (fps * totalDuration);
+  return Math.sin(progress * Math.PI * 2) * amplitude * depth;
+}
+
+/**
+ * Character-by-character reveal animation.
+ * Returns array of per-character styles with staggered opacity and transform.
+ */
+export function characterReveal(
+  frame: number,
+  fps: number,
+  text: string,
+  startFrame: number = 0,
+  charDelayFrames: number = 1.5,
+): { char: string; opacity: number; transform: string }[] {
+  return text.split("").map((char, i) => {
+    const charStart = startFrame + i * charDelayFrames;
+    const progress = interpolate(
+      frame,
+      [charStart, charStart + fps * 0.15],
+      [0, 1],
+      { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: EASE_OUT },
+    );
+    return {
+      char,
+      opacity: progress,
+      transform: `translateY(${12 * (1 - progress)}px)`,
+    };
+  });
+}
+
+/**
+ * Kinetic entrance — rotateZ + skewX with animated text-shadow.
+ * Great for bold headlines that need energy.
+ */
+export function kineticEntrance(progress: number): { transform: string; textShadow: string } {
+  const rotate = interpolate(progress, [0, 1], [-3, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const skew = interpolate(progress, [0, 1], [8, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const shadowBlur = interpolate(progress, [0, 1], [20, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const shadowOpacity = interpolate(progress, [0, 1], [0.4, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  return {
+    transform: `rotateZ(${rotate}deg) skewX(${skew}deg)`,
+    textShadow: `0 ${shadowBlur}px ${shadowBlur * 1.5}px rgba(0,0,0,${shadowOpacity})`,
+  };
+}
+
+/**
+ * Animated letter spacing — tight→normal reveal for premium feel.
+ */
+export function letterSpacingReveal(
+  progress: number,
+  startEm: number = 0.3,
+  endEm: number = 0,
+): string {
+  const spacing = interpolate(progress, [0, 1], [startEm, endEm], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  return `${spacing}em`;
+}
+
+/**
+ * Floating particle system — generates positions for subtle background particles.
+ */
+export function generateParticles(
+  count: number,
+  frame: number,
+  fps: number,
+  width: number,
+  height: number,
+  seed: number = 42,
+): { x: number; y: number; opacity: number; size: number }[] {
+  return Array.from({ length: count }, (_, i) => {
+    // Deterministic pseudo-random based on index + seed
+    const hash = Math.sin(i * 127.1 + seed * 311.7) * 43758.5453;
+    const baseX = ((hash - Math.floor(hash)) * width);
+    const baseY = ((Math.sin(i * 269.5 + seed * 183.3) * 43758.5453) % 1 + 1) % 1 * height;
+    const speed = 0.3 + ((hash * 7) % 1 + 1) % 1 * 0.7;
+    const t = frame / fps;
+
+    return {
+      x: baseX + Math.sin(t * 0.5 + i) * 15,
+      y: (baseY - t * speed * 20) % (height + 20),
+      opacity: 0.08 + 0.15 * Math.sin(t * 0.8 + i * 2),
+      size: 2 + ((hash * 13) % 1 + 1) % 1 * 4,
+    };
+  });
+}
+
+/**
+ * Film grain noise overlay — returns CSS background-image for a pseudo-random noise pattern.
+ * Uses CSS gradient trick, no actual texture needed.
+ */
+export function filmGrainCSS(frame: number, opacity: number = 0.04): string {
+  const offset = (frame * 7) % 100;
+  return `repeating-conic-gradient(rgba(0,0,0,${opacity}) ${offset}% ${offset + 0.1}%, transparent ${offset + 0.1}% ${offset + 2}%)`;
+}
+
+/**
+ * Chromatic aberration — splits element into RGB offset channels.
+ * Returns CSS filter + transform for a subtle glitch effect.
+ */
+export function chromaticAberration(
+  intensity: number = 1,
+): { textShadow: string } {
+  const px = intensity;
+  return {
+    textShadow: `${px}px 0 rgba(255,0,0,0.3), ${-px}px 0 rgba(0,0,255,0.3)`,
+  };
 }
 
 /** Mix two colors. Factor 0 = colorA, 1 = colorB */

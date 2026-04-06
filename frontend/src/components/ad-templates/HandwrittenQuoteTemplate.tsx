@@ -68,16 +68,21 @@ export function HandwrittenQuoteTemplate({
           const hasEmphasis = line.includes("_");
           const parts = hasEmphasis ? line.split("_") : [line];
 
+          // Dynamic font size based on line length
+          const baseFontSize = 38 * s;
+          const fontSize = line.length > 25 ? Math.max(24 * s, baseFontSize * (25 / line.length)) : baseFontSize;
           return (
             <div
               key={i}
               style={{
-                fontSize: 38 * s,
+                fontSize,
                 fontWeight: 700,
                 color: textColor,
                 lineHeight: 1.3,
                 letterSpacing: 2 * s,
                 textTransform: "uppercase",
+                maxWidth: "90%",
+                wordBreak: "break-word",
                 // Slight rotation for handwritten feel
                 transform: `rotate(${(i % 2 === 0 ? -0.5 : 0.3)}deg)`,
               }}

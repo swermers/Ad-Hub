@@ -19,6 +19,7 @@ import {
   vignetteOverlay,
   shiftHue,
   breathe,
+  chromaticAberration,
 } from "./animationUtils";
 
 export interface PASCompositionProps {
@@ -191,8 +192,12 @@ function ProblemScene({
   const labelAnim = springSlideUp(frame, fps, 0, 30, "snappy");
   const headlineAnim = springSlideUp(frame, fps, 6, 40, "smooth");
 
-  // Fade out near end of scene
+  // Blur-dissolve fade out (blurs as it exits for cinematic transition)
   const fadeOut = interpolate(frame, [fps * 1.7, fps * 2.1], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const exitBlur = interpolate(frame, [fps * 1.7, fps * 2.1], [0, 8], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -208,6 +213,7 @@ function ProblemScene({
         alignItems: "center",
         padding: 80,
         opacity: fadeOut,
+        filter: `blur(${exitBlur}px)`,
         zIndex: 1,
       }}
     >
@@ -267,8 +273,16 @@ function AgitateScene({
   // Spring entrance within the sequence (frame resets to 0 inside Sequence)
   const textAnim = springSlideUp(frame, fps, 0, 40, "snappy");
 
-  // Fade out near end
+  // Chromatic aberration during shake for glitch feel
+  const isShaking = shakeX !== 0 || shakeY !== 0;
+  const chromatic = isShaking ? chromaticAberration(2) : { textShadow: "none" };
+
+  // Blur-dissolve fade out
   const fadeOut = interpolate(frame, [fps * 1.4, fps * 1.8], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const exitBlur = interpolate(frame, [fps * 1.4, fps * 1.8], [0, 6], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -284,11 +298,12 @@ function AgitateScene({
         alignItems: "center",
         padding: 80,
         opacity: fadeOut,
+        filter: `blur(${exitBlur}px)`,
         transform: `translate(${shakeX}px, ${shakeY}px)`,
         zIndex: 2,
       }}
     >
-      {/* Agitate text */}
+      {/* Agitate text with chromatic aberration during shake */}
       <p
         style={{
           fontSize: 42,
@@ -299,6 +314,7 @@ function AgitateScene({
           margin: 0,
           opacity: textAnim.opacity,
           transform: textAnim.transform,
+          textShadow: chromatic.textShadow,
         }}
       >
         {safeBody}

@@ -496,50 +496,174 @@ VISUAL_TEMPLATES = [
 ]
 
 
-def _assign_diverse_templates(count: int, preferred: str | None = None) -> list[str]:
-    """Assign diverse template types across a batch to avoid visual monotony."""
+def _analyze_content_for_visuals(piece: dict) -> dict:
+    """Analyze generated content to recommend visual treatment.
+
+    Lightweight heuristic — no LLM call. Pattern-matches on keywords,
+    punctuation, and structure to inform template selection and cinematic features.
+    """
+    text = f"{piece.get('title', '')} {piece.get('body', '')} {piece.get('hook', '')}".lower()
+    headline = piece.get("title", "") or piece.get("hook", "") or ""
+
+    # Energy detection
+    exclamation_count = text.count("!")
+    question_count = text.count("?")
+    caps_words = sum(1 for w in text.split() if w.isupper() and len(w) > 1)
+    energy_words = sum(1 for w in ["now", "stop", "urgent", "fast", "breaking", "alert", "boom", "launch", "explode", "crush"] if w in text)
+    energy = "high" if (exclamation_count >= 2 or caps_words >= 3 or energy_words >= 2) else "calm" if (question_count == 0 and exclamation_count == 0 and energy_words == 0) else "medium"
+
+    # Structure detection
+    has_numbers = any(c.isdigit() for c in text)
+    has_question = question_count > 0
+    has_contrast = any(w in text for w in ["but", "however", "instead", "versus", "vs", "not", "before", "after"])
+    has_testimonial = any(w in text for w in ["said", "quote", "told me", "according to", '"'])
+    has_list = text.count("\n-") >= 2 or text.count("\n•") >= 2
+
+    if has_numbers and not has_contrast:
+        structure = "data"
+    elif has_contrast:
+        structure = "contrast"
+    elif has_testimonial:
+        structure = "testimonial"
+    elif has_list:
+        structure = "list"
+    else:
+        structure = "narrative"
+
+    # Mood detection
+    urgent_words = sum(1 for w in ["now", "today", "urgent", "limited", "last chance", "deadline", "hurry"] if w in text)
+    aspirational_words = sum(1 for w in ["imagine", "dream", "future", "transform", "elevate", "premium", "luxury", "exclusive"] if w in text)
+    educational_words = sum(1 for w in ["how to", "guide", "learn", "step", "tip", "mistake", "lesson", "framework"] if w in text)
+
+    if urgent_words >= 2:
+        mood = "urgent"
+    elif aspirational_words >= 2:
+        mood = "aspirational"
+    elif educational_words >= 2:
+        mood = "educational"
+    elif has_contrast or has_question:
+        mood = "provocative"
+    else:
+        mood = "aspirational"
+
+    return {
+        "energy": energy,
+        "structure": structure,
+        "mood": mood,
+        "has_numbers": has_numbers,
+        "has_question": has_question,
+        "headline_length": len(headline),
+    }
+
+
+# Map content analysis → template recommendations
+_CONTENT_TEMPLATE_MAP = {
+    "data": ["stat_proof", "status_card", "bold_hook"],
+    "contrast": ["before_after", "pain_solution", "bold_hook"],
+    "testimonial": ["testimonial", "handwritten_quote", "gradient_card"],
+    "list": ["editorial_stack", "status_card", "gradient_card"],
+    "narrative": ["gradient_card", "brand_hero", "editorial_stack"],
+}
+
+
+def _assign_diverse_templates(
+    count: int,
+    preferred: str | None = None,
+    design_style: str | None = None,
+    pieces: list[dict] | None = None,
+) -> list[str]:
+    """Assign templates using content analysis and design style recommendations.
+
+    Priority:
+    1. User-specified preferred template → use for all
+    2. Design style recommended_templates → use as priority pool
+    3. Content analysis → match structure/mood to template
+    4. Fall back to diverse cycling
+    """
     if preferred:
         return [preferred] * count
-    # Shuffle and cycle through templates so no two adjacent pieces look the same
-    pool = VISUAL_TEMPLATES.copy()
-    random.shuffle(pool)
-    return [pool[i % len(pool)] for i in range(count)]
+
+    # Build a priority pool from design style if available
+    priority_pool: list[str] = []
+    if design_style and design_style in DESIGN_STYLES:
+        priority_pool = list(DESIGN_STYLES[design_style].get("recommended_templates", []))
+
+    result = []
+    for i in range(count):
+        # Try content-aware selection first
+        if pieces and i < len(pieces):
+            analysis = _analyze_content_for_visuals(pieces[i])
+            content_recs = _CONTENT_TEMPLATE_MAP.get(analysis["structure"], [])
+
+            # If we have both design style and content recs, find intersection or prefer design style
+            if priority_pool and content_recs:
+                overlap = [t for t in priority_pool if t in content_recs]
+                if overlap:
+                    result.append(overlap[i % len(overlap)])
+                    continue
+                # No overlap — use design style pool
+                result.append(priority_pool[i % len(priority_pool)])
+                continue
+            elif priority_pool:
+                result.append(priority_pool[i % len(priority_pool)])
+                continue
+            elif content_recs:
+                result.append(content_recs[i % len(content_recs)])
+                continue
+
+        # Fall back to diverse cycling
+        if priority_pool:
+            result.append(priority_pool[i % len(priority_pool)])
+        else:
+            pool = VISUAL_TEMPLATES.copy()
+            random.shuffle(pool)
+            result.append(pool[i % len(pool)])
+
+    # Ensure no two adjacent templates are the same (swap if needed)
+    for i in range(1, len(result)):
+        if result[i] == result[i - 1]:
+            # Find a different template
+            alternatives = [t for t in VISUAL_TEMPLATES if t != result[i]]
+            if alternatives:
+                result[i] = alternatives[i % len(alternatives)]
+
+    return result
 
 # Template text constraints — max character counts per field.
 # Used to instruct Claude to generate copy that fits each template's layout.
 TEMPLATE_CONSTRAINTS = {
-    "bold_hook": {"headline": 30, "body": 60, "cta": 20},
-    "before_after": {"headline": 25, "body": 50, "cta": 18},
-    "pain_solution": {"headline": 30, "body": 60, "cta": 20},
-    "stat_proof": {"headline": 15, "body": 50, "cta": 18},
-    "testimonial": {"headline": 40, "body": 60, "cta": 18},
-    "gradient_card": {"headline": 30, "body": 55, "cta": 20},
-    "minimal_clean": {"headline": 25, "body": 50, "cta": 18},
-    "split_image": {"headline": 30, "body": 55, "cta": 18},
-    "story_vertical": {"headline": 25, "body": 45, "cta": 18},
-    "carousel_card": {"headline": 25, "body": 50, "cta": 18},
-    "ugc_style": {"headline": 30, "body": 55, "cta": 20},
+    "bold_hook": {"headline": 48, "body": 90, "cta": 22},
+    "before_after": {"headline": 40, "body": 75, "cta": 20},
+    "pain_solution": {"headline": 48, "body": 90, "cta": 22},
+    "stat_proof": {"headline": 25, "body": 75, "cta": 20},
+    "testimonial": {"headline": 60, "body": 90, "cta": 20},
+    "gradient_card": {"headline": 48, "body": 85, "cta": 22},
+    "minimal_clean": {"headline": 40, "body": 75, "cta": 20},
+    "split_image": {"headline": 48, "body": 85, "cta": 20},
+    "story_vertical": {"headline": 40, "body": 70, "cta": 20},
+    "carousel_card": {"headline": 40, "body": 75, "cta": 20},
+    "ugc_style": {"headline": 48, "body": 85, "cta": 22},
     # Video styles
-    "swiss-bold": {"headline": 25, "body": 50, "cta": 18},
-    "swiss-stack": {"headline": 30, "body": 60, "cta": 18},
-    "swiss-type": {"headline": 20, "body": 45, "cta": 16},
-    "swiss-grid": {"headline": 25, "body": 50, "cta": 18},
-    "swiss-minimal": {"headline": 20, "body": 40, "cta": 16},
-    "swiss-carousel": {"headline": 25, "body": 50, "cta": 18},
-    "swiss-story": {"headline": 25, "body": 45, "cta": 18},
-    "saas-demo": {"headline": 35, "body": 60, "cta": 20},
-    "data-hype": {"headline": 40, "body": 30, "cta": 20},
-    "social-proof": {"headline": 50, "body": 70, "cta": 22},
-    "default": {"headline": 30, "body": 60, "cta": 20},
-    "pas": {"headline": 25, "body": 50, "cta": 18},
-    "kinetic": {"headline": 30, "body": 55, "cta": 18},
-    "hand-drawn": {"headline": 25, "body": 50, "cta": 18},
+    "swiss-bold": {"headline": 40, "body": 75, "cta": 20},
+    "swiss-stack": {"headline": 48, "body": 90, "cta": 20},
+    "swiss-type": {"headline": 32, "body": 70, "cta": 18},
+    "swiss-grid": {"headline": 40, "body": 75, "cta": 20},
+    "swiss-minimal": {"headline": 32, "body": 60, "cta": 18},
+    "swiss-carousel": {"headline": 40, "body": 75, "cta": 20},
+    "swiss-story": {"headline": 40, "body": 70, "cta": 20},
+    "saas-demo": {"headline": 55, "body": 90, "cta": 22},
+    "data-hype": {"headline": 60, "body": 45, "cta": 22},
+    "social-proof": {"headline": 70, "body": 100, "cta": 24},
+    "default": {"headline": 48, "body": 90, "cta": 22},
+    "pas": {"headline": 40, "body": 75, "cta": 20},
+    "kinetic": {"headline": 48, "body": 85, "cta": 20},
+    "hand-drawn": {"headline": 40, "body": 75, "cta": 20},
     # Typography-heavy templates
-    "editorial_stack": {"headline": 35, "body": 50, "cta": 18},
-    "brand_hero": {"headline": 35, "body": 55, "cta": 18},
-    "status_card": {"headline": 25, "body": 65, "cta": 18},
-    "handwritten_quote": {"headline": 50, "body": 60, "cta": 16},
-    "billboard": {"headline": 30, "body": 30, "cta": 18},
+    "editorial_stack": {"headline": 55, "body": 75, "cta": 20},
+    "brand_hero": {"headline": 55, "body": 85, "cta": 20},
+    "status_card": {"headline": 40, "body": 95, "cta": 20},
+    "handwritten_quote": {"headline": 70, "body": 90, "cta": 18},
+    "billboard": {"headline": 48, "body": 45, "cta": 20},
 }
 
 
@@ -891,10 +1015,11 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                 ]
 
             # Assign diverse templates across the batch
-            templates = _assign_diverse_templates(len(pieces), template_type)
+            templates = _assign_diverse_templates(len(pieces), template_type, design_style=design_style, pieces=pieces)
 
             for idx, piece in enumerate(pieces):
                 assigned_template = templates[idx]
+                content_analysis = _analyze_content_for_visuals(piece)
                 piece_meta = {
                     "model": result["model"],
                     "input_tokens": result["input_tokens"],
@@ -902,6 +1027,7 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                     "funnel_stage": funnel_stage,
                     "creative_preset": creative_preset,
                     "industry_vertical": industry_vertical,
+                    "content_analysis": content_analysis,
                 }
                 if piece.get("slide_headlines"):
                     piece_meta["slide_headlines"] = piece["slide_headlines"]
@@ -1118,10 +1244,11 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                 ]
 
             # Assign diverse templates across the batch
-            templates = _assign_diverse_templates(len(pieces), template_type)
+            templates = _assign_diverse_templates(len(pieces), template_type, design_style=design_style, pieces=pieces)
 
             for idx, piece in enumerate(pieces):
                 assigned_template = templates[idx]
+                content_analysis = _analyze_content_for_visuals(piece)
                 piece_meta = {
                     "model": result["model"],
                     "input_tokens": result["input_tokens"],
@@ -1129,6 +1256,7 @@ Return ONLY the JSON array, no additional text or markdown formatting."""
                     "funnel_stage": funnel_stage,
                     "creative_preset": creative_preset,
                     "industry_vertical": industry_vertical,
+                    "content_analysis": content_analysis,
                 }
                 if piece.get("slide_headlines"):
                     piece_meta["slide_headlines"] = piece["slide_headlines"]

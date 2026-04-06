@@ -74,17 +74,17 @@ def _write_system(ctx: FlowContext) -> str:
 
 {ctx.product_context}
 
-Your current task: write the copy for each slide. Headlines 3-12 words, readable at glance speed."""
+Your current task: write the copy for each slide. Headlines max 50 chars, readable at glance speed."""
 
-    return f"""You are writing carousel slide copy. Each slide headline must be under 25 characters. Punchy, visual, bold.
+    return f"""You are writing carousel slide copy. Each slide headline must be punchy, visual, bold.
 
 {ctx.voice_context}
 
 {ctx.prompt_set.get("voice_rules", "")}
 
 SLIDE COPY RULES:
-- Headline: MAX 25 characters. Bold statement, not a sentence.
-- Subtext (optional): MAX 50 characters. One supporting line.
+- Headline: MAX 50 characters. Bold, punchy — fragments work best but short sentences are fine.
+- Subtext (optional): MAX 90 characters. One supporting line.
 - Each slide must make sense on its own (someone might screenshot just one).
 - But together they must tell a story with forward momentum.
 - Use contrast, numbers, or questions to create visual interest."""
@@ -107,8 +107,8 @@ Return ONLY a JSON object:
     "slides": [
         {{
             "position": 1,
-            "headline": "bold headline (max 25 chars)",
-            "subtext": "supporting line (max 50 chars, optional)",
+            "headline": "bold headline (max 50 chars)",
+            "subtext": "supporting line (max 90 chars, optional)",
             "role": "hook"
         }}
     ]
@@ -218,7 +218,6 @@ Score each dimension 1-5. Pass threshold: 22/25.
 
 Auto-fail conditions:
 - Fewer than 4 or more than 8 slides
-- Any headline that's a complete sentence (fragments work better)
 - No clear arc (slides feel disconnected)
 - CTA slide says "Like and share!" instead of connecting to content
 

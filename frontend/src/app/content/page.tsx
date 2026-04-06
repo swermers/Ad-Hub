@@ -7,6 +7,7 @@ import { api, API_BASE, type ContentPiece, type Product } from "@/lib/api";
 import { TemplateRenderer } from "@/components/ad-templates/TemplateRenderer";
 import type { AspectRatio } from "@/components/ad-templates/types";
 import { buildColorSchemeFromSeed } from "@/components/ad-templates/colorUtils";
+import { TextReveal } from "@/components/TextReveal";
 
 type ViewMode = "grid" | "list";
 
@@ -282,9 +283,14 @@ export default function ContentPage() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF9500]" />
               </span>
             </div>
-            <h1 className="text-4xl md:text-7xl font-bold tracking-tighter text-[#E5E1E4]">
-              Content<span className="text-[#E5E1E4]/30">{" "}Pipeline.</span>
-            </h1>
+            <TextReveal
+              text="Content Pipeline."
+              animation="reveal-up"
+              duration={0.8}
+              delay={0.1}
+              as="h1"
+              className="text-4xl md:text-7xl font-bold tracking-tighter text-[#E5E1E4]"
+            />
             <p className="text-[#E5E1E4]/40 text-sm mt-2 font-mono">
               SYS:CONTENT_QUEUE // {totalCount} items indexed // {new Date().toLocaleDateString()}
             </p>

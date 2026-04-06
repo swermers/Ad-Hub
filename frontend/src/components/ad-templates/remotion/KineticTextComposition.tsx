@@ -19,6 +19,9 @@ import {
   animatedMeshGradient,
   vignetteOverlay,
   drawProgress,
+  kineticEntrance,
+  letterSpacingReveal,
+  generateParticles,
 } from "./animationUtils";
 
 export interface KineticTextProps {
@@ -89,6 +92,9 @@ export function KineticTextComposition({
   // Animated mesh gradient background
   const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.1);
 
+  // Floating particles
+  const particles = generateParticles(8, frame, fps, width, height, 17);
+
   return (
     <AbsoluteFill
       style={{
@@ -109,6 +115,25 @@ export function KineticTextComposition({
           pointerEvents: "none",
         }}
       />
+
+      {/* Floating particles */}
+      {particles.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: p.x,
+            top: p.y,
+            width: p.size,
+            height: p.size,
+            borderRadius: "50%",
+            backgroundColor: accentColor,
+            opacity: p.opacity,
+            zIndex: 1,
+            pointerEvents: "none",
+          }}
+        />
+      ))}
 
       {/* Screenshot background if available */}
       {screenshotUrl && (
@@ -162,6 +187,8 @@ export function KineticTextComposition({
             {words.map((word, i) => {
               const progress = wordSprings[i] ?? 0;
               const isHighlight = i === words.length - 1 || (i > 0 && i % 3 === 0);
+              const kinetic = kineticEntrance(progress);
+              const ls = letterSpacingReveal(progress, 0.2, 0);
 
               return (
                 <span
@@ -172,11 +199,14 @@ export function KineticTextComposition({
                     color: isHighlight ? accentColor : textColor,
                     lineHeight: 1.1,
                     opacity: Math.min(progress * 1.5, 1),
-                    transform: `scale(${0.7 + 0.3 * progress}) translateY(${30 * (1 - progress)}px)`,
+                    transform: `scale(${0.7 + 0.3 * progress}) translateY(${30 * (1 - progress)}px) rotateX(${-5 * (1 - progress)}deg) ${kinetic.transform}`,
                     display: "inline-block",
                     textTransform: "uppercase",
-                    letterSpacing: -1,
-                    textShadow: isHighlight ? `0 0 ${40 * progress}px ${accentColor}44` : "none",
+                    letterSpacing: ls,
+                    textShadow: isHighlight
+                      ? `0 0 ${40 * progress}px ${accentColor}44, ${kinetic.textShadow}`
+                      : kinetic.textShadow,
+                    perspective: "500px",
                   }}
                 >
                   {word}

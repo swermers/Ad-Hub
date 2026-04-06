@@ -7,7 +7,7 @@ import {
 } from "remotion";
 import type { AspectRatio } from "../types";
 import { getDimensions } from "../types";
-import { TYPE, PALETTE, SPACE, isLightColor } from "./swissDesign";
+import { TYPE, PALETTE, SPACE, SHADOWS, DEPTH, TIMING, isLightColor } from "./swissDesign";
 import {
   safeTruncate,
   springProgress,
@@ -17,6 +17,10 @@ import {
   springStagger,
   animatedMeshGradient,
   breathe,
+  kineticEntrance,
+  letterSpacingReveal,
+  parallaxOffset,
+  generateParticles,
 } from "./animationUtils";
 import { IconArrowRight } from "./icons";
 
@@ -113,6 +117,13 @@ export function SwissBoldComposition({
   // Animated mesh gradient background
   const meshBg = animatedMeshGradient(frame, fps, backgroundColor, accentColor, 0.12);
 
+  // Parallax: background shifts slowly, card foreground faster
+  const bgParallax = parallaxOffset(frame, fps, 5, DEPTH.background, 15);
+  const fgParallax = parallaxOffset(frame, fps, 5, DEPTH.foreground, 8);
+
+  // Floating particles in background
+  const particles = generateParticles(12, frame, fps, width, height);
+
   return (
     <AbsoluteFill
       style={{
@@ -126,6 +137,33 @@ export function SwissBoldComposition({
         justifyContent: "center",
       }}
     >
+      {/* Background parallax layer */}
+      <div
+        style={{
+          position: "absolute",
+          inset: -20,
+          background: meshBg,
+          transform: `translateY(${bgParallax}px)`,
+        }}
+      />
+
+      {/* Floating particles */}
+      {particles.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: p.x,
+            top: p.y,
+            width: p.size,
+            height: p.size,
+            borderRadius: "50%",
+            backgroundColor: accentColor,
+            opacity: p.opacity,
+            pointerEvents: "none",
+          }}
+        />
+      ))}
       {/* Scene 1: Card entrance */}
       <Sequence from={0} layout="none">
         <div
@@ -138,9 +176,9 @@ export function SwissBoldComposition({
             backgroundColor: cardBg,
             borderRadius: cardRadius,
             opacity: Math.min(cardSpring * 2, 1),
-            transform: `scale(${0.9 + 0.1 * cardSpring})`,
+            transform: `scale(${0.9 + 0.1 * cardSpring}) translateY(${fgParallax}px)`,
             overflow: "hidden",
-            boxShadow: `0 ${20 * cardSpring}px ${60 * cardSpring}px rgba(0,0,0,0.3)`,
+            boxShadow: `0 ${20 * cardSpring}px ${60 * cardSpring}px rgba(0,0,0,0.3), ${SHADOWS.cinematicGlow(accentColor, 0.15 * cardSpring)}`,
           }}
         >
           {/* Top notch */}
@@ -195,6 +233,8 @@ export function SwissBoldComposition({
               >
                 {words.map((word, i) => {
                   const progress = wordSprings[i] ?? 0;
+                  const kinetic = kineticEntrance(progress);
+                  const ls = letterSpacingReveal(progress, 0.15, 0);
                   return (
                     <span
                       key={i}
@@ -202,11 +242,12 @@ export function SwissBoldComposition({
                         fontSize: hlSize,
                         fontWeight: 900,
                         lineHeight: 1.0,
-                        letterSpacing: -2,
+                        letterSpacing: ls,
                         color: headlineColor,
                         textTransform: "uppercase",
                         opacity: Math.min(progress * 1.5, 1),
-                        transform: `translateY(${40 * (1 - progress)}px)`,
+                        transform: `translateY(${40 * (1 - progress)}px) ${kinetic.transform}`,
+                        textShadow: kinetic.textShadow,
                         display: "inline-block",
                       }}
                     >
