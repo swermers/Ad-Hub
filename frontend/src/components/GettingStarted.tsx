@@ -9,82 +9,50 @@ const STEPS = [
   {
     id: "product",
     number: "01",
-    title: "Create a Product",
+    title: "Add Your Product or Brand",
     description:
-      "Add the product or brand you want to create content for. This can be a SaaS tool, physical product, service — or even your personal brand.",
+      "Add a product, SaaS tool, or personal brand. Include your website URL so we can auto-extract your voice, messaging, and key details.",
     details: [
-      "Give it a name and description",
-      'For personal brands, choose type "Other" and name it something like "My Personal Brand"',
-      "Add your website URL so we can crawl it later",
-      "Include target audience, pain points, and differentiators",
+      "Give it a name, description, and website URL",
+      "Click 'Start Crawl' to auto-extract brand voice and messaging",
+      "Review the generated Brand Brief and tweak as needed",
+      "Set up your Brand Profile with tone, colors, and content rules",
     ],
     cta: { label: "Create Product", href: "/products/new" },
     icon: "inventory_2",
     checkKey: "hasProducts",
   },
   {
-    id: "crawl",
-    number: "02",
-    title: "Crawl Your Website",
-    description:
-      "Let our crawler analyze your site to extract brand voice, key messaging, and product details automatically.",
-    details: [
-      "Open your product and click 'Start Crawl'",
-      "We'll scan up to 20 pages by default",
-      "Extracted data feeds into your brand brief",
-      "You can generate a Brand Brief once crawling completes",
-    ],
-    cta: { label: "Go to Products", href: "/products" },
-    icon: "travel_explore",
-    checkKey: "hasCrawled",
-  },
-  {
-    id: "brand",
-    number: "03",
-    title: "Set Up Brand Profile",
-    description:
-      "Define your brand voice, visual identity, content rules, and platform-specific guidelines. This ensures every generated piece is on-brand.",
-    details: [
-      "Set tone descriptors (e.g. warm, authoritative, playful)",
-      "Add words to always use and words to never use",
-      "Upload your logo and define brand colors",
-      "Set platform-specific rules for LinkedIn, X, Meta, etc.",
-    ],
-    cta: { label: "Edit Brand Profile", href: "/brand-profile" },
-    icon: "palette",
-    checkKey: "hasBrandProfile",
-  },
-  {
-    id: "voice",
-    number: "04",
-    title: "Create a Voice Profile",
-    description:
-      "Capture your personal writing style so generated content sounds like you wrote it. You can also import from a .md file.",
-    details: [
-      "Add writing samples — paste real posts, emails, or threads",
-      "Set your tone keywords and style preferences",
-      "Define favorite phrases and sentence style",
-      "You can have multiple voice profiles for different contexts",
-    ],
-    cta: { label: "Open Content Studio", href: "/studio" },
-    icon: "record_voice_over",
-    checkKey: "hasVoiceProfile",
-  },
-  {
     id: "generate",
-    number: "05",
+    number: "02",
     title: "Generate Content",
     description:
-      "Choose your content types, platforms, and style — then let AI create on-brand content ready for review.",
+      "Drop a raw idea, topic, or voice memo into the Studio. Get back social posts, ad copy, email drafts, and video scripts — all matching your brand voice.",
     details: [
-      "Select content types: social posts, ad copy, carousels, stories, emails, blog drafts",
-      'Use "Select All" to generate across all types at once',
-      "Pick target platforms (Twitter/X, LinkedIn, Meta, Google)",
-      "Review generated content in the Content library and approve or edit",
+      "Open the Studio and describe your idea or paste raw text",
+      "Select your voice profile and content types",
+      "Review generated pieces in the Content library",
+      "Approve, edit, or regenerate until you're happy",
     ],
-    cta: { label: "Generate Content", href: "/generate" },
-    icon: "bolt",
+    cta: { label: "Open Studio", href: "/studio" },
+    icon: "auto_awesome",
     checkKey: "hasContent",
+  },
+  {
+    id: "ads",
+    number: "03",
+    title: "Create Ad Campaigns",
+    description:
+      "Generate dozens of ad variations from your pain points. The optimizer learns which angles work and auto-generates more winners.",
+    details: [
+      "Go to Campaigns and select your product",
+      "Choose pain points or import from CSV",
+      "Generate 10-50 ad variations in one batch",
+      "Export as images or push to your ad platform",
+    ],
+    cta: { label: "Create Ads", href: "/campaigns" },
+    icon: "layers",
+    checkKey: "hasAds",
   },
 ];
 
@@ -171,7 +139,7 @@ export function GettingStarted({
                     Getting Started
                   </p>
                   <h2 className="text-xl font-black tracking-tight text-[#E5E1E4]">
-                    Build Your Ad Engine
+                    Set Up Your Content Engine
                   </h2>
                 </div>
                 <button
@@ -407,7 +375,7 @@ export function GettingStartedBanner({
           New here? Follow the setup guide
         </p>
         <p className="text-xs text-[#E5E1E4]/40">
-          5 steps to set up your product, brand, and start generating content.
+          3 steps to set up your brand and start generating content.
         </p>
       </div>
       <button
