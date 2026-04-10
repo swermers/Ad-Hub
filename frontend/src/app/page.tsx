@@ -104,7 +104,7 @@ export default function DashboardPage() {
           Every version<span className="text-[#554334]/50"> better.</span>
         </h1>
         <p className="max-w-2xl text-base md:text-lg text-[#E5E1E4]/50 leading-relaxed font-medium">
-          <span className="text-[#ffbd7f]">{weekData?.totalContent ?? 0}</span> pieces created across <span className="text-[#ffbd7f]">{weekData?.products.length ?? 0}</span> products. Drop an idea in the Studio or text it to Telegram.
+          <span className="text-[#ffbd7f]">{weekData?.totalContent ?? 0}</span> pieces created across <span className="text-[#ffbd7f]">{weekData?.products.length ?? 0}</span> products. Drop an idea in the Studio to get started.
         </p>
       </motion.section>
 
@@ -217,8 +217,8 @@ export default function DashboardPage() {
                   <Link href="/studio">
                     <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 md:px-6 py-3 liquid-gradient text-[#2d1600] rounded-xl font-bold text-xs uppercase tracking-widest">Content Studio</motion.button>
                   </Link>
-                  <Link href="/seeds">
-                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 md:px-6 py-3 border border-[#554334]/40 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#353437] transition-colors">Seed Bank</motion.button>
+                  <Link href="/campaigns">
+                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 md:px-6 py-3 border border-[#554334]/40 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#353437] transition-colors">Create Ads</motion.button>
                   </Link>
                 </div>
               </div>

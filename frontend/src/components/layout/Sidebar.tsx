@@ -8,34 +8,15 @@ import { clearToken } from "@/lib/api";
 
 const navSections = [
   {
-    label: "Create",
-    items: [
-      { href: "/studio", label: "Content Studio", icon: "auto_awesome" },
-      { href: "/seeds", label: "Seed Bank", icon: "database" },
-      { href: "/content", label: "Content Library", icon: "library_books" },
-      { href: "/queue", label: "Content Queue", icon: "view_kanban" },
-      { href: "/generate", label: "Batch Generate", icon: "bolt" },
-    ],
-  },
-  {
-    label: "Manage",
+    label: null,
     items: [
       { href: "/", label: "Dashboard", icon: "dashboard" },
+      { href: "/studio", label: "Studio", icon: "auto_awesome" },
+      { href: "/content", label: "Content", icon: "library_books" },
       { href: "/products", label: "Products", icon: "inventory_2" },
-      { href: "/brand-profile", label: "Brand & Voice", icon: "palette" },
-      { href: "/style-guides", label: "Style Guides", icon: "menu_book" },
-      { href: "/schedule", label: "Schedule", icon: "calendar_month" },
-      { href: "/analytics", label: "Analytics", icon: "bar_chart" },
-      { href: "/intelligence", label: "Intelligence", icon: "psychology" },
-    ],
-  },
-  {
-    label: "Ads & Campaigns",
-    items: [
-      { href: "/bulk-generate", label: "Bulk Ads", icon: "layers" },
-      { href: "/optimizer", label: "Optimizer", icon: "speed" },
-      { href: "/command-center", label: "Command Center", icon: "terminal" },
-      { href: "/agent", label: "Agent", icon: "smart_toy" },
+      { href: "/brand", label: "Brand", icon: "palette" },
+      { href: "/campaigns", label: "Campaigns", icon: "layers" },
+      { href: "/autopilot", label: "Autopilot", icon: "smart_toy" },
     ],
   },
   {

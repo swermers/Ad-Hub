@@ -4,10 +4,10 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 
-const LibraryView = dynamic(() => import("./components/LibraryView"), {
+const BulkGenerateView = dynamic(() => import("./BulkGenerateView"), {
   loading: () => <LoadingSkeleton />,
 });
-const QueueView = dynamic(() => import("./components/QueueView"), {
+const OptimizerView = dynamic(() => import("./OptimizerView"), {
   loading: () => <LoadingSkeleton />,
 });
 
@@ -24,19 +24,19 @@ function LoadingSkeleton() {
   );
 }
 
-type Tab = "library" | "queue";
+type Tab = "create" | "optimizer";
 
-export default function ContentPage() {
-  const [tab, setTab] = useState<Tab>("library");
+export default function CampaignsPage() {
+  const [tab, setTab] = useState<Tab>("create");
 
   return (
     <div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FF9500] mb-1">Content</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FF9500] mb-1">Campaigns</p>
           <h1 className="text-2xl font-black tracking-tight text-[#E5E1E4]">
-            Manage Your Content
+            Ads & Campaigns
           </h1>
         </div>
 
@@ -47,30 +47,30 @@ export default function ContentPage() {
           className="flex gap-1 p-1 rounded-xl bg-[#1b1b1d]/60 border border-[#554334]/30 w-fit"
         >
           <button
-            onClick={() => setTab("library")}
+            onClick={() => setTab("create")}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${
-              tab === "library"
+              tab === "create"
                 ? "bg-[#FF9500] text-[#2d1600]"
                 : "text-[#E5E1E4]/50 hover:text-[#E5E1E4] hover:bg-white/5"
             }`}
           >
-            Library
+            Create Ads
           </button>
           <button
-            onClick={() => setTab("queue")}
+            onClick={() => setTab("optimizer")}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${
-              tab === "queue"
+              tab === "optimizer"
                 ? "bg-[#FF9500] text-[#2d1600]"
                 : "text-[#E5E1E4]/50 hover:text-[#E5E1E4] hover:bg-white/5"
             }`}
           >
-            Queue
+            Optimizer
           </button>
         </motion.div>
       </div>
 
       {/* Tab Content */}
-      {tab === "library" ? <LibraryView /> : <QueueView />}
+      {tab === "create" ? <BulkGenerateView /> : <OptimizerView />}
     </div>
   );
 }
