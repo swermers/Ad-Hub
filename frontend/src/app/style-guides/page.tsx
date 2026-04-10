@@ -3,12 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api, type StyleGuideItem, type StyleGuideCreate } from "@/lib/api";
-
-const fadeUp = (delay: number = 0) => ({
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
-});
+import { fadeUp } from "@/lib/motion";
 
 function parseJson<T>(val: string | null, fallback: T): T {
   if (!val) return fallback;

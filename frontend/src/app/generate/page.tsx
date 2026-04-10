@@ -5,16 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api, type Product, type GenerateStatus } from "@/lib/api";
 import { INDUSTRY_THEMES, getTheme } from "@/components/ad-templates/industryThemes";
-
-const fadeUp = (delay: number = 0) => ({
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
-});
-
-const stagger = {
-  animate: { transition: { staggerChildren: 0.08 } },
-};
+import { fadeUp, stagger } from "@/lib/motion";
 
 const CREATIVE_PRESETS = [
   { value: "", label: "None", description: "No creative direction — use default generation" },

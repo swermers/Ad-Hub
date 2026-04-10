@@ -4,17 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { api, type ContentPiece, type Product } from "@/lib/api";
-
-/* ─── animation helpers ─── */
-const fadeUp = (delay: number = 0) => ({
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
-});
-
-const stagger = {
-  animate: { transition: { staggerChildren: 0.08 } },
-};
+import { fadeUp, stagger } from "@/lib/motion";
 
 const cardVariant = {
   initial: { opacity: 0, y: 16, scale: 0.97 },

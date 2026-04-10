@@ -123,19 +123,13 @@ async def transcribe_audio(file: UploadFile = File(...)):
     Accepts common audio formats: mp3, mp4, m4a, wav, webm, ogg, flac.
     Returns the transcript text ready to feed into the content pipeline.
     """
-    import openai
-
-    from app.config import settings
-
-    if not settings.openai_api_key:
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+    from app.services.transcription import transcribe_audio_bytes
 
     allowed_types = {
         "audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a", "audio/wav",
         "audio/webm", "audio/ogg", "audio/flac", "audio/x-m4a",
         "video/mp4", "video/webm",  # some voice memo apps save as video
     }
-    # Also check by extension since content_type can be unreliable
     allowed_extensions = {".mp3", ".mp4", ".m4a", ".wav", ".webm", ".ogg", ".flac"}
 
     ext = ""
@@ -149,25 +143,16 @@ async def transcribe_audio(file: UploadFile = File(...)):
         )
 
     try:
-        client = openai.OpenAI(api_key=settings.openai_api_key)
         audio_bytes = await file.read()
-
-        # Whisper needs a file-like object with a name
-        import io
-        audio_file = io.BytesIO(audio_bytes)
-        audio_file.name = file.filename or "audio.m4a"
-
-        transcription = client.audio.transcriptions.create(
-            model=settings.whisper_model,
-            file=audio_file,
-            response_format="text",
-        )
+        transcript = transcribe_audio_bytes(audio_bytes, file.filename or "audio.m4a")
 
         return {
-            "transcript": transcription,
+            "transcript": transcript,
             "filename": file.filename,
             "duration_hint": f"{len(audio_bytes) / 1024:.0f} KB",
         }
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 

@@ -53,6 +53,40 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+async function uploadFile<T>(
+  path: string,
+  file: File,
+  extraFields?: Record<string, string>,
+): Promise<T> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (extraFields) {
+    for (const [key, value] of Object.entries(extraFields)) {
+      formData.append(key, value);
+    }
+  }
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    body: formData,
+    headers,
+  });
+
+  if (res.status === 401 && typeof window !== "undefined") {
+    clearToken();
+    window.location.href = "/login";
+    throw new Error("Session expired");
+  }
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(error.detail || "Upload failed");
+  }
+  return res.json();
+}
+
 // Products
 export const api = {
   // Products
@@ -205,50 +239,16 @@ export const api = {
     request<CommandCenter>(`/api/analytics/command-center?include_ai=${includeAi}`),
 
   // Screenshots
-  uploadScreenshot: async (productId: string, file: File): Promise<{ path: string; screenshots: string[] }> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api/products/${productId}/screenshots`, {
-      method: "POST",
-      body: formData,
-      headers,
-    });
-    if (res.status === 401 && typeof window !== "undefined") {
-      clearToken();
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
-    if (!res.ok) throw new Error("Upload failed");
-    return res.json();
-  },
+  uploadScreenshot: (productId: string, file: File) =>
+    uploadFile<{ path: string; screenshots: string[] }>(`/api/products/${productId}/screenshots`, file),
   deleteScreenshot: (productId: string, path: string) =>
     request<{ screenshots: string[] }>(`/api/products/${productId}/screenshots?path=${encodeURIComponent(path)}`, {
       method: "DELETE",
     }),
 
   // Reference Images
-  uploadReferenceImage: async (productId: string, file: File): Promise<{ path: string; reference_images: string[] }> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api/products/${productId}/reference-images`, {
-      method: "POST",
-      body: formData,
-      headers,
-    });
-    if (res.status === 401 && typeof window !== "undefined") {
-      clearToken();
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
-    if (!res.ok) throw new Error("Upload failed");
-    return res.json();
-  },
+  uploadReferenceImage: (productId: string, file: File) =>
+    uploadFile<{ path: string; reference_images: string[] }>(`/api/products/${productId}/reference-images`, file),
   deleteReferenceImage: (productId: string, path: string) =>
     request<{ reference_images: string[] }>(`/api/products/${productId}/reference-images?path=${encodeURIComponent(path)}`, {
       method: "DELETE",
@@ -379,28 +379,8 @@ export const api = {
   // ─── Agent API ─────────────────────────────────────────────────────────────
 
   // Audio Transcription (Whisper)
-  transcribeAudio: async (file: File): Promise<TranscribeResult> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api/agent/transcribe`, {
-      method: "POST",
-      body: formData,
-      headers,
-    });
-    if (res.status === 401 && typeof window !== "undefined") {
-      clearToken();
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(error.detail || "Transcription failed");
-    }
-    return res.json();
-  },
+  transcribeAudio: (file: File) =>
+    uploadFile<TranscribeResult>("/api/agent/transcribe", file),
 
   // System Status
   getAgentStatus: () => request<AgentSystemStatus>("/api/agent/status"),
@@ -505,47 +485,10 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
-  uploadLogo: async (productId: string, file: File): Promise<{ path: string }> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api/products/${productId}/brand-profile/logo`, {
-      method: "POST",
-      body: formData,
-      headers,
-    });
-    if (res.status === 401 && typeof window !== "undefined") {
-      clearToken();
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
-    if (!res.ok) throw new Error("Upload failed");
-    return res.json();
-  },
-  extractBrandGuide: async (productId: string, file: File): Promise<BrandGuideExtractResult> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api/products/${productId}/brand-profile/extract-guide`, {
-      method: "POST",
-      body: formData,
-      headers,
-    });
-    if (res.status === 401 && typeof window !== "undefined") {
-      clearToken();
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
-      throw new Error(err.detail || "Upload failed");
-    }
-    return res.json();
-  },
+  uploadLogo: (productId: string, file: File) =>
+    uploadFile<{ path: string }>(`/api/products/${productId}/brand-profile/logo`, file),
+  extractBrandGuide: (productId: string, file: File) =>
+    uploadFile<BrandGuideExtractResult>(`/api/products/${productId}/brand-profile/extract-guide`, file),
   listRejectionFeedback: (productId: string, limit: number = 50) =>
     request<RejectionFeedbackItem[]>(`/api/products/${productId}/rejection-feedback?limit=${limit}`),
   createRejectionFeedback: (productId: string, data: RejectionFeedbackCreate) =>
@@ -585,52 +528,11 @@ export const api = {
     }),
   deleteStyleGuide: (id: string) =>
     request<void>(`/api/style-guides/${id}`, { method: "DELETE" }),
-  extractStyleGuide: async (guideId: string, file: File): Promise<StyleGuideExtractResult> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api/style-guides/${guideId}/extract`, {
-      method: "POST",
-      body: formData,
-      headers,
-    });
-    if (res.status === 401 && typeof window !== "undefined") {
-      clearToken();
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
-      throw new Error(err.detail || "Upload failed");
-    }
-    return res.json();
-  },
+  extractStyleGuide: (guideId: string, file: File) =>
+    uploadFile<StyleGuideExtractResult>(`/api/style-guides/${guideId}/extract`, file),
 
-  createAndExtractStyleGuide: async (name: string, file: File): Promise<StyleGuideExtractResult> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("name", name);
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api/style-guides/create-and-extract?name=${encodeURIComponent(name)}`, {
-      method: "POST",
-      body: formData,
-      headers,
-    });
-    if (res.status === 401 && typeof window !== "undefined") {
-      clearToken();
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
-      throw new Error(err.detail || "Upload failed");
-    }
-    return res.json();
-  },
+  createAndExtractStyleGuide: (name: string, file: File) =>
+    uploadFile<StyleGuideExtractResult>(`/api/style-guides/create-and-extract?name=${encodeURIComponent(name)}`, file),
 
   // Intelligence — Tier 5
   getIntelligenceDashboard: (productId: string) =>
@@ -751,71 +653,9 @@ export const api = {
     }),
   deleteVoiceProfile: (id: string) =>
     request<{ deleted: boolean }>(`/api/voice-profiles/${id}`, { method: "DELETE" }),
-  importMarkdownVoiceProfile: async (file: File): Promise<VoiceProfileItem> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api/voice-profiles/import-markdown-and-create`, {
-      method: "POST",
-      body: formData,
-      headers,
-    });
-    if (res.status === 401 && typeof window !== "undefined") {
-      clearToken();
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
-    if (!res.ok) throw new Error("Import failed");
-    return res.json();
-  },
+  importMarkdownVoiceProfile: (file: File) =>
+    uploadFile<VoiceProfileItem>("/api/voice-profiles/import-markdown-and-create", file),
 
-  parseVoiceMarkdown: async (file: File): Promise<VoiceProfileParsed> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api/voice-profiles/import-markdown`, {
-      method: "POST",
-      body: formData,
-      headers,
-    });
-    if (res.status === 401 && typeof window !== "undefined") {
-      clearToken();
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(error.detail || "Failed to parse markdown");
-    }
-    return res.json();
-  },
-
-  importVoiceMarkdown: async (file: File): Promise<VoiceProfileItem> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api/voice-profiles/import-markdown-and-create`, {
-      method: "POST",
-      body: formData,
-      headers,
-    });
-    if (res.status === 401 && typeof window !== "undefined") {
-      clearToken();
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(error.detail || "Failed to import markdown");
-    }
-    return res.json();
-  },
 
   // ─── Content Pipeline (Stepped) ─────────────────────────────────────────────
 
@@ -1908,19 +1748,6 @@ export interface VoiceProfileCreate {
   content_themes?: string[];
   is_default?: boolean;
   style_guide_id?: string | null;
-}
-
-export interface VoiceProfileParsed {
-  name: string;
-  description: string;
-  tone_keywords: string[];
-  style_rules: string;
-  sentence_style: string;
-  favorite_phrases: string[];
-  words_to_avoid: string[];
-  words_to_use: string[];
-  writing_samples: string[];
-  content_themes: string[];
 }
 
 // ─── Content Pipeline (Stepped) ───────────────────────────────────────────────

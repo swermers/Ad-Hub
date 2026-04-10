@@ -9,16 +9,7 @@ import {
   ContentPiece,
   PlatformConnection,
 } from "@/lib/api";
-
-const fadeUp = (delay: number = 0) => ({
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
-});
-
-const stagger = {
-  animate: { transition: { staggerChildren: 0.08 } },
-};
+import { fadeUp, stagger } from "@/lib/motion";
 
 const selectClass =
   "px-4 py-2.5 glass-prism rounded-xl border border-[#554334]/30 bg-[#1b1b1d]/60 backdrop-blur-xl text-sm text-[#E5E1E4] focus:outline-none focus:border-[#FF9500]/50 transition-colors";

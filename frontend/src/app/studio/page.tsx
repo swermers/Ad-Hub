@@ -9,20 +9,10 @@ import VoiceProfileSelector from "./components/VoiceProfileSelector";
 import StudioParameters from "./components/StudioParameters";
 import PipelineView from "./components/PipelineView";
 import ContentOutput from "./components/ContentOutput";
+import { fadeUp, stagger } from "@/lib/motion";
 
 /* ── Phases ── */
 type Phase = "compose" | "pipeline" | "output";
-
-/* ── Animation tokens ── */
-const fadeUp = (delay: number = 0) => ({
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
-});
-
-const stagger = {
-  animate: { transition: { staggerChildren: 0.08 } },
-};
 
 export default function StudioPage() {
   /* ── Shared state ── */

@@ -11,14 +11,12 @@ import {
 
 type Tab = "overview" | "approvals" | "activity" | "guardrails";
 
+import { stagger } from "@/lib/motion";
+
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
-};
-
-const stagger = {
-  animate: { transition: { staggerChildren: 0.08 } },
 };
 
 const ACTION_LABELS: Record<string, { label: string; icon: string; color: string }> = {
