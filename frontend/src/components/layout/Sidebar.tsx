@@ -14,7 +14,7 @@ const navSections = [
       { href: "/seeds", label: "Seed Bank", icon: "database" },
       { href: "/content", label: "Content Library", icon: "library_books" },
       { href: "/queue", label: "Content Queue", icon: "view_kanban" },
-      { href: "/generate", label: "Quick Generate", icon: "bolt" },
+      { href: "/generate", label: "Batch Generate", icon: "bolt" },
     ],
   },
   {

@@ -237,25 +237,14 @@ async def _handle_telegram_voice(voice: dict, message: dict, db) -> str | None:
             audio_bytes = audio_resp.content
 
         # Step 3: Transcribe with Whisper
-        import openai
-        from app.config import settings as app_settings
+        from app.services.transcription import transcribe_audio_bytes
 
-        if not app_settings.openai_api_key:
+        try:
+            transcript = transcribe_audio_bytes(audio_bytes, "voice.ogg")
+        except ValueError:
             if bot:
                 await bot.send_notification("OpenAI API key not configured — can't transcribe voice memos.")
             return None
-
-        openai_client = openai.OpenAI(api_key=app_settings.openai_api_key)
-        audio_file = io.BytesIO(audio_bytes)
-        audio_file.name = "voice.ogg"
-
-        transcription = openai_client.audio.transcriptions.create(
-            model=app_settings.whisper_model,
-            file=audio_file,
-            response_format="text",
-        )
-
-        transcript = transcription.strip() if isinstance(transcription, str) else str(transcription).strip()
 
         if not transcript:
             if bot:

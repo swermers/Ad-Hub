@@ -9,19 +9,12 @@ import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { isDemo } from "@/lib/api";
 
 function TopNav({ onMenuToggle }: { onMenuToggle: () => void }) {
-  const pathname = usePathname();
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const handleUnreadCountChange = useCallback((count: number) => {
     setUnreadCount(count);
   }, []);
-
-  const topLinks = [
-    { href: "/", label: "Dashboard" },
-    { href: "/content", label: "Campaigns" },
-    { href: "/analytics", label: "Analytics" },
-  ];
 
   return (
     <nav className="fixed top-0 w-full z-50 glass-nav border-b border-white/5 flex justify-between items-center px-4 md:px-8 h-16 md:h-20">
@@ -37,27 +30,6 @@ function TopNav({ onMenuToggle }: { onMenuToggle: () => void }) {
         <span className="text-xl md:text-2xl font-bold tracking-tighter text-[#E5E1E4]">
           Iterant
         </span>
-        <div className="hidden md:flex gap-6 ml-4">
-          {topLinks.map((link) => {
-            const isActive =
-              link.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`text-sm transition-colors duration-200 haptic-btn ${
-                  isActive
-                    ? "text-[#FF9500] font-bold border-b-2 border-[#FF9500] pb-1"
-                    : "text-[#E5E1E4]/70 hover:text-[#E5E1E4]"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </div>
       </div>
       <div className="flex items-center gap-2 md:gap-4 entrance-fade stagger-1">
         <Link

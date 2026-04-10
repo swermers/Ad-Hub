@@ -13,15 +13,12 @@ from app.routers import (
     agent,
     analytics,
     auth,
-    autonomous_loop,
-    billing,
     brand_profile,
     bulk_generator,
     bulk_upload,
     connections,
     content,
     content_pipeline,
-    content_prompts,
     dispatch,
     generation,
     image_gen,
@@ -38,6 +35,8 @@ from app.routers import (
     voice_profiles,
     workflows,
 )
+# TODO: Re-enable when frontend integration is built
+# from app.routers import autonomous_loop, billing, content_prompts
 
 logger = logging.getLogger(__name__)
 
@@ -112,13 +111,14 @@ app.include_router(image_gen.router, prefix="/api/products", tags=["image-gen"])
 app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
 app.include_router(seeds.router, prefix="/api/seeds", tags=["seeds"])
 app.include_router(brand_profile.router, prefix="/api/products", tags=["brand-profile"])
-app.include_router(autonomous_loop.router, prefix="/api/products", tags=["autonomous-loop"])
-app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 app.include_router(intelligence.router, prefix="/api/products", tags=["intelligence"])
 app.include_router(voice_profiles.router, prefix="/api/voice-profiles", tags=["voice-profiles"])
 app.include_router(style_guides.router, prefix="/api/style-guides", tags=["style-guides"])
 app.include_router(content_pipeline.router, prefix="/api/pipeline", tags=["content-pipeline"])
-app.include_router(content_prompts.router, prefix="/api/products", tags=["content-prompts"])
+# TODO: Re-enable when frontend integration is built
+# app.include_router(autonomous_loop.router, prefix="/api/products", tags=["autonomous-loop"])
+# app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
+# app.include_router(content_prompts.router, prefix="/api/products", tags=["content-prompts"])
 app.include_router(dispatch.router, prefix="/api/dispatch", tags=["dispatch"])
 app.include_router(video_render.router, prefix="/api/video", tags=["video-render"])
 app.include_router(workflows.router, prefix="/api/workflows", tags=["workflows"])
